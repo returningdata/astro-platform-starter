@@ -1,19 +1,187 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Markdown from '../components/Markdown.astro';
-
-const explainer = `
-An Astro website can go way beyond static pages - on the right platform.
-
-Netlify supports not only [Streaming SSR](https://docs.astro.build/en/guides/server-side-rendering/#html-streaming) and fast [Edge Middleware](https://docs.astro.build/en/guides/middleware/), but also [on-demand revalidation](https://www.netlify.com/blog/cache-tags-and-purge-api-on-netlify/) and [stale-while-revalidate](https://www.netlify.com/blog/swr-and-fine-grained-cache-control/). 
-Any page or data can be rebuilt only when needed, without site visitors ever getting a performance hit.
-`;
 ---
 
-<Layout title="Welcome to Astro.">
-    <h1 class="mb-10">Netlify Platform Starter for Astro</h1>
-    <Markdown content={explainer} class="mb-10 text-lg" />
-    <p>
-        <a href="https://docs.netlify.com/frameworks/astro/" class="btn btn-lg sm:min-w-64">Read the Docs</a>
-    </p>
+<Layout title="Del Perro Police Department - Officer Hub">
+    <div class="space-y-12">
+        <!-- Hero Section -->
+        <div class="text-center space-y-4">
+            <h1 class="mb-6 text-5xl md:text-6xl">Del Perro Police Department</h1>
+            <p class="text-xl text-white/80 max-w-3xl mx-auto">
+                Officer Resources and Information Hub
+            </p>
+            <div class="flex items-center justify-center gap-2 text-sm text-white/60">
+                <span class="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span>System Operational</span>
+            </div>
+        </div>
+
+        <!-- Quick Access Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+            <!-- Officer Dashboard -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Dashboard</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    Access your shift schedules, active cases, and patrol assignments
+                </p>
+                <a href="/dashboard" class="text-primary hover:underline font-semibold">
+                    View Dashboard →
+                </a>
+            </div>
+
+            <!-- Case Management -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Case Files</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    Review active investigations, incident reports, and case documentation
+                </p>
+                <a href="/cases" class="text-primary hover:underline font-semibold">
+                    Open Cases →
+                </a>
+            </div>
+
+            <!-- Resources -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Resources</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    Department protocols, training materials, and policy documents
+                </p>
+                <a href="/resources" class="text-primary hover:underline font-semibold">
+                    Browse Resources →
+                </a>
+            </div>
+
+            <!-- Dispatch -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Dispatch</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    Real-time call logs, active units, and emergency response coordination
+                </p>
+                <a href="/dispatch" class="text-primary hover:underline font-semibold">
+                    View Dispatch →
+                </a>
+            </div>
+
+            <!-- Personnel -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Personnel</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    Officer directory, contact information, and department roster
+                </p>
+                <a href="/personnel" class="text-primary hover:underline font-semibold">
+                    View Personnel →
+                </a>
+            </div>
+
+            <!-- Equipment -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Equipment</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    Inventory management, vehicle checkout, and equipment requests
+                </p>
+                <a href="/equipment" class="text-primary hover:underline font-semibold">
+                    Manage Equipment →
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
+            <div class="bg-white/5 rounded-lg p-4 text-center border border-white/10">
+                <div class="text-3xl font-bold text-primary mb-1">24</div>
+                <div class="text-sm text-white/60">Officers On Duty</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center border border-white/10">
+                <div class="text-3xl font-bold text-primary mb-1">8</div>
+                <div class="text-sm text-white/60">Active Cases</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center border border-white/10">
+                <div class="text-3xl font-bold text-primary mb-1">15</div>
+                <div class="text-sm text-white/60">Patrol Units</div>
+            </div>
+            <div class="bg-white/5 rounded-lg p-4 text-center border border-white/10">
+                <div class="text-3xl font-bold text-primary mb-1">3</div>
+                <div class="text-sm text-white/60">Priority Calls</div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white/5 rounded-lg p-6 border border-white/10 mt-8">
+            <h2 class="text-2xl font-bold mb-6">Recent Activity</h2>
+            <div class="space-y-4">
+                <div class="flex items-start gap-4 pb-4 border-b border-white/10">
+                    <div class="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-semibold">Unit 12-Adam responded to 415 call</span>
+                            <span class="text-sm text-white/60">5 min ago</span>
+                        </div>
+                        <p class="text-sm text-white/70">Location: Ocean Avenue & Del Perro Pier</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4 pb-4 border-b border-white/10">
+                    <div class="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-semibold">Case #2024-1847 updated</span>
+                            <span class="text-sm text-white/60">12 min ago</span>
+                        </div>
+                        <p class="text-sm text-white/70">Officer Johnson added new evidence report</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-semibold">Shift change - Night patrol starting</span>
+                            <span class="text-sm text-white/60">25 min ago</span>
+                        </div>
+                        <p class="text-sm text-white/70">6 officers now on patrol duty</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </Layout>

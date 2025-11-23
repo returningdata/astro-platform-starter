@@ -1,10 +1,10 @@
-# Astro on Netlify Platform Starter
+# Del Perro Police Department WEBAPP
 
-[Live Demo](https://astro-platform-starter.netlify.app/)
+
 
 A modern starter based on Astro.js, Tailwind, and [Netlify Core Primitives](https://docs.netlify.com/core/overview/#develop) (Edge Functions, Image CDN, Blobs).
 
-## Astro Commands
+## DPPD Commands
 
 All commands are run from the root of the project, from a terminal:
 

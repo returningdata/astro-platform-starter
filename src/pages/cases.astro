@@ -1,0 +1,387 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Case Files - Del Perro Police Department">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Case Files</h1>
+                <p class="text-white/70">Del Perro Officers Only - Create and manage case files</p>
+            </div>
+            <button id="newCaseBtn" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-semibold transition-all">
+                + New Case
+            </button>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="flex gap-4 overflow-x-auto pb-2">
+            <button class="filter-tab active" data-filter="all">All Cases</button>
+            <button class="filter-tab" data-filter="open">Open</button>
+            <button class="filter-tab" data-filter="in-progress">In Progress</button>
+            <button class="filter-tab" data-filter="closed">Closed</button>
+        </div>
+
+        <!-- Cases List -->
+        <div id="casesList" class="space-y-4">
+            <!-- Cases will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-12">
+            <div class="text-white/40 mb-4">
+                <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            <p class="text-white/60">No cases found</p>
+            <p class="text-white/40 text-sm mt-2">Create a new case to get started</p>
+        </div>
+    </div>
+
+    <!-- New Case Modal -->
+    <div id="newCaseModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
+            <div class="p-6 border-b border-white/10">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold">New Case File</h2>
+                    <button id="closeModalBtn" class="text-white/60 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <form id="newCaseForm" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Case Title</label>
+                    <input type="text" name="title" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-primary focus:outline-none" placeholder="Brief description of the case">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Case Type</label>
+                    <select name="type" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-primary focus:outline-none">
+                        <option value="">Select type...</option>
+                        <option value="felony">Felony</option>
+                        <option value="criminal">Criminal</option>
+                        <option value="misdemeanor">Misdemeanor</option>
+                        <option value="investigation">Investigation</option>
+                        <option value="incident">Incident Report</option>
+                        <option value="arrest">Arrest</option>
+                        <option value="traffic">Traffic Stop</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Description</label>
+                    <textarea name="description" rows="4" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-primary focus:outline-none" placeholder="Detailed description of the case..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Reporting Officer</label>
+                    <input type="text" name="officer" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-primary focus:outline-none" placeholder="Your name">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Location (Optional)</label>
+                    <input type="text" name="location" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-primary focus:outline-none" placeholder="e.g., Del Perro Pier">
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-semibold transition-all">
+                        Create Case
+                    </button>
+                    <button type="button" id="cancelBtn" class="px-6 py-3 rounded-lg font-semibold border border-white/20 hover:bg-white/5 transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Case Modal -->
+    <div id="editCaseModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20">
+            <div class="p-6 border-b border-white/10">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold">Edit Case Status</h2>
+                    <button id="closeEditModalBtn" class="text-white/60 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <form id="editCaseForm" class="p-6 space-y-4">
+                <input type="hidden" name="caseId" id="editCaseId">
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Case Status</label>
+                    <select name="status" id="editCaseStatus" required class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-primary focus:outline-none">
+                        <option value="open">Open</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Add Update Note (Optional)</label>
+                    <textarea name="note" id="editCaseNote" rows="3" class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:border-primary focus:outline-none" placeholder="Add a note about this status change..."></textarea>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-semibold transition-all">
+                        Update Case
+                    </button>
+                    <button type="button" id="cancelEditBtn" class="px-6 py-3 rounded-lg font-semibold border border-white/20 hover:bg-white/5 transition-all">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        .filter-tab {
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+        .filter-tab:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .filter-tab.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+            color: rgb(59, 130, 246);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-open {
+            background: rgba(34, 197, 94, 0.2);
+            color: rgb(34, 197, 94);
+        }
+        .status-in-progress {
+            background: rgba(234, 179, 8, 0.2);
+            color: rgb(234, 179, 8);
+        }
+        .status-closed {
+            background: rgba(100, 116, 139, 0.2);
+            color: rgb(148, 163, 184);
+        }
+    </style>
+
+    <script>
+        // Load cases from localStorage
+        function loadCases() {
+            const casesJson = localStorage.getItem('dppd_cases');
+            return casesJson ? JSON.parse(casesJson) : [];
+        }
+
+        // Save cases to localStorage
+        function saveCases(cases) {
+            localStorage.setItem('dppd_cases', JSON.stringify(cases));
+        }
+
+        // Generate case ID
+        function generateCaseId() {
+            const year = new Date().getFullYear();
+            const cases = loadCases();
+            const caseNumber = String(cases.length + 1).padStart(3, '0');
+            return `${year}-${caseNumber}`;
+        }
+
+        // Format date
+        function formatDate(date) {
+            const d = new Date(date);
+            const now = new Date();
+            const diffMs = now - d;
+            const diffMins = Math.floor(diffMs / 60000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} min ago`;
+            if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+            return d.toLocaleDateString();
+        }
+
+        // Render cases
+        function renderCases(filter = 'all') {
+            const cases = loadCases();
+            const casesList = document.getElementById('casesList');
+            const emptyState = document.getElementById('emptyState');
+
+            let filteredCases = cases;
+            if (filter !== 'all') {
+                filteredCases = cases.filter(c => c.status === filter);
+            }
+
+            if (filteredCases.length === 0) {
+                casesList.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            casesList.innerHTML = filteredCases.map(caseItem => `
+                <div class="bg-white/5 rounded-lg p-6 border border-white/10 hover:bg-white/10 transition-all">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <div class="flex items-center gap-3 mb-2">
+                                <h3 class="text-xl font-bold">Case #${caseItem.id}</h3>
+                                <span class="status-badge status-${caseItem.status}">${caseItem.status.toUpperCase().replace('-', ' ')}</span>
+                            </div>
+                            <p class="text-lg text-white/90">${caseItem.title}</p>
+                        </div>
+                        <button class="edit-case-btn bg-primary/20 hover:bg-primary/30 text-primary px-4 py-2 rounded-lg font-semibold transition-all" data-case-id="${caseItem.id}">
+                            Edit Status
+                        </button>
+                    </div>
+                    <div class="space-y-2 text-sm text-white/70">
+                        <p><strong>Type:</strong> ${caseItem.type}</p>
+                        <p><strong>Officer:</strong> ${caseItem.officer}</p>
+                        ${caseItem.location ? `<p><strong>Location:</strong> ${caseItem.location}</p>` : ''}
+                        <p class="text-white/90 mt-3">${caseItem.description}</p>
+                        ${caseItem.updates && caseItem.updates.length > 0 ? `
+                            <div class="mt-4 pt-4 border-t border-white/10">
+                                <p class="font-semibold text-white/80 mb-2">Updates:</p>
+                                ${caseItem.updates.map(update => `
+                                    <p class="text-xs text-white/60 mb-1">${formatDate(update.timestamp)}: ${update.note}</p>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="mt-4 text-xs text-white/50">
+                        Created ${formatDate(caseItem.createdAt)}
+                    </div>
+                </div>
+            `).join('');
+
+            // Attach edit button handlers
+            document.querySelectorAll('.edit-case-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const caseId = e.target.dataset.caseId;
+                    openEditModal(caseId);
+                });
+            });
+        }
+
+        // Open edit modal
+        function openEditModal(caseId) {
+            const cases = loadCases();
+            const caseItem = cases.find(c => c.id === caseId);
+            if (!caseItem) return;
+
+            document.getElementById('editCaseId').value = caseId;
+            document.getElementById('editCaseStatus').value = caseItem.status;
+            document.getElementById('editCaseNote').value = '';
+            document.getElementById('editCaseModal').classList.remove('hidden');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCases();
+
+            // Filter tabs
+            document.querySelectorAll('.filter-tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                    e.target.classList.add('active');
+                    renderCases(e.target.dataset.filter);
+                });
+            });
+
+            // New case modal
+            document.getElementById('newCaseBtn').addEventListener('click', () => {
+                document.getElementById('newCaseModal').classList.remove('hidden');
+            });
+
+            document.getElementById('closeModalBtn').addEventListener('click', () => {
+                document.getElementById('newCaseModal').classList.add('hidden');
+            });
+
+            document.getElementById('cancelBtn').addEventListener('click', () => {
+                document.getElementById('newCaseModal').classList.add('hidden');
+            });
+
+            // New case form
+            document.getElementById('newCaseForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+
+                const newCase = {
+                    id: generateCaseId(),
+                    title: formData.get('title'),
+                    type: formData.get('type'),
+                    description: formData.get('description'),
+                    officer: formData.get('officer'),
+                    location: formData.get('location'),
+                    status: 'open',
+                    createdAt: new Date().toISOString(),
+                    updates: []
+                };
+
+                const cases = loadCases();
+                cases.unshift(newCase);
+                saveCases(cases);
+
+                document.getElementById('newCaseModal').classList.add('hidden');
+                e.target.reset();
+                renderCases();
+            });
+
+            // Edit case modal
+            document.getElementById('closeEditModalBtn').addEventListener('click', () => {
+                document.getElementById('editCaseModal').classList.add('hidden');
+            });
+
+            document.getElementById('cancelEditBtn').addEventListener('click', () => {
+                document.getElementById('editCaseModal').classList.add('hidden');
+            });
+
+            // Edit case form
+            document.getElementById('editCaseForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const caseId = formData.get('caseId');
+                const newStatus = formData.get('status');
+                const note = formData.get('note');
+
+                const cases = loadCases();
+                const caseIndex = cases.findIndex(c => c.id === caseId);
+
+                if (caseIndex !== -1) {
+                    cases[caseIndex].status = newStatus;
+                    if (note) {
+                        if (!cases[caseIndex].updates) {
+                            cases[caseIndex].updates = [];
+                        }
+                        cases[caseIndex].updates.push({
+                            timestamp: new Date().toISOString(),
+                            note: note
+                        });
+                    }
+                    saveCases(cases);
+                }
+
+                document.getElementById('editCaseModal').classList.add('hidden');
+                renderCases();
+            });
+
+            // Close modals on backdrop click
+            document.getElementById('newCaseModal').addEventListener('click', (e) => {
+                if (e.target.id === 'newCaseModal') {
+                    document.getElementById('newCaseModal').classList.add('hidden');
+                }
+            });
+
+            document.getElementById('editCaseModal').addEventListener('click', (e) => {
+                if (e.target.id === 'editCaseModal') {
+                    document.getElementById('editCaseModal').classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</Layout>

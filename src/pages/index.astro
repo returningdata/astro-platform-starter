@@ -1,19 +1,454 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Markdown from '../components/Markdown.astro';
-
-const explainer = `
-An Astro website can go way beyond static pages - on the right platform.
-
-Netlify supports not only [Streaming SSR](https://docs.astro.build/en/guides/server-side-rendering/#html-streaming) and fast [Edge Middleware](https://docs.astro.build/en/guides/middleware/), but also [on-demand revalidation](https://www.netlify.com/blog/cache-tags-and-purge-api-on-netlify/) and [stale-while-revalidate](https://www.netlify.com/blog/swr-and-fine-grained-cache-control/). 
-Any page or data can be rebuilt only when needed, without site visitors ever getting a performance hit.
-`;
 ---
 
-<Layout title="Welcome to Astro.">
-    <h1 class="mb-10">Netlify Platform Starter for Astro</h1>
-    <Markdown content={explainer} class="mb-10 text-lg" />
-    <p>
-        <a href="https://docs.netlify.com/frameworks/astro/" class="btn btn-lg sm:min-w-64">Read the Docs</a>
-    </p>
+<Layout title="Del Perro Police Department - Officer Hub">
+    <div class="space-y-12">
+        <!-- Hero Section -->
+        <div class="text-center space-y-4">
+            <h1 class="mb-6 text-5xl md:text-6xl">Del Perro Police Department</h1>
+            <p class="text-xl text-white/80 max-w-3xl mx-auto">
+                Officer Resources and Information Hub
+            </p>
+            <div class="flex items-center justify-center gap-2 text-sm text-white/60">
+                <span class="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span>System Operational</span>
+            </div>
+        </div>
+
+        <!-- Quick Access Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+            <!-- Case Files Forum -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Case Files</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    Create and manage case files, investigations, and incident reports (Del Perro Officers Only)
+                </p>
+                <a href="/cases" class="text-primary hover:underline font-semibold">
+                    Open Case Files →
+                </a>
+            </div>
+
+            <!-- Resources -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Resources</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    Department protocols, training materials, and policy documents
+                </p>
+                <a href="/resources" class="text-primary hover:underline font-semibold">
+                    Browse Resources →
+                </a>
+            </div>
+
+            <!-- Personnel -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Personnel</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    Officer directory, contact information, and department roster
+                </p>
+                <a href="/chain-of-command" class="text-primary hover:underline font-semibold">
+                    View Personnel →
+                </a>
+            </div>
+
+            <!-- Equipment -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold">Equipment</h2>
+                </div>
+                <p class="text-white/70 mb-4">
+                    View and manage department equipment inventory
+                </p>
+                <a href="/equipment" class="text-primary hover:underline font-semibold">
+                    View Equipment →
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12">
+            <div class="bg-white/5 rounded-lg p-4 text-center border border-white/10">
+                <div id="onDutyCount" class="text-3xl font-bold text-primary mb-1">
+                    <span class="animate-pulse">...</span>
+                </div>
+                <div class="text-sm text-white/60">Officers On Duty</div>
+                <div class="text-xs text-white/40 mt-1">Live from Discord</div>
+            </div>
+            <a href="/cases" class="bg-white/5 rounded-lg p-4 text-center border border-white/10 hover:bg-white/10 transition-all">
+                <div id="activeCasesCount" class="text-3xl font-bold text-primary mb-1">0</div>
+                <div class="text-sm text-white/60">Active Cases</div>
+                <div class="text-xs text-white/40 mt-1">Click to view →</div>
+            </a>
+        </div>
+
+        <!-- Department Meetings -->
+        <div class="bg-white/5 rounded-lg p-6 border border-white/10 mt-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold">Department Meetings</h2>
+                <a
+                    href="https://discord.com/channels/1322805466975440906/1392569191583842517"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+                >
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
+                    </svg>
+                    Open in Discord
+                </a>
+            </div>
+            <div id="meetingsContent" class="space-y-3">
+                <p class="text-white/60 text-sm animate-pulse">Loading meeting announcements...</p>
+            </div>
+        </div>
+
+        <!-- Department Subdivisions -->
+        <div class="bg-white/5 rounded-lg p-6 border border-white/10 mt-8">
+            <h2 class="text-2xl font-bold mb-4">Department Subdivisions</h2>
+            <p class="text-white/70 mb-4">
+                We have specialized divisions for officers to join and advance their careers. Apply now for:
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
+                    <div class="font-bold text-primary">SWAT</div>
+                    <div class="text-sm text-white/60">Special Weapons & Tactics</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
+                    <div class="font-bold text-primary">K9</div>
+                    <div class="text-sm text-white/60">Canine Unit</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
+                    <div class="font-bold text-primary">TEU</div>
+                    <div class="text-sm text-white/60">Tactical Enforcement</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
+                    <div class="font-bold text-primary">CIU</div>
+                    <div class="text-sm text-white/60">Criminal Investigations</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
+                    <div class="font-bold text-primary">IA</div>
+                    <div class="text-sm text-white/60">Internal Affairs</div>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
+                    <div class="font-bold text-primary">FTD</div>
+                    <div class="text-sm text-white/60">Field Training Division</div>
+                </div>
+            </div>
+            <a
+                href="https://discord.com/channels/1322805466975440906/1322807968173002854/1323053201368547480"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 bg-primary hover:bg-primary/80 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+            >
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
+                </svg>
+                Apply for Subdivisions on Discord
+            </a>
+        </div>
+
+        <!-- Uniforms -->
+        <div class="bg-white/5 rounded-lg p-6 border border-white/10 mt-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold">Department Uniforms</h2>
+                <a
+                    href="https://discord.com/channels/1322805466975440906/1322807838745170023"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+                >
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
+                    </svg>
+                    Open in Discord
+                </a>
+            </div>
+            <div id="uniformsContent" class="space-y-3">
+                <p class="text-white/60 text-sm animate-pulse">Loading uniform information...</p>
+            </div>
+        </div>
+
+        <!-- 10 Codes -->
+        <div class="bg-white/5 rounded-lg p-6 border border-white/10 mt-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold">10 Codes</h2>
+                <a
+                    href="https://discord.com/channels/1322805466975440906/1322808533271711775"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+                >
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
+                    </svg>
+                    Open in Discord
+                </a>
+            </div>
+            <div id="codesContent" class="space-y-3">
+                <p class="text-white/60 text-sm animate-pulse">Loading 10 codes...</p>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="bg-white/5 rounded-lg p-6 border border-white/10 mt-8">
+            <h2 class="text-2xl font-bold mb-6">Recent Activity</h2>
+            <div class="space-y-4">
+                <div class="flex items-start gap-4 pb-4 border-b border-white/10">
+                    <div class="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-semibold">Officer Smith went on duty</span>
+                            <span class="text-sm text-white/60">5 min ago</span>
+                        </div>
+                        <p class="text-sm text-white/70">Status: Patrol</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4 pb-4 border-b border-white/10">
+                    <div class="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-semibold">Case #2025-001 created</span>
+                            <span class="text-sm text-white/60">12 min ago</span>
+                        </div>
+                        <p class="text-sm text-white/70">New investigation opened</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-semibold">Case #2025-002 updated</span>
+                            <span class="text-sm text-white/60">25 min ago</span>
+                        </div>
+                        <p class="text-sm text-white/70">Status changed to In Progress</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 text-center">
+                <p class="text-sm text-white/60">Activity updates from Discord channels</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Utility function to format timestamps
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return date.toLocaleDateString();
+        }
+
+        // Utility function to parse Discord message content
+        function parseContent(content) {
+            if (!content) return '';
+            // Truncate long content
+            if (content.length > 300) {
+                return content.substring(0, 300) + '...';
+            }
+            return content;
+        }
+
+        // Load officers on duty count
+        async function loadOnDutyCount() {
+            try {
+                const response = await fetch('/.netlify/functions/discord-on-duty');
+                const data = await response.json();
+
+                const countEl = document.getElementById('onDutyCount');
+                if (data.success && typeof data.count === 'number') {
+                    countEl.textContent = data.count;
+                } else {
+                    countEl.textContent = '0';
+                    countEl.nextElementSibling?.insertAdjacentHTML('afterend',
+                        '<div class="text-xs text-yellow-500 mt-1">Configure Discord integration</div>');
+                }
+            } catch (error) {
+                console.error('Failed to load on-duty count:', error);
+                document.getElementById('onDutyCount').textContent = '0';
+            }
+        }
+
+        // Load meeting announcements
+        async function loadMeetings() {
+            const container = document.getElementById('meetingsContent');
+            try {
+                const response = await fetch('/.netlify/functions/discord-meetings');
+                const data = await response.json();
+
+                if (data.success && data.messages && data.messages.length > 0) {
+                    container.innerHTML = data.messages.slice(0, 5).map(msg => `
+                        <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                            <div class="flex items-start justify-between mb-2">
+                                <span class="font-semibold text-sm text-primary">${msg.author.username}</span>
+                                <span class="text-xs text-white/50">${formatTimestamp(msg.timestamp)}</span>
+                            </div>
+                            <p class="text-white/80 text-sm whitespace-pre-wrap">${parseContent(msg.content)}</p>
+                            ${msg.embeds && msg.embeds.length > 0 ? `
+                                <div class="mt-2 text-xs text-white/60">+ ${msg.embeds.length} embed(s)</div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <p class="text-white/60 text-sm">${data.error || 'No meeting announcements available'}</p>
+                            <p class="text-white/40 text-xs mt-2">Configure DISCORD_BOT_TOKEN to enable live updates</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load meetings:', error);
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-white/60 text-sm">Unable to load meeting announcements</p>
+                        <p class="text-white/40 text-xs mt-2">Please check Discord integration settings</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load uniforms information
+        async function loadUniforms() {
+            const container = document.getElementById('uniformsContent');
+            try {
+                const response = await fetch('/.netlify/functions/discord-uniforms');
+                const data = await response.json();
+
+                if (data.success && data.messages && data.messages.length > 0) {
+                    container.innerHTML = data.messages.slice(0, 5).map(msg => `
+                        <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                            <div class="flex items-start justify-between mb-2">
+                                <span class="font-semibold text-sm text-primary">${msg.author.username}</span>
+                                <span class="text-xs text-white/50">${formatTimestamp(msg.timestamp)}</span>
+                            </div>
+                            <p class="text-white/80 text-sm whitespace-pre-wrap">${parseContent(msg.content)}</p>
+                            ${msg.attachments && msg.attachments.length > 0 ? `
+                                <div class="mt-3 grid grid-cols-2 gap-2">
+                                    ${msg.attachments.slice(0, 2).map(att => {
+                                        if (att.contentType?.startsWith('image/')) {
+                                            return `<img src="${att.url}" alt="${att.filename}" class="rounded border border-white/20 max-h-32 object-cover" />`;
+                                        }
+                                        return `<a href="${att.url}" target="_blank" class="text-xs text-primary hover:underline">${att.filename}</a>`;
+                                    }).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <p class="text-white/60 text-sm">${data.error || 'No uniform information available'}</p>
+                            <p class="text-white/40 text-xs mt-2">Configure DISCORD_BOT_TOKEN to enable live updates</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load uniforms:', error);
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-white/60 text-sm">Unable to load uniform information</p>
+                        <p class="text-white/40 text-xs mt-2">Please check Discord integration settings</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load 10 codes
+        async function loadCodes() {
+            const container = document.getElementById('codesContent');
+            try {
+                const response = await fetch('/.netlify/functions/discord-codes');
+                const data = await response.json();
+
+                if (data.success && data.messages && data.messages.length > 0) {
+                    container.innerHTML = data.messages.slice(0, 5).map(msg => `
+                        <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+                            <div class="flex items-start justify-between mb-2">
+                                <span class="font-semibold text-sm text-primary">${msg.author.username}</span>
+                                <span class="text-xs text-white/50">${formatTimestamp(msg.timestamp)}</span>
+                            </div>
+                            <p class="text-white/80 text-sm whitespace-pre-wrap">${parseContent(msg.content)}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <p class="text-white/60 text-sm">${data.error || 'No 10 codes available'}</p>
+                            <p class="text-white/40 text-xs mt-2">Configure DISCORD_BOT_TOKEN to enable live updates</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load codes:', error);
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-white/60 text-sm">Unable to load 10 codes</p>
+                        <p class="text-white/40 text-xs mt-2">Please check Discord integration settings</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load active cases count
+        function loadActiveCasesCount() {
+            const casesJson = localStorage.getItem('dppd_cases');
+            const cases = casesJson ? JSON.parse(casesJson) : [];
+            const activeCases = cases.filter(c => c.status === 'open' || c.status === 'in-progress');
+            document.getElementById('activeCasesCount').textContent = activeCases.length;
+        }
+
+        // Initialize all live data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOnDutyCount();
+            loadMeetings();
+            loadUniforms();
+            loadCodes();
+            loadActiveCasesCount();
+
+            // Refresh on-duty count every 30 seconds
+            setInterval(loadOnDutyCount, 30000);
+
+            // Refresh other content every 60 seconds
+            setInterval(() => {
+                loadMeetings();
+                loadUniforms();
+                loadCodes();
+            }, 60000);
+        });
+    </script>
 </Layout>

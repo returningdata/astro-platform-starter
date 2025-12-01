@@ -104,6 +104,24 @@ import Layout from '../../layouts/Layout.astro';
                                     </select>
                                 </div>
                             </div>
+
+                            <!-- Image Upload Section -->
+                            <div class="border border-slate-600 rounded-lg p-4 bg-slate-700/30">
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Category Image</label>
+                                <div class="image-preview-container mb-3 ${category.image ? '' : 'hidden'}" data-category-index="${catIndex}">
+                                    <img src="${category.image || ''}" alt="Category image" class="category-image-preview max-h-32 rounded-lg object-cover" data-category-index="${catIndex}">
+                                </div>
+                                <div class="flex gap-2 flex-wrap">
+                                    <label class="upload-image-btn px-3 py-2 bg-primary hover:bg-primary/80 rounded-lg cursor-pointer text-sm font-medium transition-colors">
+                                        ${category.image ? 'Replace Image' : 'Upload Image'}
+                                        <input type="file" accept="image/*" class="image-upload hidden" data-category-index="${catIndex}">
+                                    </label>
+                                    <button class="remove-image px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors ${category.image ? '' : 'hidden'}" data-category-index="${catIndex}">
+                                        Remove Image
+                                    </button>
+                                </div>
+                            </div>
+
                             <button class="delete-category text-red-400 hover:text-red-300 text-sm" data-category-index="${catIndex}">
                                 Delete Category
                             </button>
@@ -200,6 +218,31 @@ import Layout from '../../layouts/Layout.astro';
                 btn.addEventListener('click', (e) => {
                     const catIndex = parseInt(e.target.dataset.categoryIndex);
                     warehouseData[catIndex].items.push({ name: 'New Item', status: 'available' });
+                    renderCategories();
+                });
+            });
+
+            // Image upload
+            document.querySelectorAll('.image-upload').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const catIndex = parseInt(e.target.dataset.categoryIndex);
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            warehouseData[catIndex].image = event.target.result;
+                            renderCategories();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            });
+
+            // Remove image
+            document.querySelectorAll('.remove-image').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const catIndex = parseInt(e.target.dataset.categoryIndex);
+                    delete warehouseData[catIndex].image;
                     renderCategories();
                 });
             });

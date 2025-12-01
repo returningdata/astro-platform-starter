@@ -13,6 +13,7 @@ export interface WarehouseCategory {
     name: string;
     icon: string;
     items: WarehouseItem[];
+    image?: string;
 }
 
 const defaultWarehouseData: WarehouseCategory[] = [

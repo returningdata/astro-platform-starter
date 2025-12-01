@@ -1,0 +1,110 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="DPPD Uniforms - Del Perro Police Department">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">DPPD Uniforms</h1>
+                <p class="text-white/70">View department uniforms and attire</p>
+            </div>
+        </div>
+
+        <!-- Uniforms Categories -->
+        <div id="uniformsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading state -->
+            <div class="col-span-full text-center py-12 text-white/60">
+                Loading uniforms inventory...
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+            <div class="flex items-center gap-6 text-sm flex-wrap">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                    <span class="text-white/70">Available</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                    <span class="text-white/70">Limited Stock</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+                    <span class="text-white/70">Out of Stock</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const icons = {
+            patrol: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>',
+            tactical: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>',
+            formal: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>',
+            accessories: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>',
+            headwear: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>',
+            footwear: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>'
+        };
+
+        const statusColors = {
+            available: 'bg-green-500',
+            limited: 'bg-yellow-500',
+            out: 'bg-red-500'
+        };
+
+        let uniformsData = [];
+
+        async function loadUniforms() {
+            try {
+                const response = await fetch('/api/uniforms');
+                const data = await response.json();
+                uniformsData = data.uniforms || [];
+                renderUniforms();
+            } catch (error) {
+                console.error('Failed to load uniforms:', error);
+                document.getElementById('uniformsGrid').innerHTML = `
+                    <div class="col-span-full text-center py-12 text-red-400">
+                        Failed to load uniforms inventory. Please refresh the page.
+                    </div>
+                `;
+            }
+        }
+
+        function renderUniforms() {
+            const grid = document.getElementById('uniformsGrid');
+
+            if (uniformsData.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-white/60">
+                        No uniforms available.
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = uniformsData.map(category => `
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                            ${icons[category.icon] || icons.patrol}
+                        </div>
+                        <h2 class="text-2xl font-bold">${category.name}</h2>
+                    </div>
+                    <ul class="space-y-2 text-white/70">
+                        ${category.items.map(item => `
+                            <li class="flex items-center gap-2">
+                                <span class="w-2 h-2 ${statusColors[item.status]} rounded-full"></span>
+                                ${item.name}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `).join('');
+        }
+
+        loadUniforms();
+    </script>
+</Layout>

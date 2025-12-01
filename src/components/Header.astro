@@ -2,20 +2,19 @@
 const navItems = [
     { linkText: 'Home', href: '/' },
     { linkText: 'About', href: '/about' },
+    { linkText: 'Warehouse', href: '/warehouse' },
+    { linkText: 'Uniforms', href: '/uniforms' },
     { linkText: 'Resources', href: '/resources' },
     { linkText: 'Chain of Command', href: '/chain-of-command' },
     { linkText: 'Events', href: '/community-events' },
-    { linkText: 'Change Logs', href: '/changelogs' }
+    { linkText: 'Change Logs', href: '/changelogs' },
+    { linkText: 'Admin', href: '/admin/login' }
 ];
 ---
 
 <nav class="flex flex-wrap items-center justify-between gap-4 pt-6 pb-12 sm:pt-8 sm:pb-16 border-b border-white/10">
     <a href="/" class="flex items-center gap-3 no-underline hover:opacity-100">
-        <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-        </div>
+        <img src="/images/DPPD_Seal_3.png" alt="DPPD Seal" class="w-12 h-12 object-contain">
         <div class="flex flex-col">
             <span class="font-bold text-lg leading-tight">DPPD</span>
             <span class="text-xs text-white/60 leading-tight">Officer Hub</span>

@@ -1,0 +1,110 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="DPPD Warehouse - Del Perro Police Department">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">DPPD Warehouse</h1>
+                <p class="text-white/70">View department equipment and inventory</p>
+            </div>
+        </div>
+
+        <!-- Warehouse Categories -->
+        <div id="warehouseGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading state -->
+            <div class="col-span-full text-center py-12 text-white/60">
+                Loading warehouse inventory...
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="bg-white/5 rounded-lg p-4 border border-white/10">
+            <div class="flex items-center gap-6 text-sm flex-wrap">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                    <span class="text-white/70">Available</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                    <span class="text-white/70">Limited Stock</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+                    <span class="text-white/70">Out of Stock</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const icons = {
+            vehicle: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>',
+            firearm: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>',
+            communication: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" /></svg>',
+            protection: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>',
+            investigation: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>',
+            traffic: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'
+        };
+
+        const statusColors = {
+            available: 'bg-green-500',
+            limited: 'bg-yellow-500',
+            out: 'bg-red-500'
+        };
+
+        let warehouseData = [];
+
+        async function loadWarehouse() {
+            try {
+                const response = await fetch('/api/warehouse');
+                const data = await response.json();
+                warehouseData = data.warehouse || [];
+                renderWarehouse();
+            } catch (error) {
+                console.error('Failed to load warehouse:', error);
+                document.getElementById('warehouseGrid').innerHTML = `
+                    <div class="col-span-full text-center py-12 text-red-400">
+                        Failed to load warehouse inventory. Please refresh the page.
+                    </div>
+                `;
+            }
+        }
+
+        function renderWarehouse() {
+            const grid = document.getElementById('warehouseGrid');
+
+            if (warehouseData.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-white/60">
+                        No items available in the warehouse.
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = warehouseData.map(category => `
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                            ${icons[category.icon] || icons.vehicle}
+                        </div>
+                        <h2 class="text-2xl font-bold">${category.name}</h2>
+                    </div>
+                    <ul class="space-y-2 text-white/70">
+                        ${category.items.map(item => `
+                            <li class="flex items-center gap-2">
+                                <span class="w-2 h-2 ${statusColors[item.status]} rounded-full"></span>
+                                ${item.name}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `).join('');
+        }
+
+        loadWarehouse();
+    </script>
+</Layout>

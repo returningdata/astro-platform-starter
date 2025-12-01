@@ -12,7 +12,6 @@ export interface WarehouseCategory {
     id: string;
     name: string;
     icon: string;
-    image?: string;
     items: WarehouseItem[];
 }
 

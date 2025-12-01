@@ -86,28 +86,21 @@ import Layout from '../layouts/Layout.astro';
             }
 
             grid.innerHTML = warehouseData.map(category => `
-                <div class="bg-white/10 backdrop-blur-sm rounded-lg overflow-hidden border border-white/20">
-                    ${category.image ? `
-                        <div class="w-full h-48 overflow-hidden">
-                            <img src="/api/warehouse/image/${category.id}" alt="${category.name}" class="w-full h-full object-cover" onerror="this.parentElement.style.display='none'">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                            ${icons[category.icon] || icons.vehicle}
                         </div>
-                    ` : ''}
-                    <div class="p-6">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                                ${icons[category.icon] || icons.vehicle}
-                            </div>
-                            <h2 class="text-2xl font-bold">${category.name}</h2>
-                        </div>
-                        <ul class="space-y-2 text-white/70">
-                            ${category.items.map(item => `
-                                <li class="flex items-center gap-2">
-                                    <span class="w-2 h-2 ${statusColors[item.status]} rounded-full"></span>
-                                    ${item.name}
-                                </li>
-                            `).join('')}
-                        </ul>
+                        <h2 class="text-2xl font-bold">${category.name}</h2>
                     </div>
+                    <ul class="space-y-2 text-white/70">
+                        ${category.items.map(item => `
+                            <li class="flex items-center gap-2">
+                                <span class="w-2 h-2 ${statusColors[item.status]} rounded-full"></span>
+                                ${item.name}
+                            </li>
+                        `).join('')}
+                    </ul>
                 </div>
             `).join('');
         }

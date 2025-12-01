@@ -42,6 +42,7 @@ import Layout from '../../layouts/Layout.astro';
         const statusOptions = ['available', 'limited', 'out'];
 
         let warehouseData = [];
+        let imageCache = {}; // Cache for loaded images
 
         // Load warehouse data
         async function loadWarehouse() {
@@ -49,11 +50,33 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/warehouse');
                 const data = await response.json();
                 warehouseData = data.warehouse || [];
+
+                // Load images for categories that have imageKeys
+                await loadImages();
+
                 renderCategories();
             } catch (error) {
                 console.error('Failed to load warehouse:', error);
                 showStatus('Failed to load warehouse data', 'error');
             }
+        }
+
+        // Load images from the separate image store
+        async function loadImages() {
+            const imagePromises = warehouseData
+                .filter(cat => cat.imageKey && !imageCache[cat.imageKey])
+                .map(async (cat) => {
+                    try {
+                        const response = await fetch(`/api/warehouse?image=${encodeURIComponent(cat.imageKey)}`);
+                        const data = await response.json();
+                        if (data.image) {
+                            imageCache[cat.imageKey] = data.image;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load image for', cat.id, e);
+                    }
+                });
+            await Promise.all(imagePromises);
         }
 
         function showStatus(message, type = 'success') {
@@ -80,7 +103,12 @@ import Layout from '../../layouts/Layout.astro';
                 return;
             }
 
-            container.innerHTML = warehouseData.map((category, catIndex) => `
+            container.innerHTML = warehouseData.map((category, catIndex) => {
+                // Get image from cache using imageKey, or use pending image data
+                const hasImage = category.image || (category.imageKey && imageCache[category.imageKey]);
+                const imageUrl = category.image || (category.imageKey ? imageCache[category.imageKey] : '');
+
+                return `
                 <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20" data-category-index="${catIndex}">
                     <!-- Category Header -->
                     <div class="flex items-start gap-4 mb-6">
@@ -108,15 +136,15 @@ import Layout from '../../layouts/Layout.astro';
                             <!-- Image Upload Section -->
                             <div class="border border-slate-600 rounded-lg p-4 bg-slate-700/30">
                                 <label class="block text-sm font-medium text-slate-300 mb-2">Category Image</label>
-                                <div class="image-preview-container mb-3 ${category.image ? '' : 'hidden'}" data-category-index="${catIndex}">
-                                    <img src="${category.image || ''}" alt="Category image" class="category-image-preview max-h-32 rounded-lg object-cover" data-category-index="${catIndex}">
+                                <div class="image-preview-container mb-3 ${hasImage ? '' : 'hidden'}" data-category-index="${catIndex}">
+                                    <img src="${imageUrl}" alt="Category image" class="category-image-preview max-h-32 rounded-lg object-cover" data-category-index="${catIndex}">
                                 </div>
                                 <div class="flex gap-2 flex-wrap">
                                     <label class="upload-image-btn px-3 py-2 bg-primary hover:bg-primary/80 rounded-lg cursor-pointer text-sm font-medium transition-colors">
-                                        ${category.image ? 'Replace Image' : 'Upload Image'}
+                                        ${hasImage ? 'Replace Image' : 'Upload Image'}
                                         <input type="file" accept="image/*" class="image-upload hidden" data-category-index="${catIndex}">
                                     </label>
-                                    <button class="remove-image px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors ${category.image ? '' : 'hidden'}" data-category-index="${catIndex}">
+                                    <button class="remove-image px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors ${hasImage ? '' : 'hidden'}" data-category-index="${catIndex}">
                                         Remove Image
                                     </button>
                                 </div>
@@ -151,7 +179,7 @@ import Layout from '../../layouts/Layout.astro';
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `;}).join('');
 
             attachEventListeners();
         }
@@ -242,7 +270,12 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.remove-image').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const catIndex = parseInt(e.target.dataset.categoryIndex);
+                    // Mark for deletion if there was a saved imageKey
+                    if (warehouseData[catIndex].imageKey) {
+                        warehouseData[catIndex]._deleteImage = true;
+                    }
                     delete warehouseData[catIndex].image;
+                    delete warehouseData[catIndex].imageKey;
                     renderCategories();
                 });
             });

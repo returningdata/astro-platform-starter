@@ -13,7 +13,17 @@ export interface WarehouseCategory {
     name: string;
     icon: string;
     items: WarehouseItem[];
-    image?: string;
+    imageKey?: string; // Reference to image stored in blobs
+}
+
+// Helper to get the warehouse store
+function getWarehouseStore() {
+    return getStore({ name: 'warehouse', consistency: 'strong' });
+}
+
+// Helper to get the images store
+function getImagesStore() {
+    return getStore({ name: 'warehouse-images', consistency: 'strong' });
 }
 
 const defaultWarehouseData: WarehouseCategory[] = [
@@ -150,7 +160,7 @@ const defaultWarehouseData: WarehouseCategory[] = [
 
 async function getWarehouseData(): Promise<WarehouseCategory[]> {
     try {
-        const store = getStore({ name: 'warehouse', consistency: 'strong' });
+        const store = getWarehouseStore();
         const data = await store.get('categories', { type: 'json' });
         if (data && Array.isArray(data)) {
             return data;
@@ -162,34 +172,100 @@ async function getWarehouseData(): Promise<WarehouseCategory[]> {
     }
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ url }) => {
+    // Check if requesting a specific image
+    const imageKey = url.searchParams.get('image');
+    if (imageKey) {
+        try {
+            const imagesStore = getImagesStore();
+            const imageData = await imagesStore.get(imageKey);
+            if (imageData) {
+                return new Response(JSON.stringify({ image: imageData }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            return new Response(JSON.stringify({ image: null }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (error) {
+            console.error('Error fetching image:', error);
+            return new Response(JSON.stringify({ image: null, error: 'Failed to load image' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+    }
+
+    // Return warehouse data
     const warehouseData = await getWarehouseData();
     return new Response(JSON.stringify({ warehouse: warehouseData }), {
         status: 200,
-        headers: {
-            'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
     });
 };
 
 export const POST: APIRoute = async ({ request }) => {
     try {
         const data = await request.json();
-        const store = getStore({ name: 'warehouse', consistency: 'strong' });
-        await store.setJSON('categories', data.warehouse);
+        const warehouseStore = getWarehouseStore();
+        const imagesStore = getImagesStore();
+
+        // Process each category and handle images separately
+        const categoriesToSave: WarehouseCategory[] = [];
+
+        for (const category of data.warehouse) {
+            const categoryToSave: WarehouseCategory = {
+                id: category.id,
+                name: category.name,
+                icon: category.icon,
+                items: category.items
+            };
+
+            // If there's a new image (base64), save it to the images store
+            if (category.image && category.image.startsWith('data:')) {
+                const imageKey = `category-${category.id}-${Date.now()}`;
+                await imagesStore.set(imageKey, category.image);
+                categoryToSave.imageKey = imageKey;
+
+                // Delete old image if there was one
+                if (category.imageKey && category.imageKey !== imageKey) {
+                    try {
+                        await imagesStore.delete(category.imageKey);
+                    } catch (e) {
+                        console.error('Failed to delete old image:', e);
+                    }
+                }
+            } else if (category.imageKey) {
+                // Keep existing image reference
+                categoryToSave.imageKey = category.imageKey;
+            }
+            // If image was removed (no image and no imageKey), don't set imageKey
+
+            // Handle image deletion
+            if (category._deleteImage && category.imageKey) {
+                try {
+                    await imagesStore.delete(category.imageKey);
+                } catch (e) {
+                    console.error('Failed to delete image:', e);
+                }
+            }
+
+            categoriesToSave.push(categoryToSave);
+        }
+
+        await warehouseStore.setJSON('categories', categoriesToSave);
+
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
         console.error('Error saving warehouse data:', error);
         return new Response(JSON.stringify({ success: false, error: 'Failed to save warehouse data' }), {
             status: 500,
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
     }
 };

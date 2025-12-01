@@ -56,12 +56,17 @@ import Layout from '../layouts/Layout.astro';
         };
 
         let warehouseData = [];
+        let imageCache = {}; // Cache for loaded images
 
         async function loadWarehouse() {
             try {
                 const response = await fetch('/api/warehouse');
                 const data = await response.json();
                 warehouseData = data.warehouse || [];
+
+                // Load images for categories that have imageKeys
+                await loadImages();
+
                 renderWarehouse();
             } catch (error) {
                 console.error('Failed to load warehouse:', error);
@@ -71,6 +76,24 @@ import Layout from '../layouts/Layout.astro';
                     </div>
                 `;
             }
+        }
+
+        // Load images from the separate image store
+        async function loadImages() {
+            const imagePromises = warehouseData
+                .filter(cat => cat.imageKey && !imageCache[cat.imageKey])
+                .map(async (cat) => {
+                    try {
+                        const response = await fetch(`/api/warehouse?image=${encodeURIComponent(cat.imageKey)}`);
+                        const data = await response.json();
+                        if (data.image) {
+                            imageCache[cat.imageKey] = data.image;
+                        }
+                    } catch (e) {
+                        console.error('Failed to load image for', cat.id, e);
+                    }
+                });
+            await Promise.all(imagePromises);
         }
 
         function renderWarehouse() {
@@ -85,11 +108,14 @@ import Layout from '../layouts/Layout.astro';
                 return;
             }
 
-            grid.innerHTML = warehouseData.map(category => `
+            grid.innerHTML = warehouseData.map(category => {
+                const imageUrl = category.imageKey ? imageCache[category.imageKey] : null;
+
+                return `
                 <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                    ${category.image ? `
+                    ${imageUrl ? `
                         <div class="mb-4 -mx-2 -mt-2">
-                            <img src="${category.image}" alt="${category.name}" class="w-full h-40 object-cover rounded-lg">
+                            <img src="${imageUrl}" alt="${category.name}" class="w-full h-40 object-cover rounded-lg">
                         </div>
                     ` : ''}
                     <div class="flex items-center gap-3 mb-4">
@@ -107,7 +133,7 @@ import Layout from '../layouts/Layout.astro';
                         `).join('')}
                     </ul>
                 </div>
-            `).join('');
+            `;}).join('');
         }
 
         loadWarehouse();

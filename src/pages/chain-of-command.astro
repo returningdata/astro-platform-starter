@@ -1,62 +1,161 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+// Rank hierarchy data
+const rankHierarchy = [
+    {
+        tier: "Chief of Police",
+        color: "from-teal-600 to-teal-700",
+        borderColor: "border-teal-500",
+        bgColor: "bg-teal-600/20",
+        textColor: "text-teal-400",
+        ranks: ["Chief of Police"]
+    },
+    {
+        tier: "High Command",
+        color: "from-teal-500 to-teal-600",
+        borderColor: "border-teal-400",
+        bgColor: "bg-teal-500/20",
+        textColor: "text-teal-300",
+        ranks: ["Deputy Chief of Police", "Assistant Chief of Police", "Colonel", "Lieutenant Colonel"]
+    },
+    {
+        tier: "Trial High Command",
+        color: "from-cyan-500 to-cyan-600",
+        borderColor: "border-cyan-400",
+        bgColor: "bg-cyan-500/20",
+        textColor: "text-cyan-300",
+        ranks: ["Commander"]
+    },
+    {
+        tier: "Low Command",
+        color: "from-blue-500 to-blue-600",
+        borderColor: "border-blue-400",
+        bgColor: "bg-blue-500/20",
+        textColor: "text-blue-300",
+        ranks: ["Major", "Captain", "1st Lieutenant", "2nd Lieutenant"]
+    },
+    {
+        tier: "Trial Low Command",
+        color: "from-indigo-500 to-indigo-600",
+        borderColor: "border-indigo-400",
+        bgColor: "bg-indigo-500/20",
+        textColor: "text-indigo-300",
+        ranks: ["Master Sergeant"]
+    },
+    {
+        tier: "Supervisors",
+        color: "from-purple-500 to-purple-600",
+        borderColor: "border-purple-400",
+        bgColor: "bg-purple-500/20",
+        textColor: "text-purple-300",
+        ranks: ["Sergeant First Class", "Staff Sergeant", "Sergeant"]
+    },
+    {
+        tier: "Trial Supervisor",
+        color: "from-violet-500 to-violet-600",
+        borderColor: "border-violet-400",
+        bgColor: "bg-violet-500/20",
+        textColor: "text-violet-300",
+        ranks: ["Corporal"]
+    },
+    {
+        tier: "Officers",
+        color: "from-amber-500 to-amber-600",
+        borderColor: "border-amber-400",
+        bgColor: "bg-amber-500/20",
+        textColor: "text-amber-300",
+        ranks: ["Officer III", "Officer II", "Officer I", "Probationary Officer"]
+    },
+    {
+        tier: "Reserves",
+        color: "from-lime-500 to-lime-600",
+        borderColor: "border-lime-400",
+        bgColor: "bg-lime-500/20",
+        textColor: "text-lime-300",
+        ranks: ["Reserve Officer"]
+    },
+    {
+        tier: "Training",
+        color: "from-green-500 to-green-600",
+        borderColor: "border-green-400",
+        bgColor: "bg-green-500/20",
+        textColor: "text-green-300",
+        ranks: ["Cadet"]
+    }
+];
 ---
 
 <Layout title="Chain of Command - Del Perro Police Department">
-    <div class="space-y-12">
+    <div class="space-y-8">
         <!-- Page Header -->
         <div class="text-center space-y-4">
-            <h1 class="mb-6 text-5xl md:text-6xl">Chain of Command</h1>
+            <h1 class="mb-4 text-5xl md:text-6xl font-bold">Chain of Command</h1>
             <p class="text-xl text-white/80 max-w-3xl mx-auto">
-                Del Perro Police Department Master Roster
+                Del Perro Police Department Rank Structure
             </p>
         </div>
 
-        <!-- Information Notice -->
-        <div class="bg-blue-500/20 backdrop-blur-sm rounded-lg p-6 border border-blue-500/30">
-            <div class="flex items-start gap-3">
-                <svg class="w-6 h-6 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                    <h3 class="font-semibold text-lg mb-1">Live Roster Data</h3>
-                    <p class="text-white/80">
-                        This page displays real-time data from the DPPD Master Roster. All changes made to the roster spreadsheet are automatically reflected here.
-                    </p>
+        <!-- Hierarchy Chart -->
+        <div class="space-y-6">
+            {rankHierarchy.map((tier, tierIndex) => (
+                <div class="relative">
+                    <!-- Tier Container -->
+                    <div class={`rounded-xl border ${tier.borderColor} ${tier.bgColor} backdrop-blur-sm overflow-hidden`}>
+                        <!-- Tier Header -->
+                        <div class={`bg-gradient-to-r ${tier.color} px-6 py-3`}>
+                            <h2 class="text-xl font-bold text-white text-center">{tier.tier}</h2>
+                        </div>
+
+                        <!-- Ranks Grid -->
+                        <div class="p-6">
+                            <div class={`flex flex-wrap justify-center gap-4 ${tier.ranks.length === 1 ? 'justify-center' : ''}`}>
+                                {tier.ranks.map((rank) => (
+                                    <div class="group relative">
+                                        <div class={`flex items-center gap-3 px-5 py-3 rounded-lg border ${tier.borderColor} bg-slate-800/60 hover:bg-slate-700/60 transition-all duration-200`}>
+                                            <!-- Rank Icon -->
+                                            <div class={`w-10 h-10 rounded-full bg-gradient-to-br ${tier.color} flex items-center justify-center flex-shrink-0`}>
+                                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                </svg>
+                                            </div>
+                                            <!-- Rank Name -->
+                                            <span class={`font-semibold ${tier.textColor}`}>{rank}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Connector Line (except for last tier) -->
+                    {tierIndex < rankHierarchy.length - 1 && (
+                        <div class="flex justify-center">
+                            <div class="w-0.5 h-6 bg-gradient-to-b from-white/40 to-white/10"></div>
+                        </div>
+                    )}
                 </div>
-            </div>
+            ))}
         </div>
 
-        <!-- Embedded Google Sheets -->
-        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-            <div class="w-full" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
-                <iframe
-                    src="https://docs.google.com/spreadsheets/d/1iUCnkFyPlNd5jorr3g2ZH2PLhwuQOcFXvx_DlbKdnI0/edit?gid=2123893270&rm=minimal&widget=true&headers=false"
-                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;"
-                    allow="fullscreen"
-                ></iframe>
+        <!-- Legend -->
+        <div class="mt-12 bg-white/5 rounded-lg p-6 border border-white/10">
+            <h3 class="text-lg font-bold mb-4 text-center">Rank Progression</h3>
+            <div class="flex flex-wrap justify-center gap-3">
+                {rankHierarchy.slice().reverse().map((tier) => (
+                    <div class="flex items-center gap-2">
+                        <div class={`w-3 h-3 rounded-full bg-gradient-to-br ${tier.color}`}></div>
+                        <span class="text-sm text-white/70">{tier.tier}</span>
+                    </div>
+                ))}
             </div>
+            <p class="text-center text-white/50 text-sm mt-4">
+                Progression flows from Training → Reserves → Officers → Supervisors → Command → Chief
+            </p>
         </div>
 
         <!-- Quick Links -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <a
-                href="https://docs.google.com/spreadsheets/d/1iUCnkFyPlNd5jorr3g2ZH2PLhwuQOcFXvx_DlbKdnI0/edit?gid=2123893270#gid=2123893270"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20 flex items-center gap-4 no-underline"
-            >
-                <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold mb-1">View Full Roster</h3>
-                    <p class="text-white/70 text-sm">Open in Google Sheets</p>
-                </div>
-            </a>
-
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
             <a
                 href="/resources"
                 class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20 flex items-center gap-4 no-underline"
@@ -69,6 +168,21 @@ import Layout from '../layouts/Layout.astro';
                 <div>
                     <h3 class="text-xl font-bold mb-1">Department Resources</h3>
                     <p class="text-white/70 text-sm">SOPs, Guidelines & More</p>
+                </div>
+            </a>
+
+            <a
+                href="/uniforms"
+                class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-all border border-white/20 flex items-center gap-4 no-underline"
+            >
+                <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-1">Uniforms</h3>
+                    <p class="text-white/70 text-sm">Department Dress Code</p>
                 </div>
             </a>
         </div>

@@ -1,9 +1,23 @@
 import type { APIRoute } from 'astro';
+import { getStore } from '@netlify/blobs';
 
 export const prerender = false;
 
-const uniformsData = [
+export interface UniformItem {
+    name: string;
+    status: 'available' | 'limited' | 'out';
+}
+
+export interface UniformCategory {
+    id: string;
+    name: string;
+    icon: string;
+    items: UniformItem[];
+}
+
+const defaultUniformsData: UniformCategory[] = [
     {
+        id: "patrol-uniforms",
         name: "Patrol Uniforms",
         icon: "tactical",
         items: [
@@ -15,6 +29,7 @@ const uniformsData = [
         ]
     },
     {
+        id: "formal-attire",
         name: "Formal Attire",
         icon: "tactical",
         items: [
@@ -23,6 +38,7 @@ const uniformsData = [
         ]
     },
     {
+        id: "detective-attire",
         name: "Detective Attire",
         icon: "tactical",
         items: [
@@ -30,6 +46,7 @@ const uniformsData = [
         ]
     },
     {
+        id: "air-unit",
         name: "Air Unit",
         icon: "tactical",
         items: [
@@ -38,6 +55,7 @@ const uniformsData = [
         ]
     },
     {
+        id: "mbu-unit",
         name: "MBU Unit",
         icon: "tactical",
         items: [
@@ -46,11 +64,48 @@ const uniformsData = [
     }
 ];
 
+async function getUniformsData(): Promise<UniformCategory[]> {
+    try {
+        const store = getStore({ name: 'uniforms', consistency: 'strong' });
+        const data = await store.get('categories', { type: 'json' });
+        if (data && Array.isArray(data)) {
+            return data;
+        }
+        return defaultUniformsData;
+    } catch (error) {
+        console.error('Error fetching uniforms data:', error);
+        return defaultUniformsData;
+    }
+}
+
 export const GET: APIRoute = async () => {
+    const uniformsData = await getUniformsData();
     return new Response(JSON.stringify({ uniforms: uniformsData }), {
         status: 200,
         headers: {
             'Content-Type': 'application/json'
         }
     });
+};
+
+export const POST: APIRoute = async ({ request }) => {
+    try {
+        const data = await request.json();
+        const store = getStore({ name: 'uniforms', consistency: 'strong' });
+        await store.setJSON('categories', data.uniforms);
+        return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch (error) {
+        console.error('Error saving uniforms data:', error);
+        return new Response(JSON.stringify({ success: false, error: 'Failed to save uniforms data' }), {
+            status: 500,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    }
 };

@@ -1,5 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+export const prerender = false;
 ---
 
 <Layout title="Resources - Del Perro Police Department">
@@ -12,135 +14,15 @@ import Layout from '../layouts/Layout.astro';
             </p>
         </div>
 
-        <!-- Primary Resources -->
-        <div class="space-y-6">
-            <h2 class="text-3xl font-bold text-primary">Official Documents</h2>
-
-            <!-- SOP Document -->
-            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                <div class="flex items-start gap-4">
-                    <div class="w-14 h-14 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-2xl font-bold mb-2">Standard Operating Procedures</h3>
-                        <p class="text-white/70 mb-4">
-                            Complete department SOPs covering all operational procedures, protocols, and policies that govern daily operations and officer conduct.
-                        </p>
-                        <a
-                            href="https://docs.google.com/document/d/1naWiUk1CixV2CgWKiBMs9LPjydhFvQHRy64B4w4fnn0/edit?usp=sharing"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex items-center gap-2 px-4 py-2 bg-primary rounded-lg hover:bg-primary/80 transition-colors font-semibold no-underline"
-                        >
-                            <span>View SOP Document</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Promotion Guidelines -->
-            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                <div class="flex items-start gap-4">
-                    <div class="w-14 h-14 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-2xl font-bold mb-2">Promotion Guidelines</h3>
-                        <p class="text-white/70 mb-4">
-                            Detailed guidelines for officer advancement including requirements, criteria, evaluation processes, and procedures for each rank within the department.
-                        </p>
-                        <a
-                            href="https://docs.google.com/document/d/1JMyHjIpFPRX96DSTiTqZU-4drZDTDrmm1PXwHAwUW4o/edit?usp=sharing"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex items-center gap-2 px-4 py-2 bg-primary rounded-lg hover:bg-primary/80 transition-colors font-semibold no-underline"
-                        >
-                            <span>View Promotion Guidelines</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Authority Matrix -->
-            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                <div class="flex items-start gap-4">
-                    <div class="w-14 h-14 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-2xl font-bold mb-2">Authority Matrix</h3>
-                        <p class="text-white/70 mb-4">
-                            Comprehensive matrix defining roles, permissions, and authorization levels for all ranks and positions within the Del Perro Police Department.
-                        </p>
-                        <a
-                            href="https://docs.google.com/spreadsheets/d/19vZ4puhiDMPX8v73aYogaZgVeZAg4DBGO8sfZFit__M/edit?usp=sharing"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="inline-flex items-center gap-2 px-4 py-2 bg-primary rounded-lg hover:bg-primary/80 transition-colors font-semibold no-underline"
-                        >
-                            <span>View Authority Matrix</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Master Roster -->
-            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                <div class="flex items-start gap-4">
-                    <div class="w-14 h-14 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="text-2xl font-bold mb-2">Master Roster</h3>
-                        <p class="text-white/70 mb-4">
-                            Complete department roster showing all officers, ranks, badge numbers, and current assignments. View the full chain of command.
-                        </p>
-                        <div class="flex gap-3">
-                            <a
-                                href="/chain-of-command"
-                                class="inline-flex items-center gap-2 px-4 py-2 bg-primary rounded-lg hover:bg-primary/80 transition-colors font-semibold no-underline"
-                            >
-                                <span>View Chain of Command</span>
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                            <a
-                                href="https://docs.google.com/spreadsheets/d/1iUCnkFyPlNd5jorr3g2ZH2PLhwuQOcFXvx_DlbKdnI0/edit?gid=2123893270#gid=2123893270"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors font-semibold no-underline border border-white/20"
-                            >
-                                <span>Open in Google Sheets</span>
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-12 text-white/60">
+            Loading resources...
         </div>
 
-        <!-- Quick Access Links -->
+        <!-- Resources Container -->
+        <div id="resourcesContainer" class="hidden space-y-12"></div>
+
+        <!-- Quick Access Links (always visible) -->
         <div class="space-y-6">
             <h2 class="text-3xl font-bold text-primary">Quick Access</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -182,4 +64,99 @@ import Layout from '../layouts/Layout.astro';
             </div>
         </div>
     </div>
+
+    <script type="module">
+        const iconSvgs = {
+            document: '<svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>',
+            spreadsheet: '<svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>',
+            link: '<svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>',
+            video: '<svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>',
+            other: '<svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>'
+        };
+
+        async function loadResources() {
+            try {
+                const response = await fetch('/api/resources');
+                const data = await response.json();
+                const resources = data.resources || [];
+                renderResources(resources);
+            } catch (error) {
+                console.error('Failed to load resources:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <div class="text-red-400">Failed to load resources. Please refresh the page.</div>
+                `;
+            }
+        }
+
+        function renderResources(resources) {
+            const container = document.getElementById('resourcesContainer');
+            const loading = document.getElementById('loadingState');
+
+            loading.classList.add('hidden');
+            container.classList.remove('hidden');
+
+            if (resources.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-white/60">
+                        <p>No resources available at this time.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group resources by category
+            const grouped = resources.reduce((acc, resource) => {
+                const cat = resource.category || 'other';
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(resource);
+                return acc;
+            }, {});
+
+            const categoryLabels = {
+                official: 'Official Documents',
+                training: 'Training Materials',
+                reference: 'Reference Materials',
+                other: 'Other Resources'
+            };
+
+            let html = '';
+
+            for (const [category, items] of Object.entries(grouped)) {
+                html += `
+                    <div class="space-y-6">
+                        <h2 class="text-3xl font-bold text-primary">${categoryLabels[category] || category}</h2>
+                        ${items.map(resource => `
+                            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-14 h-14 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                                        ${iconSvgs[resource.icon] || iconSvgs.other}
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-2xl font-bold mb-2">${resource.title}</h3>
+                                        <p class="text-white/70 mb-4">${resource.description}</p>
+                                        <a
+                                            href="${resource.url}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="inline-flex items-center gap-2 px-4 py-2 bg-primary rounded-lg hover:bg-primary/80 transition-colors font-semibold no-underline"
+                                        >
+                                            <span>View ${resource.title}</span>
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Initialize
+        loadResources();
+    </script>
 </Layout>

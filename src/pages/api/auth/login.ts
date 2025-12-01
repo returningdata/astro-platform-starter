@@ -17,9 +17,19 @@ export const POST: APIRoute = async ({ request }) => {
             });
         }
 
-        // Note: This is a placeholder authentication
-        // In production, this should validate against a secure database
-        // and use proper password hashing
+        const validUsername = 'DPPD_ADMIN';
+        const validPassword = 'DPPD_High_Command2025!@';
+
+        if (username === validUsername && password === validPassword) {
+            return new Response(JSON.stringify({
+                success: true,
+                message: 'Login successful'
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         return new Response(JSON.stringify({
             success: false,
             error: 'Invalid credentials'

@@ -1,38 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { communityEvents } from '../data/community-events';
 
-// Sort events by date
-const sortedEvents = [...communityEvents].sort((a, b) =>
-  new Date(a.date).getTime() - new Date(b.date).getTime()
-);
-
-const upcomingEvents = sortedEvents.filter(e => e.status === 'upcoming');
-const ongoingEvents = sortedEvents.filter(e => e.status === 'ongoing');
-const completedEvents = sortedEvents.filter(e => e.status === 'completed');
-
-// Helper function to format date
-function formatDate(dateStr: string) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-}
-
-// Helper function to get category color
-function getCategoryColor(category: string) {
-  const colors = {
-    patrol: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    community: 'bg-green-500/20 text-green-400 border-green-500/30',
-    training: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-    ceremony: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    other: 'bg-gray-500/20 text-gray-400 border-gray-500/30'
-  };
-  return colors[category as keyof typeof colors] || colors.other;
-}
+export const prerender = false;
 ---
 
 <Layout title="Community Events - Del Perro Police Department">
@@ -45,143 +14,178 @@ function getCategoryColor(category: string) {
             </p>
         </div>
 
-        <!-- Information Notice -->
-        <div class="bg-blue-500/20 backdrop-blur-sm rounded-lg p-6 border border-blue-500/30">
-            <div class="flex items-start gap-3">
-                <svg class="w-6 h-6 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                    <h3 class="font-semibold text-lg mb-1">Event Updates</h3>
-                    <p class="text-white/80 text-sm">
-                        Events are managed through the repository. To add or update events, edit the <code class="bg-white/10 px-2 py-0.5 rounded">src/data/community-events.ts</code> file.
-                    </p>
-                </div>
-            </div>
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-12 text-white/60">
+            Loading events...
         </div>
 
-        <!-- Upcoming Events -->
-        {upcomingEvents.length > 0 && (
-            <div class="space-y-6">
-                <h2 class="text-3xl font-bold text-primary">Upcoming Events</h2>
-                <div class="grid grid-cols-1 gap-6">
-                    {upcomingEvents.map(event => (
-                        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
-                            <div class="flex flex-col md:flex-row md:items-start gap-4">
-                                <!-- Date Badge -->
-                                <div class="flex-shrink-0 bg-primary rounded-lg p-4 text-center w-24">
-                                    <div class="text-2xl font-bold">{new Date(event.date).getDate()}</div>
-                                    <div class="text-xs uppercase">{new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}</div>
-                                </div>
-
-                                <!-- Event Details -->
-                                <div class="flex-1">
-                                    <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
-                                        <h3 class="text-2xl font-bold">{event.title}</h3>
-                                        <span class={`px-3 py-1 rounded-full text-xs font-semibold uppercase border ${getCategoryColor(event.category)}`}>
-                                            {event.category}
-                                        </span>
-                                    </div>
-                                    <div class="space-y-2 mb-3">
-                                        <div class="flex items-center gap-2 text-white/70">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <span class="text-sm">{formatDate(event.date)}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2 text-white/70">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <span class="text-sm">{event.time}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2 text-white/70">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <span class="text-sm">{event.location}</span>
-                                        </div>
-                                    </div>
-                                    <p class="text-white/80">{event.description}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )}
-
-        <!-- Ongoing Events -->
-        {ongoingEvents.length > 0 && (
-            <div class="space-y-6">
-                <h2 class="text-3xl font-bold text-primary">Ongoing Events</h2>
-                <div class="grid grid-cols-1 gap-6">
-                    {ongoingEvents.map(event => (
-                        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-green-500/30 hover:bg-white/15 transition-all">
-                            <div class="flex flex-col md:flex-row md:items-start gap-4">
-                                <div class="flex-shrink-0 bg-green-500 rounded-lg p-4 text-center w-24">
-                                    <div class="text-sm font-bold uppercase">Active</div>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
-                                        <h3 class="text-2xl font-bold">{event.title}</h3>
-                                        <span class={`px-3 py-1 rounded-full text-xs font-semibold uppercase border ${getCategoryColor(event.category)}`}>
-                                            {event.category}
-                                        </span>
-                                    </div>
-                                    <p class="text-white/80">{event.description}</p>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )}
-
-        <!-- Past Events -->
-        {completedEvents.length > 0 && (
-            <div class="space-y-6">
-                <h2 class="text-3xl font-bold text-white/60">Past Events</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {completedEvents.map(event => (
-                        <div class="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-                            <h3 class="text-lg font-bold mb-1 text-white/80">{event.title}</h3>
-                            <div class="text-sm text-white/60 mb-2">{formatDate(event.date)}</div>
-                            <p class="text-sm text-white/70">{event.description}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )}
-
-        <!-- How to Add Events -->
-        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-8 border border-white/20">
-            <h2 class="text-2xl font-bold mb-4">How to Add Events</h2>
-            <p class="text-white/80 mb-4">
-                To add, update, or remove events from this page:
-            </p>
-            <ol class="list-decimal list-inside space-y-2 text-white/80">
-                <li>Navigate to <code class="bg-white/10 px-2 py-0.5 rounded">src/data/community-events.ts</code> in the repository</li>
-                <li>Edit the <code class="bg-white/10 px-2 py-0.5 rounded">communityEvents</code> array to add or modify events</li>
-                <li>Commit and push your changes</li>
-                <li>The site will automatically rebuild with your updated events</li>
-            </ol>
-            <div class="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
-                <p class="text-sm text-white/70 font-mono">
-                    Example:<br/>
-                    <span class="text-blue-400">&#123;</span><br/>
-                    &nbsp;&nbsp;id: '6',<br/>
-                    &nbsp;&nbsp;title: 'New Event',<br/>
-                    &nbsp;&nbsp;date: '2025-12-25',<br/>
-                    &nbsp;&nbsp;time: '10:00 AM',<br/>
-                    &nbsp;&nbsp;location: 'DPPD HQ',<br/>
-                    &nbsp;&nbsp;description: 'Event description...',<br/>
-                    &nbsp;&nbsp;category: 'community',<br/>
-                    &nbsp;&nbsp;status: 'upcoming'<br/>
-                    <span class="text-blue-400">&#125;</span>
-                </p>
-            </div>
-        </div>
+        <!-- Events Container -->
+        <div id="eventsContainer" class="hidden space-y-12"></div>
     </div>
+
+    <script type="module">
+        const categoryColors = {
+            patrol: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+            community: 'bg-green-500/20 text-green-400 border-green-500/30',
+            training: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+            ceremony: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+            other: 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+        };
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        async function loadEvents() {
+            try {
+                const response = await fetch('/api/events');
+                const data = await response.json();
+                const events = data.events || [];
+
+                // Sort events by date
+                const sortedEvents = [...events].sort((a, b) =>
+                    new Date(a.date).getTime() - new Date(b.date).getTime()
+                );
+
+                const upcomingEvents = sortedEvents.filter(e => e.status === 'upcoming');
+                const ongoingEvents = sortedEvents.filter(e => e.status === 'ongoing');
+                const completedEvents = sortedEvents.filter(e => e.status === 'completed');
+
+                renderEvents(upcomingEvents, ongoingEvents, completedEvents);
+            } catch (error) {
+                console.error('Failed to load events:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <div class="text-red-400">Failed to load events. Please refresh the page.</div>
+                `;
+            }
+        }
+
+        function renderEvents(upcomingEvents, ongoingEvents, completedEvents) {
+            const container = document.getElementById('eventsContainer');
+            const loading = document.getElementById('loadingState');
+
+            loading.classList.add('hidden');
+            container.classList.remove('hidden');
+
+            let html = '';
+
+            // Upcoming Events
+            if (upcomingEvents.length > 0) {
+                html += `
+                    <div class="space-y-6">
+                        <h2 class="text-3xl font-bold text-primary">Upcoming Events</h2>
+                        <div class="grid grid-cols-1 gap-6">
+                            ${upcomingEvents.map(event => `
+                                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
+                                    <div class="flex flex-col md:flex-row md:items-start gap-4">
+                                        <div class="flex-shrink-0 bg-primary rounded-lg p-4 text-center w-24">
+                                            <div class="text-2xl font-bold">${new Date(event.date).getDate()}</div>
+                                            <div class="text-xs uppercase">${new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}</div>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                                <h3 class="text-2xl font-bold">${event.title}</h3>
+                                                <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase border ${categoryColors[event.category] || categoryColors.other}">
+                                                    ${event.category}
+                                                </span>
+                                            </div>
+                                            <div class="space-y-2 mb-3">
+                                                <div class="flex items-center gap-2 text-white/70">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <span class="text-sm">${formatDate(event.date)}</span>
+                                                </div>
+                                                <div class="flex items-center gap-2 text-white/70">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    <span class="text-sm">${event.time}</span>
+                                                </div>
+                                                <div class="flex items-center gap-2 text-white/70">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                    <span class="text-sm">${event.location}</span>
+                                                </div>
+                                            </div>
+                                            <p class="text-white/80">${event.description}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Ongoing Events
+            if (ongoingEvents.length > 0) {
+                html += `
+                    <div class="space-y-6">
+                        <h2 class="text-3xl font-bold text-primary">Ongoing Events</h2>
+                        <div class="grid grid-cols-1 gap-6">
+                            ${ongoingEvents.map(event => `
+                                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-green-500/30 hover:bg-white/15 transition-all">
+                                    <div class="flex flex-col md:flex-row md:items-start gap-4">
+                                        <div class="flex-shrink-0 bg-green-500 rounded-lg p-4 text-center w-24">
+                                            <div class="text-sm font-bold uppercase">Active</div>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                                <h3 class="text-2xl font-bold">${event.title}</h3>
+                                                <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase border ${categoryColors[event.category] || categoryColors.other}">
+                                                    ${event.category}
+                                                </span>
+                                            </div>
+                                            <p class="text-white/80">${event.description}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Past Events
+            if (completedEvents.length > 0) {
+                html += `
+                    <div class="space-y-6">
+                        <h2 class="text-3xl font-bold text-white/60">Past Events</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${completedEvents.map(event => `
+                                <div class="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
+                                    <h3 class="text-lg font-bold mb-1 text-white/80">${event.title}</h3>
+                                    <div class="text-sm text-white/60 mb-2">${formatDate(event.date)}</div>
+                                    <p class="text-sm text-white/70">${event.description}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // No events message
+            if (upcomingEvents.length === 0 && ongoingEvents.length === 0 && completedEvents.length === 0) {
+                html = `
+                    <div class="text-center py-12 text-white/60">
+                        <p>No events scheduled at this time. Check back soon!</p>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Initialize
+        loadEvents();
+    </script>
 </Layout>

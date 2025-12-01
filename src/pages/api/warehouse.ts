@@ -1,9 +1,24 @@
 import type { APIRoute } from 'astro';
+import { getStore } from '@netlify/blobs';
 
 export const prerender = false;
 
-const warehouseData = [
+export interface WarehouseItem {
+    name: string;
+    status: 'available' | 'limited' | 'out';
+}
+
+export interface WarehouseCategory {
+    id: string;
+    name: string;
+    icon: string;
+    image?: string;
+    items: WarehouseItem[];
+}
+
+const defaultWarehouseData: WarehouseCategory[] = [
     {
+        id: "2010-trainee-vehicle",
         name: "2010 Trainee Vehicle",
         icon: "vehicle",
         items: [
@@ -12,6 +27,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "2013-crown-victoria",
         name: "2013 Crown Victoria",
         icon: "vehicle",
         items: [
@@ -20,6 +36,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "2016-dodge-charger",
         name: "2016 Dodge Charger",
         icon: "vehicle",
         items: [
@@ -28,6 +45,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "2016-ford-explorer",
         name: "2016 Ford Explorer",
         icon: "vehicle",
         items: [
@@ -36,6 +54,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "2017-f150",
         name: "2017 F150",
         icon: "vehicle",
         items: [
@@ -44,6 +63,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "2018-dodge-charger",
         name: "2018 Dodge Charger",
         icon: "vehicle",
         items: [
@@ -53,6 +73,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "2022-ford-mustang-shelby-gt500",
         name: "2022 Ford Mustang Shelby GT500",
         icon: "vehicle",
         items: [
@@ -63,6 +84,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "2023-ram-1500",
         name: "2023 Ram 1500",
         icon: "vehicle",
         items: [
@@ -71,6 +93,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "2019-corvette-c7",
         name: "2019 Corvette C7",
         icon: "vehicle",
         items: [
@@ -79,6 +102,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "aw139",
         name: "AW139",
         icon: "firearm",
         items: [
@@ -87,6 +111,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "md-500",
         name: "MD 500",
         icon: "communication",
         items: [
@@ -95,6 +120,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "inkas-sentry",
         name: "INKAS Sentry",
         icon: "communication",
         items: [
@@ -103,6 +129,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "2023-srt-hellfire",
         name: "2023 SRT Hellfire",
         icon: "protection",
         items: [
@@ -111,6 +138,7 @@ const warehouseData = [
         ]
     },
     {
+        id: "blue-bird",
         name: "Blue Bird",
         icon: "investigation",
         items: [
@@ -120,11 +148,48 @@ const warehouseData = [
     }
 ];
 
+async function getWarehouseData(): Promise<WarehouseCategory[]> {
+    try {
+        const store = getStore({ name: 'warehouse', consistency: 'strong' });
+        const data = await store.get('categories', { type: 'json' });
+        if (data && Array.isArray(data)) {
+            return data;
+        }
+        return defaultWarehouseData;
+    } catch (error) {
+        console.error('Error fetching warehouse data:', error);
+        return defaultWarehouseData;
+    }
+}
+
 export const GET: APIRoute = async () => {
+    const warehouseData = await getWarehouseData();
     return new Response(JSON.stringify({ warehouse: warehouseData }), {
         status: 200,
         headers: {
             'Content-Type': 'application/json'
         }
     });
+};
+
+export const POST: APIRoute = async ({ request }) => {
+    try {
+        const data = await request.json();
+        const store = getStore({ name: 'warehouse', consistency: 'strong' });
+        await store.setJSON('categories', data.warehouse);
+        return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch (error) {
+        console.error('Error saving warehouse data:', error);
+        return new Response(JSON.stringify({ success: false, error: 'Failed to save warehouse data' }), {
+            status: 500,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    }
 };

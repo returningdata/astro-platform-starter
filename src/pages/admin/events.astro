@@ -1,0 +1,286 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Admin - Events Management">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Events Management</h1>
+                <p class="text-white/70">Manage community events and activities</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/community-events" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    View Events Page
+                </a>
+                <button id="saveBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Add New Event Button -->
+        <button id="addEventBtn" class="w-full py-4 border-2 border-dashed border-white/30 rounded-lg hover:border-primary hover:bg-white/5 transition-colors text-white/70 hover:text-white">
+            + Add New Event
+        </button>
+
+        <!-- Events List -->
+        <div id="eventsList" class="space-y-6">
+            <div class="text-center py-12 text-white/60">
+                Loading events data...
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const categoryOptions = ['patrol', 'community', 'training', 'ceremony', 'other'];
+        const statusOptions = ['upcoming', 'ongoing', 'completed'];
+        const categoryColors = {
+            patrol: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+            community: 'bg-green-500/20 text-green-400 border-green-500/30',
+            training: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+            ceremony: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+            other: 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+        };
+
+        let eventsData = [];
+
+        // Load events data
+        async function loadEvents() {
+            try {
+                const response = await fetch('/api/events');
+                const data = await response.json();
+                eventsData = data.events || [];
+                renderEvents();
+            } catch (error) {
+                console.error('Failed to load events:', error);
+                showStatus('Failed to load events data', 'error');
+            }
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        function generateId() {
+            return 'event-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function renderEvents() {
+            const container = document.getElementById('eventsList');
+
+            if (eventsData.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-white/60">
+                        No events found. Add your first event above.
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort events by date
+            const sortedEvents = [...eventsData].sort((a, b) =>
+                new Date(a.date).getTime() - new Date(b.date).getTime()
+            );
+
+            container.innerHTML = sortedEvents.map((event, index) => {
+                const originalIndex = eventsData.findIndex(e => e.id === event.id);
+                return `
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20" data-event-index="${originalIndex}">
+                    <!-- Event Header -->
+                    <div class="flex items-start justify-between gap-4 mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-16 h-16 bg-primary rounded-lg flex flex-col items-center justify-center">
+                                <div class="text-xl font-bold">${new Date(event.date).getDate()}</div>
+                                <div class="text-xs uppercase">${new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}</div>
+                            </div>
+                            <div>
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold uppercase border ${categoryColors[event.category] || categoryColors.other}">
+                                    ${event.category}
+                                </span>
+                                <span class="ml-2 px-2 py-1 rounded-full text-xs font-semibold uppercase ${event.status === 'upcoming' ? 'bg-blue-500/20 text-blue-400' : event.status === 'ongoing' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}">
+                                    ${event.status}
+                                </span>
+                            </div>
+                        </div>
+                        <button class="delete-event text-red-400 hover:text-red-300 text-sm" data-event-index="${originalIndex}">
+                            Delete Event
+                        </button>
+                    </div>
+
+                    <!-- Event Form -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Event Title</label>
+                            <input type="text" value="${event.title}" class="event-title w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-event-index="${originalIndex}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Date</label>
+                            <input type="date" value="${event.date}" class="event-date w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-event-index="${originalIndex}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Time</label>
+                            <input type="text" value="${event.time}" placeholder="e.g., 6:00 PM - 8:00 PM" class="event-time w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-event-index="${originalIndex}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Location</label>
+                            <input type="text" value="${event.location}" class="event-location w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-event-index="${originalIndex}">
+                        </div>
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-slate-300 mb-1">Category</label>
+                                <select class="event-category w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-event-index="${originalIndex}">
+                                    ${categoryOptions.map(cat => `<option value="${cat}" ${event.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-slate-300 mb-1">Status</label>
+                                <select class="event-status w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-event-index="${originalIndex}">
+                                    ${statusOptions.map(s => `<option value="${s}" ${event.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Description</label>
+                            <textarea class="event-description w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent h-24 resize-none" data-event-index="${originalIndex}">${event.description}</textarea>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+
+            attachEventListeners();
+        }
+
+        function attachEventListeners() {
+            // Event title changes
+            document.querySelectorAll('.event-title').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    eventsData[index].title = e.target.value;
+                });
+            });
+
+            // Event date changes
+            document.querySelectorAll('.event-date').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    eventsData[index].date = e.target.value;
+                    renderEvents();
+                });
+            });
+
+            // Event time changes
+            document.querySelectorAll('.event-time').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    eventsData[index].time = e.target.value;
+                });
+            });
+
+            // Event location changes
+            document.querySelectorAll('.event-location').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    eventsData[index].location = e.target.value;
+                });
+            });
+
+            // Event category changes
+            document.querySelectorAll('.event-category').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    eventsData[index].category = e.target.value;
+                    renderEvents();
+                });
+            });
+
+            // Event status changes
+            document.querySelectorAll('.event-status').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    eventsData[index].status = e.target.value;
+                    renderEvents();
+                });
+            });
+
+            // Event description changes
+            document.querySelectorAll('.event-description').forEach(textarea => {
+                textarea.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    eventsData[index].description = e.target.value;
+                });
+            });
+
+            // Delete event
+            document.querySelectorAll('.delete-event').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    if (confirm('Are you sure you want to delete this event?')) {
+                        eventsData.splice(index, 1);
+                        renderEvents();
+                    }
+                });
+            });
+        }
+
+        // Add new event
+        document.getElementById('addEventBtn').addEventListener('click', () => {
+            const today = new Date().toISOString().split('T')[0];
+            const newEvent = {
+                id: generateId(),
+                title: 'New Event',
+                date: today,
+                time: 'TBD',
+                location: 'DPPD Headquarters',
+                description: 'Event description...',
+                category: 'community',
+                status: 'upcoming'
+            };
+            eventsData.push(newEvent);
+            renderEvents();
+        });
+
+        // Save changes
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/api/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ events: eventsData })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('Changes saved successfully!', 'success');
+                } else {
+                    showStatus(result.error || 'Failed to save changes', 'error');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showStatus('Failed to save changes', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Changes';
+            }
+        });
+
+        // Initialize
+        loadEvents();
+    </script>
+</Layout>

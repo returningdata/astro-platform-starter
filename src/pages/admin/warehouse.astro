@@ -98,10 +98,21 @@ import Layout from '../../layouts/Layout.astro';
                                         </div>`
                                     }
                                 </div>
-                                <label class="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-100 bg-black/50 flex items-center justify-center rounded-lg transition-opacity">
-                                    <span class="text-white text-sm font-medium">Upload</span>
-                                    <input type="file" accept="image/*" class="hidden image-upload" data-category-index="${catIndex}">
-                                </label>
+                                ${category.image ?
+                                    `<div class="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/50 flex flex-col items-center justify-center rounded-lg transition-opacity gap-2">
+                                        <label class="cursor-pointer px-3 py-1 bg-primary hover:bg-primary/80 rounded text-white text-sm font-medium transition-colors">
+                                            Replace
+                                            <input type="file" accept="image/*" class="hidden image-upload" data-category-index="${catIndex}">
+                                        </label>
+                                        <button class="remove-image px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-white text-sm font-medium transition-colors" data-category-index="${catIndex}" data-category-id="${category.id}">
+                                            Remove
+                                        </button>
+                                    </div>` :
+                                    `<label class="absolute inset-0 cursor-pointer opacity-0 group-hover:opacity-100 bg-black/50 flex items-center justify-center rounded-lg transition-opacity">
+                                        <span class="text-white text-sm font-medium">Upload</span>
+                                        <input type="file" accept="image/*" class="hidden image-upload" data-category-index="${catIndex}">
+                                    </label>`
+                                }
                             </div>
                         </div>
 
@@ -250,6 +261,41 @@ import Layout from '../../layouts/Layout.astro';
                     } catch (error) {
                         console.error('Upload error:', error);
                         showStatus('Failed to upload image', 'error');
+                    }
+                });
+            });
+
+            // Remove image
+            document.querySelectorAll('.remove-image').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const catIndex = parseInt(e.target.dataset.categoryIndex);
+                    const categoryId = e.target.dataset.categoryId;
+
+                    if (!confirm('Are you sure you want to remove this image?')) {
+                        return;
+                    }
+
+                    try {
+                        showStatus('Removing image...', 'success');
+                        const response = await fetch(`/api/warehouse/image/${categoryId}`, {
+                            method: 'DELETE'
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            delete warehouseData[catIndex].image;
+                            showStatus('Image removed successfully!', 'success');
+                            renderCategories();
+                        } else {
+                            showStatus(result.error || 'Failed to remove image', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Remove image error:', error);
+                        showStatus('Failed to remove image', 'error');
                     }
                 });
             });

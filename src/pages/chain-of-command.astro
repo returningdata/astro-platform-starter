@@ -1,6 +1,26 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
+export const prerender = false;
+
+// Fetch command positions data
+let commandPositions: Array<{rank: string, name: string, callSign: string}> = [];
+try {
+    const response = await fetch(new URL('/api/department-data', Astro.url.origin));
+    if (response.ok) {
+        const data = await response.json();
+        commandPositions = data.commandPositions || [];
+    }
+} catch (e) {
+    // Use empty array as fallback
+}
+
+// Helper function to get officer info for a rank
+function getOfficerInfo(rankName: string) {
+    const position = commandPositions.find(p => p.rank === rankName);
+    return position ? { name: position.name, callSign: position.callSign } : null;
+}
+
 // Rank hierarchy data
 const rankHierarchy = [
     {
@@ -110,20 +130,30 @@ const rankHierarchy = [
                         <!-- Ranks Grid -->
                         <div class="p-6">
                             <div class={`flex flex-wrap justify-center gap-4 ${tier.ranks.length === 1 ? 'justify-center' : ''}`}>
-                                {tier.ranks.map((rank) => (
-                                    <div class="group relative">
-                                        <div class={`flex items-center gap-3 px-5 py-3 rounded-lg border ${tier.borderColor} bg-slate-800/60 hover:bg-slate-700/60 transition-all duration-200`}>
-                                            <!-- Rank Icon -->
-                                            <div class={`w-10 h-10 rounded-full bg-gradient-to-br ${tier.color} flex items-center justify-center flex-shrink-0`}>
-                                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                </svg>
+                                {tier.ranks.map((rank) => {
+                                    const officerInfo = getOfficerInfo(rank);
+                                    return (
+                                        <div class="group relative">
+                                            <div class={`flex items-center gap-3 px-5 py-3 rounded-lg border ${tier.borderColor} bg-slate-800/60 hover:bg-slate-700/60 transition-all duration-200`}>
+                                                <!-- Rank Icon -->
+                                                <div class={`w-10 h-10 rounded-full bg-gradient-to-br ${tier.color} flex items-center justify-center flex-shrink-0`}>
+                                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                    </svg>
+                                                </div>
+                                                <!-- Rank Name and Officer Info -->
+                                                <div class="flex flex-col">
+                                                    <span class={`font-semibold ${tier.textColor}`}>{rank}</span>
+                                                    {officerInfo && (officerInfo.name || officerInfo.callSign) && (
+                                                        <span class="text-sm text-white/70 italic">
+                                                            {officerInfo.name}{officerInfo.name && officerInfo.callSign ? ' - ' : ''}{officerInfo.callSign}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <!-- Rank Name -->
-                                            <span class={`font-semibold ${tier.textColor}`}>{rank}</span>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>

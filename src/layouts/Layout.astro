@@ -10,6 +10,10 @@ interface Props {
 }
 
 const { title } = Astro.props;
+
+// Default theme - will be overridden by client-side JS that fetches current settings
+const defaultTheme = 'christmas';
+const bodyClass = `antialiased text-white theme-${defaultTheme}`;
 ---
 
 <!doctype html>
@@ -22,7 +26,278 @@ const { title } = Astro.props;
         <link rel="icon" type="image/png" href="/images/DPPD_Seal_3.png" />
         <link rel="preload" as="font" type="font/woff2" href={interWoff2} crossorigin />
     </head>
-    <body class="antialiased text-white bg-complementary">
+    <body class={bodyClass} data-theme="christmas">
+        <!-- Falling effects container -->
+        <div id="effects-container" class="fixed inset-0 pointer-events-none z-[9999] overflow-hidden"></div>
+
+        <!-- Theme Loading Script - Runs immediately to apply theme before render -->
+        <script>
+            // Theme configuration
+            const themeConfig = {
+                christmas: {
+                    class: 'theme-christmas',
+                    musicId: 'yXfWUNl1PbM',
+                    musicTitle: '🎄Del Perro PD - Christmas Music',
+                    playerStyle: 'bg-red-800/90 border-yellow-500',
+                    buttonStyle: 'bg-green-700/50 hover:text-green-300',
+                    symbols: ['❄', '❅', '❆', '✻', '✼', '❉']
+                },
+                halloween: {
+                    class: 'theme-halloween',
+                    musicId: 'qw07ZfxeV4g',
+                    musicTitle: '👻 Del Perro PD - Spooky Music',
+                    playerStyle: 'bg-purple-900/90 border-orange-500',
+                    buttonStyle: 'bg-orange-700/50 hover:text-orange-300',
+                    symbols: ['💀', '🎃', '🧟', '👻', '🦇', '🕷️']
+                },
+                default: {
+                    class: 'theme-default',
+                    musicId: '329iFlRszxs',
+                    musicTitle: '🛡️ Del Perro PD - Music',
+                    playerStyle: 'bg-blue-800/90 border-blue-400',
+                    buttonStyle: 'bg-blue-700/50 hover:text-blue-300',
+                    symbols: []
+                }
+            };
+
+            let currentTheme = 'christmas';
+            let player = null;
+            let isPlaying = false;
+
+            // Apply theme to the page
+            function applyTheme(theme) {
+                const config = themeConfig[theme] || themeConfig.christmas;
+                const body = document.body;
+
+                // Remove old theme classes
+                body.classList.remove('theme-christmas', 'theme-halloween', 'theme-default');
+                // Add new theme class
+                body.classList.add(config.class);
+                body.setAttribute('data-theme', theme);
+
+                // Update music player styling
+                const musicPlayer = document.getElementById('youtube-music-player');
+                if (musicPlayer) {
+                    // Remove old style classes
+                    musicPlayer.classList.remove(
+                        'bg-red-800/90', 'border-yellow-500',
+                        'bg-purple-900/90', 'border-orange-500',
+                        'bg-blue-800/90', 'border-blue-400'
+                    );
+                    // Add new style classes
+                    config.playerStyle.split(' ').forEach(cls => musicPlayer.classList.add(cls));
+                }
+
+                const musicButton = document.getElementById('yt-music-toggle');
+                if (musicButton) {
+                    // Remove old button style classes
+                    musicButton.classList.remove(
+                        'bg-green-700/50', 'hover:text-green-300',
+                        'bg-orange-700/50', 'hover:text-orange-300',
+                        'bg-blue-700/50', 'hover:text-blue-300'
+                    );
+                    // Add new button style classes
+                    config.buttonStyle.split(' ').forEach(cls => musicButton.classList.add(cls));
+                }
+
+                const musicTitle = document.getElementById('yt-song-title');
+                if (musicTitle) {
+                    musicTitle.textContent = config.musicTitle;
+                }
+
+                currentTheme = theme;
+            }
+
+            // Load theme settings from API
+            async function loadThemeSettings() {
+                try {
+                    const response = await fetch('/api/theme-settings');
+                    const data = await response.json();
+                    if (data.settings && data.settings.activeTheme) {
+                        applyTheme(data.settings.activeTheme);
+                        return data.settings;
+                    }
+                } catch (error) {
+                    console.error('Failed to load theme settings:', error);
+                }
+                return null;
+            }
+
+            // Create falling effects
+            function createFallingEffects() {
+                const container = document.getElementById('effects-container');
+                if (!container) return;
+
+                // Clear existing effects
+                container.innerHTML = '';
+
+                const config = themeConfig[currentTheme] || themeConfig.christmas;
+                const symbols = config.symbols;
+
+                if (symbols.length === 0) return; // No effects for default theme
+
+                const numberOfElements = 50;
+
+                for (let i = 0; i < numberOfElements; i++) {
+                    setTimeout(() => {
+                        createFallingElement(container, symbols);
+                    }, i * 200);
+                }
+            }
+
+            function createFallingElement(container, symbols) {
+                const element = document.createElement('div');
+                element.className = 'falling-element';
+                element.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+
+                // Random starting position
+                element.style.left = Math.random() * 100 + 'vw';
+
+                // Random size
+                const size = Math.random() * 1.5 + 0.5;
+                element.style.fontSize = size + 'rem';
+
+                // Random opacity
+                element.style.opacity = (Math.random() * 0.5 + 0.5).toString();
+
+                // Random animation duration
+                const fallDuration = Math.random() * 10 + 8;
+                const swayDuration = Math.random() * 3 + 2;
+                element.style.animationDuration = fallDuration + 's, ' + swayDuration + 's';
+
+                container.appendChild(element);
+
+                // Remove and recreate when animation ends
+                element.addEventListener('animationend', function() {
+                    element.remove();
+                    createFallingElement(container, symbols);
+                });
+            }
+
+            // Initialize YouTube player
+            function initYouTubePlayer(videoId) {
+                if (typeof YT === 'undefined' || typeof YT.Player === 'undefined') {
+                    // Wait for API to load
+                    setTimeout(() => initYouTubePlayer(videoId), 100);
+                    return;
+                }
+
+                player = new YT.Player('youtube-player', {
+                    height: '0',
+                    width: '0',
+                    videoId: videoId,
+                    playerVars: {
+                        'autoplay': 0,
+                        'controls': 0,
+                        'loop': 1,
+                        'playlist': videoId
+                    },
+                    events: {
+                        'onReady': function(event) {
+                            player.setVolume(30);
+                            player.playVideo();
+                        },
+                        'onStateChange': function(event) {
+                            if (event.data === YT.PlayerState.PLAYING) {
+                                isPlaying = true;
+                                updatePlayIcon();
+                            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                                isPlaying = false;
+                                updatePlayIcon();
+                            }
+                        }
+                    }
+                });
+            }
+
+            function updatePlayIcon() {
+                const playIcon = document.getElementById('yt-icon-play');
+                const pauseIcon = document.getElementById('yt-icon-pause');
+                if (isPlaying) {
+                    playIcon?.classList.add('hidden');
+                    pauseIcon?.classList.remove('hidden');
+                } else {
+                    playIcon?.classList.remove('hidden');
+                    pauseIcon?.classList.add('hidden');
+                }
+            }
+
+            // Initialize everything
+            async function initialize() {
+                // Load and apply theme
+                const settings = await loadThemeSettings();
+
+                // Start falling effects with the loaded theme
+                createFallingEffects();
+
+                // Get the correct music video ID
+                const config = themeConfig[currentTheme] || themeConfig.christmas;
+                let musicId = config.musicId;
+
+                // Use custom music IDs from settings if available
+                if (settings) {
+                    if (currentTheme === 'christmas' && settings.christmasMusic) {
+                        musicId = settings.christmasMusic;
+                    } else if (currentTheme === 'halloween' && settings.halloweenMusic) {
+                        musicId = settings.halloweenMusic;
+                    } else if (currentTheme === 'default' && settings.defaultMusic) {
+                        musicId = settings.defaultMusic;
+                    }
+                }
+
+                // Initialize YouTube player with the correct video
+                initYouTubePlayer(musicId);
+            }
+
+            // Load YouTube IFrame API
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+            // Set up music toggle button
+            document.addEventListener('DOMContentLoaded', function() {
+                document.getElementById('yt-music-toggle')?.addEventListener('click', () => {
+                    if (player) {
+                        if (isPlaying) {
+                            player.pauseVideo();
+                        } else {
+                            player.playVideo();
+                        }
+                    }
+                });
+            });
+
+            // Start initialization when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initialize);
+            } else {
+                initialize();
+            }
+        </script>
+
+        <!-- YouTube Music Player -->
+        <div id="youtube-music-player" class="fixed bottom-4 right-4 z-50 backdrop-blur-sm rounded-2xl p-3 shadow-lg border-2 transition-all hover:scale-105 min-w-[200px] bg-red-800/90 border-yellow-500">
+            <div id="yt-song-title" class="text-white text-xs text-center mb-2 font-medium truncate px-2">
+                Loading...
+            </div>
+            <div class="flex items-center justify-center gap-2">
+                <button id="yt-music-toggle" class="flex items-center justify-center w-10 h-10 text-white transition-colors rounded-full bg-green-700/50 hover:text-green-300" aria-label="Toggle music">
+                    <svg id="yt-icon-play" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"></path>
+                    </svg>
+                    <svg id="yt-icon-pause" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Hidden YouTube iframe for audio -->
+        <div id="youtube-player-container" class="hidden">
+            <div id="youtube-player"></div>
+        </div>
+
         <div class="flex flex-col min-h-screen px-6 bg-noise sm:px-12">
             <div class="flex flex-col w-full max-w-5xl mx-auto grow">
                 <Header />

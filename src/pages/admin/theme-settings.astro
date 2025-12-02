@@ -1,0 +1,227 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+---
+
+<Layout title="Theme Settings - DPPD Admin">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Theme Settings</h1>
+                <p class="text-white/70">Customize the site's appearance with seasonal themes</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/admin" class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors">
+                    ← Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Theme Selection -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h2 class="text-2xl font-bold mb-6">Select Active Theme</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="theme-cards">
+                <!-- Christmas Theme -->
+                <div class="theme-card relative rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-105" data-theme="christmas">
+                    <div class="absolute inset-0 bg-gradient-to-br from-green-800 to-green-900"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-6xl opacity-30">❄️</div>
+                    <div class="relative p-6 text-center">
+                        <div class="text-4xl mb-3">🎄</div>
+                        <h3 class="text-xl font-bold mb-2">Christmas</h3>
+                        <p class="text-white/70 text-sm mb-4">Falling snowflakes, snowflake cursor, festive green colors</p>
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-green-600"></span>
+                            <span class="w-4 h-4 rounded-full bg-red-600"></span>
+                            <span class="w-4 h-4 rounded-full bg-white"></span>
+                        </div>
+                    </div>
+                    <div class="theme-selected-badge absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full hidden">
+                        ✓ Active
+                    </div>
+                </div>
+
+                <!-- Halloween Theme -->
+                <div class="theme-card relative rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-105" data-theme="halloween">
+                    <div class="absolute inset-0 bg-gradient-to-br from-orange-900 to-purple-900"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-6xl opacity-30">🎃</div>
+                    <div class="relative p-6 text-center">
+                        <div class="text-4xl mb-3">👻</div>
+                        <h3 class="text-xl font-bold mb-2">Halloween</h3>
+                        <p class="text-white/70 text-sm mb-4">Falling skulls, pumpkins & zombies, spooky cursor</p>
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-orange-500"></span>
+                            <span class="w-4 h-4 rounded-full bg-purple-600"></span>
+                            <span class="w-4 h-4 rounded-full bg-gray-800"></span>
+                        </div>
+                    </div>
+                    <div class="theme-selected-badge absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full hidden">
+                        ✓ Active
+                    </div>
+                </div>
+
+                <!-- Default Theme -->
+                <div class="theme-card relative rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-105" data-theme="default">
+                    <div class="absolute inset-0 bg-gradient-to-br from-blue-800 to-blue-900"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-6xl opacity-30">🛡️</div>
+                    <div class="relative p-6 text-center">
+                        <div class="text-4xl mb-3">🔵</div>
+                        <h3 class="text-xl font-bold mb-2">Default Blue</h3>
+                        <p class="text-white/70 text-sm mb-4">Classic police theme with blue colors, standard cursor</p>
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="w-4 h-4 rounded-full bg-blue-600"></span>
+                            <span class="w-4 h-4 rounded-full bg-blue-400"></span>
+                            <span class="w-4 h-4 rounded-full bg-white"></span>
+                        </div>
+                    </div>
+                    <div class="theme-selected-badge absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full hidden">
+                        ✓ Active
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Theme Descriptions -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h2 class="text-2xl font-bold mb-4">Theme Details</h2>
+
+            <div class="space-y-4">
+                <div class="p-4 rounded-lg bg-green-800/30 border border-green-500/30">
+                    <h3 class="font-bold text-lg mb-2">🎄 Christmas Theme</h3>
+                    <ul class="text-white/80 text-sm space-y-1 list-disc list-inside">
+                        <li>Falling snowflakes animation (❄ ❅ ❆ ✻ ✼ ❉)</li>
+                        <li>Custom snowflake cursor</li>
+                        <li>Green and red color scheme</li>
+                        <li>Festive background music</li>
+                    </ul>
+                </div>
+
+                <div class="p-4 rounded-lg bg-orange-800/30 border border-orange-500/30">
+                    <h3 class="font-bold text-lg mb-2">👻 Halloween Theme</h3>
+                    <ul class="text-white/80 text-sm space-y-1 list-disc list-inside">
+                        <li>Falling skulls, pumpkins, and zombies (💀 🎃 🧟 👻 🦇 🕷️)</li>
+                        <li>Spooky skull cursor</li>
+                        <li>Orange and purple color scheme</li>
+                        <li>Spooky background music</li>
+                    </ul>
+                </div>
+
+                <div class="p-4 rounded-lg bg-blue-800/30 border border-blue-500/30">
+                    <h3 class="font-bold text-lg mb-2">🔵 Default Blue Theme</h3>
+                    <ul class="text-white/80 text-sm space-y-1 list-disc list-inside">
+                        <li>No falling effects</li>
+                        <li>Standard cursor</li>
+                        <li>Classic police blue color scheme</li>
+                        <li>Background music</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex justify-end">
+            <button id="save-btn" class="btn btn-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Save Theme Settings
+            </button>
+        </div>
+
+        <!-- Status Message -->
+        <div id="status-message" class="hidden fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 p-4 rounded-lg shadow-lg z-50"></div>
+    </div>
+
+    <script>
+        let currentTheme = 'christmas';
+
+        // Load current settings
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/theme-settings');
+                const data = await response.json();
+                if (data.settings) {
+                    currentTheme = data.settings.activeTheme || 'christmas';
+                    updateThemeCards();
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            }
+        }
+
+        // Update theme card UI
+        function updateThemeCards() {
+            document.querySelectorAll('.theme-card').forEach(card => {
+                const theme = card.getAttribute('data-theme');
+                const badge = card.querySelector('.theme-selected-badge');
+                if (theme === currentTheme) {
+                    card.classList.add('ring-4', 'ring-green-500');
+                    badge?.classList.remove('hidden');
+                } else {
+                    card.classList.remove('ring-4', 'ring-green-500');
+                    badge?.classList.add('hidden');
+                }
+            });
+        }
+
+        // Theme card click handlers
+        document.querySelectorAll('.theme-card').forEach(card => {
+            card.addEventListener('click', () => {
+                currentTheme = card.getAttribute('data-theme') || 'christmas';
+                updateThemeCards();
+            });
+        });
+
+        // Save settings
+        document.getElementById('save-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('save-btn') as HTMLButtonElement;
+            const statusEl = document.getElementById('status-message');
+
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Saving...';
+
+            try {
+                const response = await fetch('/api/theme-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        settings: {
+                            activeTheme: currentTheme,
+                            christmasMusic: 'yXfWUNl1PbM',
+                            halloweenMusic: 'qw07ZfxeV4g',
+                            defaultMusic: '329iFlRszxs'
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    if (statusEl) {
+                        statusEl.className = 'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 p-4 rounded-lg shadow-lg z-50 bg-green-600';
+                        statusEl.textContent = '✓ Theme settings saved! Refresh the page to see changes.';
+                        statusEl.classList.remove('hidden');
+                        setTimeout(() => statusEl.classList.add('hidden'), 5000);
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to save');
+                }
+            } catch (error) {
+                if (statusEl) {
+                    statusEl.className = 'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 p-4 rounded-lg shadow-lg z-50 bg-red-600';
+                    statusEl.textContent = '✗ Failed to save theme settings';
+                    statusEl.classList.remove('hidden');
+                    setTimeout(() => statusEl.classList.add('hidden'), 5000);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Save Theme Settings';
+            }
+        });
+
+        // Load settings on page load
+        loadSettings();
+    </script>
+</Layout>

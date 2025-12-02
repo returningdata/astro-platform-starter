@@ -1,0 +1,244 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Admin - Department Data Management">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Department Data</h1>
+                <p class="text-white/70">Manage awards recipients and chain of command</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    Back to Dashboard
+                </a>
+                <button id="saveBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Chain of Command Section -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h2 class="text-2xl font-bold mb-4 text-teal-400">Chain of Command</h2>
+            <p class="text-white/60 mb-6">Assign names to high command positions. Names will appear in italic on the Chain of Command page.</p>
+
+            <div id="commandList" class="space-y-4">
+                <div class="text-center py-8 text-white/60">
+                    Loading chain of command data...
+                </div>
+            </div>
+        </div>
+
+        <!-- Awards Recipients Section -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h2 class="text-2xl font-bold mb-4 text-yellow-400">Recent Awards & Recognition</h2>
+            <p class="text-white/60 mb-6">Assign recipient names to awards. Names will appear in italic on the About page.</p>
+
+            <div id="awardsList" class="space-y-4">
+                <div class="text-center py-8 text-white/60">
+                    Loading awards data...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        let departmentData = {
+            awardRecipients: [],
+            commandPositions: []
+        };
+
+        // Load department data
+        async function loadDepartmentData() {
+            try {
+                const response = await fetch('/api/department-data');
+                const data = await response.json();
+                departmentData = data;
+                renderCommandPositions();
+                renderAwards();
+            } catch (error) {
+                console.error('Failed to load department data:', error);
+                showStatus('Failed to load department data', 'error');
+            }
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        function renderCommandPositions() {
+            const container = document.getElementById('commandList');
+
+            if (!departmentData.commandPositions || departmentData.commandPositions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-white/60">
+                        No command positions found.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = departmentData.commandPositions.map((position, index) => `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Rank</label>
+                        <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-teal-300 font-semibold">
+                            ${position.rank}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Call Sign</label>
+                        <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-cyan-300 font-mono">
+                            ${position.callSign}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Name <span class="text-white/50">(italic)</span></label>
+                        <input
+                            type="text"
+                            value="${position.name || ''}"
+                            placeholder="Enter officer name..."
+                            class="command-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            data-index="${index}"
+                        >
+                    </div>
+                </div>
+            `).join('');
+
+            attachCommandListeners();
+        }
+
+        function renderAwards() {
+            const container = document.getElementById('awardsList');
+
+            if (!departmentData.awardRecipients || departmentData.awardRecipients.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-white/60">
+                        No awards found.
+                    </div>
+                `;
+                return;
+            }
+
+            // Group awards by type (medals vs calendar-based)
+            const medals = departmentData.awardRecipients.slice(0, 6);
+            const timeBasedAwards = departmentData.awardRecipients.slice(6);
+
+            container.innerHTML = `
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-yellow-300 mb-3">Medals</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${medals.map((award, index) => `
+                            <div class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                                <svg class="w-8 h-8 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <div class="flex-1">
+                                    <div class="text-sm font-semibold text-white/90 mb-1">${award.awardName}</div>
+                                    <input
+                                        type="text"
+                                        value="${award.recipientName || ''}"
+                                        placeholder="Enter recipient name..."
+                                        class="award-recipient w-full px-3 py-1.5 bg-slate-700/50 border border-slate-600 rounded text-white italic text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                                        data-index="${index}"
+                                    >
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-blue-300 mb-3">Recognition Awards</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${timeBasedAwards.map((award, i) => {
+                            const index = i + 6;
+                            return `
+                            <div class="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                                <svg class="w-8 h-8 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    ${award.awardName === 'Photo of the Week'
+                                        ? '<path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />'
+                                        : '<path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />'}
+                                </svg>
+                                <div class="flex-1">
+                                    <div class="text-sm font-semibold text-white/90 mb-1">${award.awardName}</div>
+                                    <input
+                                        type="text"
+                                        value="${award.recipientName || ''}"
+                                        placeholder="Enter recipient name..."
+                                        class="award-recipient w-full px-3 py-1.5 bg-slate-700/50 border border-slate-600 rounded text-white italic text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        data-index="${index}"
+                                    >
+                                </div>
+                            </div>
+                        `}).join('')}
+                    </div>
+                </div>
+            `;
+
+            attachAwardListeners();
+        }
+
+        function attachCommandListeners() {
+            document.querySelectorAll('.command-name').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.commandPositions[index].name = e.target.value;
+                });
+            });
+        }
+
+        function attachAwardListeners() {
+            document.querySelectorAll('.award-recipient').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.awardRecipients[index].recipientName = e.target.value;
+                });
+            });
+        }
+
+        // Save changes
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/api/department-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(departmentData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('Changes saved successfully!', 'success');
+                } else {
+                    showStatus(result.error || 'Failed to save changes', 'error');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showStatus('Failed to save changes', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Changes';
+            }
+        });
+
+        // Initialize
+        loadDepartmentData();
+    </script>
+</Layout>

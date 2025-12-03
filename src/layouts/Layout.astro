@@ -4,16 +4,75 @@ import '@fontsource-variable/inter/wght.css';
 import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { getStore } from '@netlify/blobs';
 
 interface Props {
     title: string;
 }
 
+interface ThemeSettings {
+    activeTheme: 'christmas' | 'halloween' | 'default';
+    christmasMusic: string;
+    halloweenMusic: string;
+    defaultMusic: string;
+}
+
+const defaultThemeSettings: ThemeSettings = {
+    activeTheme: 'christmas',
+    christmasMusic: 'yXfWUNl1PbM',
+    halloweenMusic: 'qw07ZfxeV4g',
+    defaultMusic: '329iFlRszxs'
+};
+
+// Fetch theme settings from Netlify Blobs on the server
+async function getThemeSettings(): Promise<ThemeSettings> {
+    try {
+        const store = getStore({ name: 'theme-settings', consistency: 'strong' });
+        const data = await store.get('settings', { type: 'json' });
+        if (data) {
+            return data as ThemeSettings;
+        }
+        return defaultThemeSettings;
+    } catch (error) {
+        console.error('Error fetching theme settings:', error);
+        return defaultThemeSettings;
+    }
+}
+
 const { title } = Astro.props;
 
-// Default theme - will be overridden by client-side JS that fetches current settings
-const defaultTheme = 'christmas';
-const bodyClass = `antialiased text-white theme-${defaultTheme}`;
+// Fetch theme settings server-side so everyone sees the same theme
+const themeSettings = await getThemeSettings();
+const activeTheme = themeSettings.activeTheme;
+const bodyClass = `antialiased text-white theme-${activeTheme}`;
+
+// Get the correct music ID for the active theme
+const musicIds = {
+    christmas: themeSettings.christmasMusic,
+    halloween: themeSettings.halloweenMusic,
+    default: themeSettings.defaultMusic
+};
+const activeMusicId = musicIds[activeTheme];
+
+// Theme-specific styling for music player (server-rendered)
+const themePlayerStyles = {
+    christmas: {
+        playerClass: 'bg-red-800/90 border-yellow-500',
+        buttonClass: 'bg-green-700/50 hover:text-green-300',
+        musicTitle: '🎄Del Perro PD - Christmas Music'
+    },
+    halloween: {
+        playerClass: 'bg-purple-900/90 border-orange-500',
+        buttonClass: 'bg-orange-700/50 hover:text-orange-300',
+        musicTitle: '👻 Del Perro PD - Spooky Music'
+    },
+    default: {
+        playerClass: 'bg-blue-800/90 border-blue-400',
+        buttonClass: 'bg-blue-700/50 hover:text-blue-300',
+        musicTitle: '🛡️ Del Perro PD - Music'
+    }
+};
+const playerStyle = themePlayerStyles[activeTheme];
 ---
 
 <!doctype html>
@@ -26,17 +85,16 @@ const bodyClass = `antialiased text-white theme-${defaultTheme}`;
         <link rel="icon" type="image/png" href="/images/DPPD_Seal_3.png" />
         <link rel="preload" as="font" type="font/woff2" href={interWoff2} crossorigin />
     </head>
-    <body class={bodyClass} data-theme="christmas">
+    <body class={bodyClass} data-theme={activeTheme} data-music-id={activeMusicId}>
         <!-- Falling effects container -->
         <div id="effects-container" class="fixed inset-0 pointer-events-none z-[9999] overflow-hidden"></div>
 
-        <!-- Theme Loading Script - Runs immediately to apply theme before render -->
+        <!-- Theme Effects Script - Uses server-provided theme -->
         <script>
             // Theme configuration
             const themeConfig = {
                 christmas: {
                     class: 'theme-christmas',
-                    musicId: 'yXfWUNl1PbM',
                     musicTitle: '🎄Del Perro PD - Christmas Music',
                     playerStyle: 'bg-red-800/90 border-yellow-500',
                     buttonStyle: 'bg-green-700/50 hover:text-green-300',
@@ -44,7 +102,6 @@ const bodyClass = `antialiased text-white theme-${defaultTheme}`;
                 },
                 halloween: {
                     class: 'theme-halloween',
-                    musicId: 'qw07ZfxeV4g',
                     musicTitle: '👻 Del Perro PD - Spooky Music',
                     playerStyle: 'bg-purple-900/90 border-orange-500',
                     buttonStyle: 'bg-orange-700/50 hover:text-orange-300',
@@ -52,7 +109,6 @@ const bodyClass = `antialiased text-white theme-${defaultTheme}`;
                 },
                 default: {
                     class: 'theme-default',
-                    musicId: '329iFlRszxs',
                     musicTitle: '🛡️ Del Perro PD - Music',
                     playerStyle: 'bg-blue-800/90 border-blue-400',
                     buttonStyle: 'bg-blue-700/50 hover:text-blue-300',
@@ -60,20 +116,15 @@ const bodyClass = `antialiased text-white theme-${defaultTheme}`;
                 }
             };
 
-            let currentTheme = 'christmas';
+            // Get theme from server-rendered data attribute (no API fetch needed)
+            const currentTheme = document.body.dataset.theme || 'christmas';
+            const musicId = document.body.dataset.musicId;
             let player = null;
             let isPlaying = false;
 
-            // Apply theme to the page
-            function applyTheme(theme) {
-                const config = themeConfig[theme] || themeConfig.christmas;
-                const body = document.body;
-
-                // Remove old theme classes
-                body.classList.remove('theme-christmas', 'theme-halloween', 'theme-default');
-                // Add new theme class
-                body.classList.add(config.class);
-                body.setAttribute('data-theme', theme);
+            // Apply theme styling to music player
+            function applyThemeStyling() {
+                const config = themeConfig[currentTheme] || themeConfig.christmas;
 
                 // Update music player styling
                 const musicPlayer = document.getElementById('youtube-music-player');
@@ -104,23 +155,6 @@ const bodyClass = `antialiased text-white theme-${defaultTheme}`;
                 if (musicTitle) {
                     musicTitle.textContent = config.musicTitle;
                 }
-
-                currentTheme = theme;
-            }
-
-            // Load theme settings from API
-            async function loadThemeSettings() {
-                try {
-                    const response = await fetch('/api/theme-settings');
-                    const data = await response.json();
-                    if (data.settings && data.settings.activeTheme) {
-                        applyTheme(data.settings.activeTheme);
-                        return data.settings;
-                    }
-                } catch (error) {
-                    console.error('Failed to load theme settings:', error);
-                }
-                return null;
             }
 
             // Create falling effects
@@ -222,30 +256,15 @@ const bodyClass = `antialiased text-white theme-${defaultTheme}`;
                 }
             }
 
-            // Initialize everything
-            async function initialize() {
-                // Load and apply theme
-                const settings = await loadThemeSettings();
+            // Initialize everything (theme is already applied server-side)
+            function initialize() {
+                // Apply theme styling to music player elements
+                applyThemeStyling();
 
-                // Start falling effects with the loaded theme
+                // Start falling effects with the server-provided theme
                 createFallingEffects();
 
-                // Get the correct music video ID
-                const config = themeConfig[currentTheme] || themeConfig.christmas;
-                let musicId = config.musicId;
-
-                // Use custom music IDs from settings if available
-                if (settings) {
-                    if (currentTheme === 'christmas' && settings.christmasMusic) {
-                        musicId = settings.christmasMusic;
-                    } else if (currentTheme === 'halloween' && settings.halloweenMusic) {
-                        musicId = settings.halloweenMusic;
-                    } else if (currentTheme === 'default' && settings.defaultMusic) {
-                        musicId = settings.defaultMusic;
-                    }
-                }
-
-                // Initialize YouTube player with the correct video
+                // Initialize YouTube player with the server-provided music ID
                 initYouTubePlayer(musicId);
             }
 
@@ -277,12 +296,12 @@ const bodyClass = `antialiased text-white theme-${defaultTheme}`;
         </script>
 
         <!-- YouTube Music Player -->
-        <div id="youtube-music-player" class="fixed bottom-4 right-4 z-50 backdrop-blur-sm rounded-2xl p-3 shadow-lg border-2 transition-all hover:scale-105 min-w-[200px] bg-red-800/90 border-yellow-500">
+        <div id="youtube-music-player" class={`fixed bottom-4 right-4 z-50 backdrop-blur-sm rounded-2xl p-3 shadow-lg border-2 transition-all hover:scale-105 min-w-[200px] ${playerStyle.playerClass}`}>
             <div id="yt-song-title" class="text-white text-xs text-center mb-2 font-medium truncate px-2">
-                Loading...
+                {playerStyle.musicTitle}
             </div>
             <div class="flex items-center justify-center gap-2">
-                <button id="yt-music-toggle" class="flex items-center justify-center w-10 h-10 text-white transition-colors rounded-full bg-green-700/50 hover:text-green-300" aria-label="Toggle music">
+                <button id="yt-music-toggle" class={`flex items-center justify-center w-10 h-10 text-white transition-colors rounded-full ${playerStyle.buttonClass}`} aria-label="Toggle music">
                     <svg id="yt-icon-play" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"></path>
                     </svg>

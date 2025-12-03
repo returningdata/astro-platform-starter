@@ -201,9 +201,13 @@ export const prerender = false;
                 if (result.success) {
                     if (statusEl) {
                         statusEl.className = 'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 p-4 rounded-lg shadow-lg z-50 bg-green-600';
-                        statusEl.textContent = '✓ Theme settings saved! Refresh the page to see changes.';
+                        statusEl.textContent = '✓ Theme saved! All visitors will now see the new theme.';
                         statusEl.classList.remove('hidden');
-                        setTimeout(() => statusEl.classList.add('hidden'), 5000);
+                        setTimeout(() => {
+                            statusEl.classList.add('hidden');
+                            // Refresh to show the new theme
+                            window.location.reload();
+                        }, 2000);
                     }
                 } else {
                     throw new Error(result.error || 'Failed to save');

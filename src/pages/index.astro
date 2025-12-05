@@ -119,31 +119,8 @@ import Layout from '../layouts/Layout.astro';
             <p class="text-white/70 mb-4">
                 We have specialized divisions for officers to join and advance their careers. Apply now for:
             </p>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
-                    <div class="font-bold text-primary">SWAT</div>
-                    <div class="text-sm text-white/60">Special Weapons & Tactics</div>
-                </div>
-                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
-                    <div class="font-bold text-primary">K9</div>
-                    <div class="text-sm text-white/60">Canine Unit</div>
-                </div>
-                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
-                    <div class="font-bold text-primary">TEU</div>
-                    <div class="text-sm text-white/60">Tactical Enforcement</div>
-                </div>
-                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
-                    <div class="font-bold text-primary">CIU</div>
-                    <div class="text-sm text-white/60">Criminal Investigations</div>
-                </div>
-                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
-                    <div class="font-bold text-primary">IA</div>
-                    <div class="text-sm text-white/60">Internal Affairs</div>
-                </div>
-                <div class="bg-white/5 rounded-lg p-3 border border-white/10">
-                    <div class="font-bold text-primary">FTD</div>
-                    <div class="text-sm text-white/60">Field Training Division</div>
-                </div>
+            <div id="subdivisionsGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                <div class="text-center py-4 text-white/60 col-span-full">Loading subdivisions...</div>
             </div>
             <a href="https://discord.com/channels/1322805466975440906/1322807968173002854/1323053201368547480" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-primary hover:bg-primary/80 text-white px-6 py-3 rounded-lg font-semibold transition-all">
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -153,4 +130,56 @@ import Layout from '../layouts/Layout.astro';
             </a>
         </div>
     </div>
+
+    <script type="module">
+        function getAvailabilityConfig(availability) {
+            switch (availability) {
+                case 'open':
+                    return { color: 'bg-green-500', text: 'Open Applications', textColor: 'text-green-400' };
+                case 'tryouts':
+                    return { color: 'bg-yellow-500', text: 'Tryouts', textColor: 'text-yellow-400' };
+                case 'handpicked':
+                    return { color: 'bg-purple-500', text: 'Handpicked', textColor: 'text-purple-400' };
+                case 'closed':
+                    return { color: 'bg-red-500', text: 'Closed', textColor: 'text-red-400' };
+                default:
+                    return { color: 'bg-gray-500', text: 'Unknown', textColor: 'text-gray-400' };
+            }
+        }
+
+        async function loadSubdivisions() {
+            const container = document.getElementById('subdivisionsGrid');
+            try {
+                const response = await fetch('/api/subdivisions');
+                const data = await response.json();
+                const subdivisions = data.subdivisions || [];
+
+                if (subdivisions.length === 0) {
+                    container.innerHTML = `<div class="text-center py-4 text-white/60 col-span-full">No subdivisions available.</div>`;
+                    return;
+                }
+
+                container.innerHTML = subdivisions.map(sub => {
+                    const config = getAvailabilityConfig(sub.availability);
+                    return `
+                        <div class="bg-white/5 rounded-lg p-3 border border-white/10">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="font-bold text-primary">${sub.abbreviation}</div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="inline-block w-2 h-2 ${config.color} rounded-full"></span>
+                                    <span class="text-xs ${config.textColor}">${config.text}</span>
+                                </div>
+                            </div>
+                            <div class="text-sm text-white/60">${sub.name}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Failed to load subdivisions:', error);
+                container.innerHTML = `<div class="text-center py-4 text-white/60 col-span-full">Failed to load subdivisions.</div>`;
+            }
+        }
+
+        loadSubdivisions();
+    </script>
 </Layout>

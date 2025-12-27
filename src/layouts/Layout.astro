@@ -162,6 +162,48 @@ const playerStyle = themePlayerStyles[activeTheme];
             let player = null;
             let isPlaying = false;
 
+            // Storage key for music state persistence
+            const MUSIC_STATE_KEY = 'dppd-music-state';
+
+            // Get saved music state from localStorage
+            function getSavedMusicState() {
+                try {
+                    const saved = localStorage.getItem(MUSIC_STATE_KEY);
+                    if (saved) {
+                        const state = JSON.parse(saved);
+                        // Only restore if the same music is playing (same theme)
+                        if (state.musicId === musicId) {
+                            return state;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error reading music state:', e);
+                }
+                return null;
+            }
+
+            // Save music state to localStorage
+            function saveMusicState() {
+                if (player && typeof player.getCurrentTime === 'function') {
+                    try {
+                        const state = {
+                            musicId: musicId,
+                            isPlaying: isPlaying,
+                            currentTime: player.getCurrentTime(),
+                            timestamp: Date.now()
+                        };
+                        localStorage.setItem(MUSIC_STATE_KEY, JSON.stringify(state));
+                    } catch (e) {
+                        console.error('Error saving music state:', e);
+                    }
+                }
+            }
+
+            // Save state before page unload (navigation)
+            window.addEventListener('beforeunload', saveMusicState);
+            // Also save periodically in case of unexpected closure
+            setInterval(saveMusicState, 2000);
+
             // Apply theme styling to music player
             function applyThemeStyling() {
                 const config = themeConfig[currentTheme] || themeConfig.christmas;
@@ -348,6 +390,9 @@ const playerStyle = themePlayerStyles[activeTheme];
                     return;
                 }
 
+                // Get saved state to restore playback position
+                const savedState = getSavedMusicState();
+
                 player = new YT.Player('youtube-player', {
                     height: '0',
                     width: '0',
@@ -361,7 +406,29 @@ const playerStyle = themePlayerStyles[activeTheme];
                     events: {
                         'onReady': function(event) {
                             player.setVolume(30);
-                            player.playVideo();
+
+                            // Restore playback position and state if available
+                            if (savedState) {
+                                // Seek to saved position (account for small time drift)
+                                const timeSinceLastSave = (Date.now() - savedState.timestamp) / 1000;
+                                let seekTime = savedState.currentTime + timeSinceLastSave;
+
+                                // Get video duration to handle looping
+                                const duration = player.getDuration();
+                                if (duration > 0) {
+                                    seekTime = seekTime % duration; // Handle wrap-around for looping
+                                }
+
+                                player.seekTo(seekTime, true);
+
+                                // Only play if it was playing before navigation
+                                if (savedState.isPlaying) {
+                                    player.playVideo();
+                                }
+                            } else {
+                                // First visit or theme changed - start playing
+                                player.playVideo();
+                            }
                         },
                         'onStateChange': function(event) {
                             if (event.data === YT.PlayerState.PLAYING) {

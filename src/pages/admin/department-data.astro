@@ -43,6 +43,18 @@ import Layout from '../../layouts/Layout.astro';
             </div>
         </div>
 
+        <!-- Subdivision Leadership Section -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h2 class="text-2xl font-bold mb-4 text-orange-400">Subdivision Leadership</h2>
+            <p class="text-white/60 mb-6">Assign heads to each subdivision. Enter name, callsign, and job title.</p>
+
+            <div id="subdivisionList" class="space-y-4">
+                <div class="text-center py-8 text-white/60">
+                    Loading subdivision data...
+                </div>
+            </div>
+        </div>
+
         <!-- Awards Recipients Section -->
         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
             <h2 class="text-2xl font-bold mb-4 text-yellow-400">Recent Awards & Recognition</h2>
@@ -61,7 +73,8 @@ import Layout from '../../layouts/Layout.astro';
             awardRecipients: [],
             commandPositions: [],
             tierPositions: [],
-            rankPositions: []
+            rankPositions: [],
+            subdivisionLeadership: []
         };
 
         // Default rank positions structure
@@ -86,6 +99,16 @@ import Layout from '../../layouts/Layout.astro';
                 rank: 'Master Sergeant',
                 members: Array(6).fill(null).map(() => ({ name: '', callSign: '', jobTitle: '' }))
             }
+        ];
+
+        // Default subdivision leadership structure
+        const defaultSubdivisionLeadership = [
+            { division: 'Subdivision Overseer', name: '', callSign: '', jobTitle: '' },
+            { division: 'Field Training Division', name: '', callSign: '', jobTitle: '' },
+            { division: 'Special Weapons and Tactics', name: '', callSign: '', jobTitle: '' },
+            { division: 'Traffic Enforcement Unit', name: '', callSign: '', jobTitle: '' },
+            { division: 'Criminal Investigations Unit', name: '', callSign: '', jobTitle: '' },
+            { division: 'K9 Division', name: '', callSign: '', jobTitle: '' }
         ];
 
         // Rank colors for styling
@@ -125,8 +148,14 @@ import Layout from '../../layouts/Layout.astro';
                     }));
                 }
 
+                // Ensure subdivisionLeadership exists
+                if (!departmentData.subdivisionLeadership || departmentData.subdivisionLeadership.length === 0) {
+                    departmentData.subdivisionLeadership = defaultSubdivisionLeadership;
+                }
+
                 renderCommandPositions();
                 renderRankPositions();
+                renderSubdivisionLeadership();
                 renderAwards();
             } catch (error) {
                 console.error('Failed to load department data:', error);
@@ -264,6 +293,62 @@ import Layout from '../../layouts/Layout.astro';
             attachRankListeners();
         }
 
+        function renderSubdivisionLeadership() {
+            const container = document.getElementById('subdivisionList');
+
+            if (!departmentData.subdivisionLeadership || departmentData.subdivisionLeadership.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-white/60">
+                        No subdivision leadership data found.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = departmentData.subdivisionLeadership.map((subdivision, index) => `
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Division</label>
+                        <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-orange-300 font-semibold">
+                            ${subdivision.division}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Name</label>
+                        <input
+                            type="text"
+                            value="${subdivision.name || ''}"
+                            placeholder="Enter head name..."
+                            class="subdivision-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            data-index="${index}"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Callsign</label>
+                        <input
+                            type="text"
+                            value="${subdivision.callSign || ''}"
+                            placeholder="Enter callsign..."
+                            class="subdivision-callsign w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white font-mono focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            data-index="${index}"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Job Title</label>
+                        <input
+                            type="text"
+                            value="${subdivision.jobTitle || ''}"
+                            placeholder="Enter job title..."
+                            class="subdivision-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            data-index="${index}"
+                        >
+                    </div>
+                </div>
+            `).join('');
+
+            attachSubdivisionListeners();
+        }
+
         function renderAwards() {
             const container = document.getElementById('awardsList');
 
@@ -381,6 +466,29 @@ import Layout from '../../layouts/Layout.astro';
                 input.addEventListener('input', (e) => {
                     const index = parseInt(e.target.dataset.index);
                     departmentData.awardRecipients[index].recipientName = e.target.value;
+                });
+            });
+        }
+
+        function attachSubdivisionListeners() {
+            document.querySelectorAll('.subdivision-name').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.subdivisionLeadership[index].name = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.subdivision-callsign').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.subdivisionLeadership[index].callSign = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.subdivision-job').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.subdivisionLeadership[index].jobTitle = e.target.value;
                 });
             });
         }

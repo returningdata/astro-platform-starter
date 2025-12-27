@@ -36,11 +36,19 @@ export interface TierPositions {
     members: TierMember[];
 }
 
+export interface SubdivisionLeader {
+    division: string;
+    name: string;
+    callSign: string;
+    jobTitle: string;
+}
+
 export interface DepartmentData {
     awardRecipients: AwardRecipient[];
     commandPositions: CommandPosition[];
     tierPositions: TierPositions[];
     rankPositions: RankPositions[];
+    subdivisionLeadership: SubdivisionLeader[];
 }
 
 const defaultDepartmentData: DepartmentData = {
@@ -146,6 +154,14 @@ const defaultDepartmentData: DepartmentData = {
                 { name: '', callSign: '', jobTitle: '' }
             ]
         }
+    ],
+    subdivisionLeadership: [
+        { division: 'Subdivision Overseer', name: '', callSign: '', jobTitle: '' },
+        { division: 'Field Training Division', name: '', callSign: '', jobTitle: '' },
+        { division: 'Special Weapons and Tactics', name: '', callSign: '', jobTitle: '' },
+        { division: 'Traffic Enforcement Unit', name: '', callSign: '', jobTitle: '' },
+        { division: 'Criminal Investigations Unit', name: '', callSign: '', jobTitle: '' },
+        { division: 'K9 Division', name: '', callSign: '', jobTitle: '' }
     ]
 };
 
@@ -154,7 +170,23 @@ async function getDepartmentData(): Promise<DepartmentData> {
         const store = getStore({ name: 'department-data', consistency: 'strong' });
         const data = await store.get('department-data', { type: 'json' });
         if (data && typeof data === 'object') {
-            return data as DepartmentData;
+            const result = data as DepartmentData;
+
+            // Ensure all default subdivisions exist in stored data
+            if (result.subdivisionLeadership) {
+                const existingDivisions = new Set(result.subdivisionLeadership.map(s => s.division));
+                for (const defaultSub of defaultDepartmentData.subdivisionLeadership) {
+                    if (!existingDivisions.has(defaultSub.division)) {
+                        // Find the correct position to insert the missing subdivision
+                        const defaultIndex = defaultDepartmentData.subdivisionLeadership.findIndex(s => s.division === defaultSub.division);
+                        result.subdivisionLeadership.splice(defaultIndex, 0, { ...defaultSub });
+                    }
+                }
+            } else {
+                result.subdivisionLeadership = defaultDepartmentData.subdivisionLeadership;
+            }
+
+            return result;
         }
         return defaultDepartmentData;
     } catch (error) {

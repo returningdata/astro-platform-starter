@@ -13,7 +13,8 @@ export interface WarehouseCategory {
     name: string;
     icon: string;
     items: WarehouseItem[];
-    imageKey?: string; // Reference to image stored in blobs
+    imageKey?: string; // Legacy: single image reference (kept for backwards compatibility)
+    imageKeys?: string[]; // Array of image keys (up to 10 images per vehicle)
 }
 
 // Helper to get the warehouse store
@@ -223,32 +224,78 @@ export const POST: APIRoute = async ({ request }) => {
                 items: category.items
             };
 
-            // If there's a new image (base64), save it to the images store
-            if (category.image && category.image.startsWith('data:')) {
-                const imageKey = `category-${category.id}-${Date.now()}`;
-                await imagesStore.set(imageKey, category.image);
-                categoryToSave.imageKey = imageKey;
+            // Handle multiple images (new system with imageKeys array)
+            if (category.images && Array.isArray(category.images)) {
+                const newImageKeys: string[] = [];
+                const existingImageKeys = category.imageKeys || [];
+                const imagesToDelete = category._deleteImages || [];
 
-                // Delete old image if there was one
-                if (category.imageKey && category.imageKey !== imageKey) {
+                // Delete images marked for deletion
+                for (const keyToDelete of imagesToDelete) {
+                    try {
+                        await imagesStore.delete(keyToDelete);
+                    } catch (e) {
+                        console.error('Failed to delete image:', keyToDelete, e);
+                    }
+                }
+
+                // Process each image in the images array
+                for (let i = 0; i < category.images.length; i++) {
+                    const img = category.images[i];
+                    if (img && img.startsWith('data:')) {
+                        // New image (base64), save to store
+                        const imageKey = `category-${category.id}-${Date.now()}-${i}`;
+                        await imagesStore.set(imageKey, img);
+                        newImageKeys.push(imageKey);
+                    } else if (img && existingImageKeys.includes(img)) {
+                        // Existing image key, keep it
+                        newImageKeys.push(img);
+                    }
+                }
+
+                if (newImageKeys.length > 0) {
+                    categoryToSave.imageKeys = newImageKeys;
+                }
+
+                // Clean up old images that are no longer used
+                for (const oldKey of existingImageKeys) {
+                    if (!newImageKeys.includes(oldKey) && !imagesToDelete.includes(oldKey)) {
+                        try {
+                            await imagesStore.delete(oldKey);
+                        } catch (e) {
+                            console.error('Failed to delete unused image:', oldKey, e);
+                        }
+                    }
+                }
+            } else {
+                // Legacy single image handling (for backwards compatibility)
+                if (category.image && category.image.startsWith('data:')) {
+                    const imageKey = `category-${category.id}-${Date.now()}`;
+                    await imagesStore.set(imageKey, category.image);
+                    categoryToSave.imageKeys = [imageKey];
+
+                    // Delete old image if there was one
+                    if (category.imageKey && category.imageKey !== imageKey) {
+                        try {
+                            await imagesStore.delete(category.imageKey);
+                        } catch (e) {
+                            console.error('Failed to delete old image:', e);
+                        }
+                    }
+                } else if (category.imageKey) {
+                    // Migrate single imageKey to imageKeys array
+                    categoryToSave.imageKeys = [category.imageKey];
+                } else if (category.imageKeys && category.imageKeys.length > 0) {
+                    categoryToSave.imageKeys = category.imageKeys;
+                }
+
+                // Handle image deletion
+                if (category._deleteImage && category.imageKey) {
                     try {
                         await imagesStore.delete(category.imageKey);
                     } catch (e) {
-                        console.error('Failed to delete old image:', e);
+                        console.error('Failed to delete image:', e);
                     }
-                }
-            } else if (category.imageKey) {
-                // Keep existing image reference
-                categoryToSave.imageKey = category.imageKey;
-            }
-            // If image was removed (no image and no imageKey), don't set imageKey
-
-            // Handle image deletion
-            if (category._deleteImage && category.imageKey) {
-                try {
-                    await imagesStore.delete(category.imageKey);
-                } catch (e) {
-                    console.error('Failed to delete image:', e);
                 }
             }
 

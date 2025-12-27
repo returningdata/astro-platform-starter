@@ -33,13 +33,19 @@ export const prerender = false;
         };
 
         function formatDate(dateStr) {
-            const date = new Date(dateStr);
+            // Append T00:00:00 to parse as local time instead of UTC
+            const date = new Date(dateStr + 'T00:00:00');
             return date.toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
             });
+        }
+
+        function parseLocalDate(dateStr) {
+            // Parse date as local time to avoid timezone issues
+            return new Date(dateStr + 'T00:00:00');
         }
 
         async function loadEvents() {
@@ -50,7 +56,7 @@ export const prerender = false;
 
                 // Sort events by date
                 const sortedEvents = [...events].sort((a, b) =>
-                    new Date(a.date).getTime() - new Date(b.date).getTime()
+                    parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
                 );
 
                 const upcomingEvents = sortedEvents.filter(e => e.status === 'upcoming');
@@ -82,41 +88,48 @@ export const prerender = false;
                         <h2 class="text-3xl font-bold text-primary">Upcoming Events</h2>
                         <div class="grid grid-cols-1 gap-6">
                             ${upcomingEvents.map(event => `
-                                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
-                                    <div class="flex flex-col md:flex-row md:items-start gap-4">
-                                        <div class="flex-shrink-0 bg-primary rounded-lg p-4 text-center w-24">
-                                            <div class="text-2xl font-bold">${new Date(event.date).getDate()}</div>
-                                            <div class="text-xs uppercase">${new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}</div>
+                                <div class="bg-white/10 backdrop-blur-sm rounded-lg overflow-hidden border border-white/20 hover:bg-white/15 transition-all">
+                                    ${event.image ? `
+                                        <div class="w-full h-48 overflow-hidden">
+                                            <img src="/api/event-image?key=${event.image}" alt="${event.title}" class="w-full h-full object-cover">
                                         </div>
-                                        <div class="flex-1">
-                                            <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
-                                                <h3 class="text-2xl font-bold">${event.title}</h3>
-                                                <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase border ${categoryColors[event.category] || categoryColors.other}">
-                                                    ${event.category}
-                                                </span>
+                                    ` : ''}
+                                    <div class="p-6">
+                                        <div class="flex flex-col md:flex-row md:items-start gap-4">
+                                            <div class="flex-shrink-0 bg-primary rounded-lg p-4 text-center w-24">
+                                                <div class="text-2xl font-bold">${parseLocalDate(event.date).getDate()}</div>
+                                                <div class="text-xs uppercase">${parseLocalDate(event.date).toLocaleDateString('en-US', { month: 'short' })}</div>
                                             </div>
-                                            <div class="space-y-2 mb-3">
-                                                <div class="flex items-center gap-2 text-white/70">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
-                                                    <span class="text-sm">${formatDate(event.date)}</span>
+                                            <div class="flex-1">
+                                                <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                                    <h3 class="text-2xl font-bold">${event.title}</h3>
+                                                    <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase border ${categoryColors[event.category] || categoryColors.other}">
+                                                        ${event.category}
+                                                    </span>
                                                 </div>
-                                                <div class="flex items-center gap-2 text-white/70">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                    <span class="text-sm">${event.time}</span>
+                                                <div class="space-y-2 mb-3">
+                                                    <div class="flex items-center gap-2 text-white/70">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                        <span class="text-sm">${formatDate(event.date)}</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-2 text-white/70">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <span class="text-sm">${event.time}</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-2 text-white/70">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                        <span class="text-sm">${event.location}</span>
+                                                    </div>
                                                 </div>
-                                                <div class="flex items-center gap-2 text-white/70">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    </svg>
-                                                    <span class="text-sm">${event.location}</span>
-                                                </div>
+                                                <p class="text-white/80">${event.description}</p>
                                             </div>
-                                            <p class="text-white/80">${event.description}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -133,19 +146,26 @@ export const prerender = false;
                         <h2 class="text-3xl font-bold text-primary">Ongoing Events</h2>
                         <div class="grid grid-cols-1 gap-6">
                             ${ongoingEvents.map(event => `
-                                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-green-500/30 hover:bg-white/15 transition-all">
-                                    <div class="flex flex-col md:flex-row md:items-start gap-4">
-                                        <div class="flex-shrink-0 bg-green-500 rounded-lg p-4 text-center w-24">
-                                            <div class="text-sm font-bold uppercase">Active</div>
+                                <div class="bg-white/10 backdrop-blur-sm rounded-lg overflow-hidden border border-green-500/30 hover:bg-white/15 transition-all">
+                                    ${event.image ? `
+                                        <div class="w-full h-48 overflow-hidden">
+                                            <img src="/api/event-image?key=${event.image}" alt="${event.title}" class="w-full h-full object-cover">
                                         </div>
-                                        <div class="flex-1">
-                                            <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
-                                                <h3 class="text-2xl font-bold">${event.title}</h3>
-                                                <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase border ${categoryColors[event.category] || categoryColors.other}">
-                                                    ${event.category}
-                                                </span>
+                                    ` : ''}
+                                    <div class="p-6">
+                                        <div class="flex flex-col md:flex-row md:items-start gap-4">
+                                            <div class="flex-shrink-0 bg-green-500 rounded-lg p-4 text-center w-24">
+                                                <div class="text-sm font-bold uppercase">Active</div>
                                             </div>
-                                            <p class="text-white/80">${event.description}</p>
+                                            <div class="flex-1">
+                                                <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                                    <h3 class="text-2xl font-bold">${event.title}</h3>
+                                                    <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase border ${categoryColors[event.category] || categoryColors.other}">
+                                                        ${event.category}
+                                                    </span>
+                                                </div>
+                                                <p class="text-white/80">${event.description}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -162,10 +182,17 @@ export const prerender = false;
                         <h2 class="text-3xl font-bold text-white/60">Past Events</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             ${completedEvents.map(event => `
-                                <div class="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10">
-                                    <h3 class="text-lg font-bold mb-1 text-white/80">${event.title}</h3>
-                                    <div class="text-sm text-white/60 mb-2">${formatDate(event.date)}</div>
-                                    <p class="text-sm text-white/70">${event.description}</p>
+                                <div class="bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10">
+                                    ${event.image ? `
+                                        <div class="w-full h-32 overflow-hidden">
+                                            <img src="/api/event-image?key=${event.image}" alt="${event.title}" class="w-full h-full object-cover opacity-70">
+                                        </div>
+                                    ` : ''}
+                                    <div class="p-4">
+                                        <h3 class="text-lg font-bold mb-1 text-white/80">${event.title}</h3>
+                                        <div class="text-sm text-white/60 mb-2">${formatDate(event.date)}</div>
+                                        <p class="text-sm text-white/70">${event.description}</p>
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>

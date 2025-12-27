@@ -50,6 +50,11 @@ import Layout from '../../layouts/Layout.astro';
 
         let eventsData = [];
 
+        // Helper function to parse date as local time to avoid timezone issues
+        function parseLocalDate(dateStr) {
+            return new Date(dateStr + 'T00:00:00');
+        }
+
         // Load events data
         async function loadEvents() {
             try {
@@ -89,7 +94,7 @@ import Layout from '../../layouts/Layout.astro';
 
             // Sort events by date
             const sortedEvents = [...eventsData].sort((a, b) =>
-                new Date(a.date).getTime() - new Date(b.date).getTime()
+                parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
             );
 
             container.innerHTML = sortedEvents.map((event, index) => {
@@ -100,8 +105,8 @@ import Layout from '../../layouts/Layout.astro';
                     <div class="flex items-start justify-between gap-4 mb-6">
                         <div class="flex items-center gap-3">
                             <div class="w-16 h-16 bg-primary rounded-lg flex flex-col items-center justify-center">
-                                <div class="text-xl font-bold">${new Date(event.date).getDate()}</div>
-                                <div class="text-xs uppercase">${new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}</div>
+                                <div class="text-xl font-bold">${parseLocalDate(event.date).getDate()}</div>
+                                <div class="text-xs uppercase">${parseLocalDate(event.date).toLocaleDateString('en-US', { month: 'short' })}</div>
                             </div>
                             <div>
                                 <span class="px-2 py-1 rounded-full text-xs font-semibold uppercase border ${categoryColors[event.category] || categoryColors.other}">
@@ -152,6 +157,27 @@ import Layout from '../../layouts/Layout.astro';
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-slate-300 mb-1">Description</label>
                             <textarea class="event-description w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent h-24 resize-none" data-event-index="${originalIndex}">${event.description}</textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Event Image</label>
+                            <div class="flex items-start gap-4">
+                                <div class="flex-1">
+                                    <div class="image-preview-container mb-2 ${event.image ? '' : 'hidden'}" data-event-index="${originalIndex}">
+                                        <img src="${event.image ? '/api/event-image?key=' + event.image : ''}" alt="Event preview" class="image-preview max-h-40 rounded-lg object-cover" data-event-index="${originalIndex}">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="event-image-input hidden" data-event-index="${originalIndex}" data-event-id="${event.id}">
+                                        <button type="button" class="upload-image-btn px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg text-sm transition-colors" data-event-index="${originalIndex}">
+                                            ${event.image ? 'Change Image' : 'Upload Image'}
+                                        </button>
+                                        <button type="button" class="remove-image-btn px-4 py-2 bg-red-600/50 hover:bg-red-600 rounded-lg text-sm transition-colors ${event.image ? '' : 'hidden'}" data-event-index="${originalIndex}">
+                                            Remove
+                                        </button>
+                                        <span class="upload-status text-sm text-white/60" data-event-index="${originalIndex}"></span>
+                                    </div>
+                                    <p class="text-xs text-white/50 mt-1">Max 5MB. Supported: JPEG, PNG, GIF, WebP</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -226,6 +252,84 @@ import Layout from '../../layouts/Layout.astro';
                     const index = parseInt(e.target.dataset.eventIndex);
                     if (confirm('Are you sure you want to delete this event?')) {
                         eventsData.splice(index, 1);
+                        renderEvents();
+                    }
+                });
+            });
+
+            // Upload image button - triggers file input
+            document.querySelectorAll('.upload-image-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = e.target.dataset.eventIndex;
+                    const fileInput = document.querySelector(`.event-image-input[data-event-index="${index}"]`);
+                    fileInput.click();
+                });
+            });
+
+            // Handle file selection and upload
+            document.querySelectorAll('.event-image-input').forEach(input => {
+                input.addEventListener('change', async (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    const eventId = e.target.dataset.eventId;
+                    const file = e.target.files[0];
+
+                    if (!file) return;
+
+                    const statusEl = document.querySelector(`.upload-status[data-event-index="${index}"]`);
+                    const uploadBtn = document.querySelector(`.upload-image-btn[data-event-index="${index}"]`);
+
+                    statusEl.textContent = 'Uploading...';
+                    uploadBtn.disabled = true;
+
+                    try {
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        formData.append('eventId', eventId);
+
+                        const response = await fetch('/api/event-image', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            eventsData[index].image = result.imageKey;
+                            statusEl.textContent = 'Uploaded!';
+                            setTimeout(() => statusEl.textContent = '', 2000);
+                            renderEvents();
+                        } else {
+                            statusEl.textContent = result.error || 'Upload failed';
+                        }
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        statusEl.textContent = 'Upload failed';
+                    } finally {
+                        uploadBtn.disabled = false;
+                    }
+                });
+            });
+
+            // Remove image button
+            document.querySelectorAll('.remove-image-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const index = parseInt(e.target.dataset.eventIndex);
+                    const event = eventsData[index];
+
+                    if (!event.image) return;
+
+                    if (confirm('Are you sure you want to remove this image?')) {
+                        try {
+                            await fetch('/api/event-image', {
+                                method: 'DELETE',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ imageKey: event.image })
+                            });
+                        } catch (error) {
+                            console.error('Failed to delete image from storage:', error);
+                        }
+
+                        delete eventsData[index].image;
                         renderEvents();
                     }
                 });

@@ -1,4 +1,4 @@
-i---
+---
 import Layout from '../layouts/Layout.astro';
 ---
 
@@ -39,6 +39,27 @@ import Layout from '../layouts/Layout.astro';
         </div>
     </div>
 
+    <!-- Image Modal for full-size viewing -->
+    <div id="imageModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4">
+        <button id="closeModal" class="absolute top-4 right-4 text-white/80 hover:text-white p-2">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <button id="modalPrev" class="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 bg-black/30 rounded-full">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+        <img id="modalImage" src="" alt="Vehicle image" class="max-w-full max-h-[85vh] object-contain rounded-lg">
+        <button id="modalNext" class="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 bg-black/30 rounded-full">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </button>
+        <div id="modalCounter" class="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 bg-black/50 px-3 py-1 rounded-full text-sm"></div>
+    </div>
+
     <script type="module">
         const icons = {
             vehicle: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>',
@@ -57,6 +78,7 @@ import Layout from '../layouts/Layout.astro';
 
         let warehouseData = [];
         let imageCache = {}; // Cache for loaded images
+        let modalState = { images: [], currentIndex: 0 }; // Modal state for image gallery
 
         async function loadWarehouse() {
             try {
@@ -68,6 +90,7 @@ import Layout from '../layouts/Layout.astro';
                 await loadImages();
 
                 renderWarehouse();
+                setupModal();
             } catch (error) {
                 console.error('Failed to load warehouse:', error);
                 document.getElementById('warehouseGrid').innerHTML = `
@@ -78,21 +101,33 @@ import Layout from '../layouts/Layout.astro';
             }
         }
 
-        // Load images from the separate image store
+        // Load images from the separate image store (supports multiple images per category)
         async function loadImages() {
-            const imagePromises = warehouseData
-                .filter(cat => cat.imageKey && !imageCache[cat.imageKey])
-                .map(async (cat) => {
-                    try {
-                        const response = await fetch(`/api/warehouse?image=${encodeURIComponent(cat.imageKey)}`);
-                        const data = await response.json();
-                        if (data.image) {
-                            imageCache[cat.imageKey] = data.image;
+            // Collect all image keys from both single imageKey and multiple imageKeys
+            const allImageKeys = [];
+            for (const cat of warehouseData) {
+                if (cat.imageKeys && cat.imageKeys.length > 0) {
+                    for (const key of cat.imageKeys) {
+                        if (!imageCache[key]) {
+                            allImageKeys.push(key);
                         }
-                    } catch (e) {
-                        console.error('Failed to load image for', cat.id, e);
                     }
-                });
+                } else if (cat.imageKey && !imageCache[cat.imageKey]) {
+                    allImageKeys.push(cat.imageKey);
+                }
+            }
+
+            const imagePromises = allImageKeys.map(async (key) => {
+                try {
+                    const response = await fetch(`/api/warehouse?image=${encodeURIComponent(key)}`);
+                    const data = await response.json();
+                    if (data.image) {
+                        imageCache[key] = data.image;
+                    }
+                } catch (e) {
+                    console.error('Failed to load image:', key, e);
+                }
+            });
             await Promise.all(imagePromises);
         }
 
@@ -108,14 +143,38 @@ import Layout from '../layouts/Layout.astro';
                 return;
             }
 
-            grid.innerHTML = warehouseData.map(category => {
-                const imageUrl = category.imageKey ? imageCache[category.imageKey] : null;
+            grid.innerHTML = warehouseData.map((category, catIndex) => {
+                // Get all images for this category (support both single and multiple)
+                const imageKeys = category.imageKeys || (category.imageKey ? [category.imageKey] : []);
+                const images = imageKeys.map(key => imageCache[key]).filter(Boolean);
+                const hasImages = images.length > 0;
+                const hasMultipleImages = images.length > 1;
 
                 return `
                 <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                    ${imageUrl ? `
-                        <div class="mb-4 -mx-2 -mt-2">
-                            <img src="${imageUrl}" alt="${category.name}" class="w-full h-40 object-cover rounded-lg">
+                    ${hasImages ? `
+                        <div class="mb-4 -mx-2 -mt-2 relative group">
+                            <div class="gallery-container" data-category="${catIndex}">
+                                <img src="${images[0]}" alt="${category.name}" class="gallery-image w-full h-40 object-cover rounded-lg cursor-pointer" data-category="${catIndex}" data-index="0">
+                                ${hasMultipleImages ? `
+                                    <button class="gallery-prev absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" data-category="${catIndex}">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                        </svg>
+                                    </button>
+                                    <button class="gallery-next absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" data-category="${catIndex}">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </button>
+                                    <div class="gallery-dots absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                                        ${images.map((_, i) => `
+                                            <button class="gallery-dot w-2 h-2 rounded-full transition-colors ${i === 0 ? 'bg-white' : 'bg-white/50'}" data-category="${catIndex}" data-index="${i}"></button>
+                                        `).join('')}
+                                    </div>
+                                    <span class="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">${images.length} photos</span>
+                                ` : ''}
+                            </div>
                         </div>
                     ` : ''}
                     <div class="flex items-center gap-3 mb-4">
@@ -134,6 +193,152 @@ import Layout from '../layouts/Layout.astro';
                     </ul>
                 </div>
             `;}).join('');
+
+            // Attach gallery event listeners
+            attachGalleryListeners();
+        }
+
+        // Track current gallery state per category
+        let galleryState = {};
+
+        function attachGalleryListeners() {
+            // Initialize gallery state
+            warehouseData.forEach((category, catIndex) => {
+                const imageKeys = category.imageKeys || (category.imageKey ? [category.imageKey] : []);
+                const images = imageKeys.map(key => imageCache[key]).filter(Boolean);
+                galleryState[catIndex] = { images, currentIndex: 0 };
+            });
+
+            // Gallery prev buttons
+            document.querySelectorAll('.gallery-prev').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const catIndex = parseInt(e.currentTarget.dataset.category);
+                    navigateGallery(catIndex, -1);
+                });
+            });
+
+            // Gallery next buttons
+            document.querySelectorAll('.gallery-next').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const catIndex = parseInt(e.currentTarget.dataset.category);
+                    navigateGallery(catIndex, 1);
+                });
+            });
+
+            // Gallery dot navigation
+            document.querySelectorAll('.gallery-dot').forEach(dot => {
+                dot.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const catIndex = parseInt(e.target.dataset.category);
+                    const index = parseInt(e.target.dataset.index);
+                    setGalleryIndex(catIndex, index);
+                });
+            });
+
+            // Click on image to open modal
+            document.querySelectorAll('.gallery-image').forEach(img => {
+                img.addEventListener('click', (e) => {
+                    const catIndex = parseInt(e.target.dataset.category);
+                    const state = galleryState[catIndex];
+                    if (state && state.images.length > 0) {
+                        openModal(state.images, state.currentIndex);
+                    }
+                });
+            });
+        }
+
+        function navigateGallery(catIndex, direction) {
+            const state = galleryState[catIndex];
+            if (!state || state.images.length <= 1) return;
+
+            let newIndex = state.currentIndex + direction;
+            if (newIndex < 0) newIndex = state.images.length - 1;
+            if (newIndex >= state.images.length) newIndex = 0;
+
+            setGalleryIndex(catIndex, newIndex);
+        }
+
+        function setGalleryIndex(catIndex, index) {
+            const state = galleryState[catIndex];
+            if (!state) return;
+
+            state.currentIndex = index;
+
+            // Update image
+            const container = document.querySelector(`.gallery-container[data-category="${catIndex}"]`);
+            if (container) {
+                const img = container.querySelector('.gallery-image');
+                if (img) {
+                    img.src = state.images[index];
+                    img.dataset.index = index;
+                }
+
+                // Update dots
+                const dots = container.querySelectorAll('.gallery-dot');
+                dots.forEach((dot, i) => {
+                    dot.className = `gallery-dot w-2 h-2 rounded-full transition-colors ${i === index ? 'bg-white' : 'bg-white/50'}`;
+                });
+            }
+        }
+
+        // Modal functions
+        function setupModal() {
+            const modal = document.getElementById('imageModal');
+            const closeBtn = document.getElementById('closeModal');
+            const prevBtn = document.getElementById('modalPrev');
+            const nextBtn = document.getElementById('modalNext');
+
+            closeBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+
+            prevBtn.addEventListener('click', () => navigateModal(-1));
+            nextBtn.addEventListener('click', () => navigateModal(1));
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (!modal.classList.contains('hidden')) {
+                    if (e.key === 'Escape') closeModal();
+                    if (e.key === 'ArrowLeft') navigateModal(-1);
+                    if (e.key === 'ArrowRight') navigateModal(1);
+                }
+            });
+        }
+
+        function openModal(images, startIndex = 0) {
+            modalState.images = images;
+            modalState.currentIndex = startIndex;
+
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            updateModalImage();
+
+            // Hide nav buttons if only one image
+            document.getElementById('modalPrev').style.display = images.length > 1 ? 'block' : 'none';
+            document.getElementById('modalNext').style.display = images.length > 1 ? 'block' : 'none';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function navigateModal(direction) {
+            let newIndex = modalState.currentIndex + direction;
+            if (newIndex < 0) newIndex = modalState.images.length - 1;
+            if (newIndex >= modalState.images.length) newIndex = 0;
+            modalState.currentIndex = newIndex;
+            updateModalImage();
+        }
+
+        function updateModalImage() {
+            document.getElementById('modalImage').src = modalState.images[modalState.currentIndex];
+            document.getElementById('modalCounter').textContent = `${modalState.currentIndex + 1} / ${modalState.images.length}`;
         }
 
         loadWarehouse();

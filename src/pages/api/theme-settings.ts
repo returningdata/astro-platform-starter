@@ -4,17 +4,19 @@ import { getStore } from '@netlify/blobs';
 export const prerender = false;
 
 export interface ThemeSettings {
-    activeTheme: 'christmas' | 'halloween' | 'default';
+    activeTheme: 'christmas' | 'halloween' | 'default' | 'new-year';
     christmasMusic: string; // YouTube video ID
     halloweenMusic: string; // YouTube video ID
     defaultMusic: string; // YouTube video ID
+    newYearMusic: string; // YouTube video ID
 }
 
 const defaultThemeSettings: ThemeSettings = {
-    activeTheme: 'christmas',
+    activeTheme: 'new-year',
     christmasMusic: 'yXfWUNl1PbM',
     halloweenMusic: 'qw07ZfxeV4g',
-    defaultMusic: '329iFlRszxs'
+    defaultMusic: '329iFlRszxs',
+    newYearMusic: 'MmC4BLodWDk'
 };
 
 function getThemeStore() {
@@ -49,10 +51,11 @@ export const POST: APIRoute = async ({ request }) => {
         const store = getThemeStore();
 
         const settingsToSave: ThemeSettings = {
-            activeTheme: data.settings.activeTheme || 'christmas',
+            activeTheme: data.settings.activeTheme || 'new-year',
             christmasMusic: data.settings.christmasMusic || defaultThemeSettings.christmasMusic,
             halloweenMusic: data.settings.halloweenMusic || defaultThemeSettings.halloweenMusic,
-            defaultMusic: data.settings.defaultMusic || defaultThemeSettings.defaultMusic
+            defaultMusic: data.settings.defaultMusic || defaultThemeSettings.defaultMusic,
+            newYearMusic: data.settings.newYearMusic || defaultThemeSettings.newYearMusic
         };
 
         await store.setJSON('settings', settingsToSave);

@@ -12,11 +12,35 @@ export interface CommandPosition {
     rank: string;
     name: string;
     callSign: string;
+    jobTitle: string;
+}
+
+export interface RankMember {
+    name: string;
+    callSign: string;
+    jobTitle: string;
+}
+
+export interface RankPositions {
+    rank: string;
+    members: RankMember[];
+}
+
+export interface TierMember {
+    name: string;
+    jobTitle: string;
+}
+
+export interface TierPositions {
+    tierName: string;
+    members: TierMember[];
 }
 
 export interface DepartmentData {
     awardRecipients: AwardRecipient[];
     commandPositions: CommandPosition[];
+    tierPositions: TierPositions[];
+    rankPositions: RankPositions[];
 }
 
 const defaultDepartmentData: DepartmentData = {
@@ -35,12 +59,93 @@ const defaultDepartmentData: DepartmentData = {
         { awardName: 'Photo of the Week', recipientName: '' }
     ],
     commandPositions: [
-        { rank: 'Chief of Police', name: '', callSign: '1R-01' },
-        { rank: 'Deputy Chief of Police', name: '', callSign: '1R-02' },
-        { rank: 'Assistant Chief of Police', name: '', callSign: '1R-03' },
-        { rank: 'Colonel', name: '', callSign: '1R-04' },
-        { rank: 'Lieutenant Colonel', name: '', callSign: '1R-05' },
-        { rank: 'Commander', name: '', callSign: '1R-06' }
+        { rank: 'Chief of Police', name: '', callSign: '1R-01', jobTitle: '' },
+        { rank: 'Deputy Chief of Police', name: '', callSign: '1R-02', jobTitle: '' },
+        { rank: 'Assistant Chief of Police', name: '', callSign: '1R-03', jobTitle: '' },
+        { rank: 'Colonel', name: '', callSign: '1R-04', jobTitle: '' },
+        { rank: 'Lieutenant Colonel', name: '', callSign: '1R-05', jobTitle: '' },
+        { rank: 'Commander', name: '', callSign: '1R-06', jobTitle: '' }
+    ],
+    tierPositions: [
+        {
+            tierName: 'Low Command',
+            members: [
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' }
+            ]
+        },
+        {
+            tierName: 'Trial Low Command',
+            members: [
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' },
+                { name: '', jobTitle: '' }
+            ]
+        }
+    ],
+    rankPositions: [
+        {
+            rank: 'Major',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Captain',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: '1st Lieutenant',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: '2nd Lieutenant',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Master Sergeant',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        }
     ]
 };
 

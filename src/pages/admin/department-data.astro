@@ -24,15 +24,22 @@ import Layout from '../../layouts/Layout.astro';
         <div id="statusMessage" class="hidden rounded-lg p-4 border">
         </div>
 
-        <!-- Chain of Command Section -->
+        <!-- Chain of Command Section - High Command -->
         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-            <h2 class="text-2xl font-bold mb-4 text-teal-400">Chain of Command</h2>
-            <p class="text-white/60 mb-6">Assign names to high command positions. Names will appear in italic on the Chain of Command page.</p>
+            <h2 class="text-2xl font-bold mb-4 text-teal-400">Chain of Command - High Command</h2>
+            <p class="text-white/60 mb-6">Assign names and job titles to high command positions.</p>
 
             <div id="commandList" class="space-y-4">
                 <div class="text-center py-8 text-white/60">
                     Loading chain of command data...
                 </div>
+            </div>
+        </div>
+
+        <!-- Rank-Based Positions Sections -->
+        <div id="rankPositionsSections" class="space-y-6">
+            <div class="text-center py-8 text-white/60">
+                Loading rank positions data...
             </div>
         </div>
 
@@ -52,7 +59,42 @@ import Layout from '../../layouts/Layout.astro';
     <script type="module">
         let departmentData = {
             awardRecipients: [],
-            commandPositions: []
+            commandPositions: [],
+            tierPositions: [],
+            rankPositions: []
+        };
+
+        // Default rank positions structure
+        const defaultRankPositions = [
+            {
+                rank: 'Major',
+                members: Array(6).fill(null).map(() => ({ name: '', callSign: '', jobTitle: '' }))
+            },
+            {
+                rank: 'Captain',
+                members: Array(6).fill(null).map(() => ({ name: '', callSign: '', jobTitle: '' }))
+            },
+            {
+                rank: '1st Lieutenant',
+                members: Array(6).fill(null).map(() => ({ name: '', callSign: '', jobTitle: '' }))
+            },
+            {
+                rank: '2nd Lieutenant',
+                members: Array(6).fill(null).map(() => ({ name: '', callSign: '', jobTitle: '' }))
+            },
+            {
+                rank: 'Master Sergeant',
+                members: Array(6).fill(null).map(() => ({ name: '', callSign: '', jobTitle: '' }))
+            }
+        ];
+
+        // Rank colors for styling
+        const rankColors = {
+            'Major': { color: 'blue', tier: 'Low Command' },
+            'Captain': { color: 'blue', tier: 'Low Command' },
+            '1st Lieutenant': { color: 'blue', tier: 'Low Command' },
+            '2nd Lieutenant': { color: 'blue', tier: 'Low Command' },
+            'Master Sergeant': { color: 'indigo', tier: 'Trial Low Command' }
         };
 
         // Load department data
@@ -61,7 +103,30 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/department-data');
                 const data = await response.json();
                 departmentData = data;
+
+                // Ensure rankPositions exists with proper structure
+                if (!departmentData.rankPositions || departmentData.rankPositions.length === 0) {
+                    departmentData.rankPositions = defaultRankPositions;
+                }
+
+                // Ensure each rank position has 6 members
+                departmentData.rankPositions = departmentData.rankPositions.map(rp => {
+                    while (rp.members.length < 6) {
+                        rp.members.push({ name: '', callSign: '', jobTitle: '' });
+                    }
+                    return rp;
+                });
+
+                // Ensure command positions have jobTitle field
+                if (departmentData.commandPositions) {
+                    departmentData.commandPositions = departmentData.commandPositions.map(cp => ({
+                        ...cp,
+                        jobTitle: cp.jobTitle || ''
+                    }));
+                }
+
                 renderCommandPositions();
+                renderRankPositions();
                 renderAwards();
             } catch (error) {
                 console.error('Failed to load department data:', error);
@@ -90,7 +155,7 @@ import Layout from '../../layouts/Layout.astro';
             }
 
             container.innerHTML = departmentData.commandPositions.map((position, index) => `
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">Rank</label>
                         <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-teal-300 font-semibold">
@@ -104,12 +169,22 @@ import Layout from '../../layouts/Layout.astro';
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Name <span class="text-white/50">(italic)</span></label>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Name</label>
                         <input
                             type="text"
                             value="${position.name || ''}"
                             placeholder="Enter officer name..."
-                            class="command-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            class="command-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                            data-index="${index}"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Job Title</label>
+                        <input
+                            type="text"
+                            value="${position.jobTitle || ''}"
+                            placeholder="Enter job title..."
+                            class="command-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                             data-index="${index}"
                         >
                     </div>
@@ -117,6 +192,76 @@ import Layout from '../../layouts/Layout.astro';
             `).join('');
 
             attachCommandListeners();
+        }
+
+        function renderRankPositions() {
+            const container = document.getElementById('rankPositionsSections');
+
+            if (!departmentData.rankPositions || departmentData.rankPositions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-white/60">
+                        No rank positions found.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = departmentData.rankPositions.map((rankPos, rankIndex) => {
+                const colorInfo = rankColors[rankPos.rank] || { color: 'slate', tier: '' };
+                const colorClass = colorInfo.color;
+
+                return `
+                    <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-2xl font-bold text-${colorClass}-400">${rankPos.rank}</h2>
+                            <span class="text-sm text-white/60">${colorInfo.tier}</span>
+                        </div>
+                        <p class="text-white/60 mb-6">Add up to 6 members with this rank. Enter name, callsign, and job title.</p>
+
+                        <div class="space-y-4">
+                            ${rankPos.members.map((member, memberIndex) => `
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-1">Name #${memberIndex + 1}</label>
+                                        <input
+                                            type="text"
+                                            value="${member.name || ''}"
+                                            placeholder="Enter member name..."
+                                            class="rank-member-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
+                                            data-rank-index="${rankIndex}"
+                                            data-member-index="${memberIndex}"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-1">Callsign</label>
+                                        <input
+                                            type="text"
+                                            value="${member.callSign || ''}"
+                                            placeholder="Enter callsign..."
+                                            class="rank-member-callsign w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white font-mono focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
+                                            data-rank-index="${rankIndex}"
+                                            data-member-index="${memberIndex}"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-300 mb-1">Job Title</label>
+                                        <input
+                                            type="text"
+                                            value="${member.jobTitle || ''}"
+                                            placeholder="Enter job title..."
+                                            class="rank-member-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
+                                            data-rank-index="${rankIndex}"
+                                            data-member-index="${memberIndex}"
+                                        >
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            attachRankListeners();
         }
 
         function renderAwards() {
@@ -189,11 +334,44 @@ import Layout from '../../layouts/Layout.astro';
             attachAwardListeners();
         }
 
+        function attachRankListeners() {
+            document.querySelectorAll('.rank-member-name').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const rankIndex = parseInt(e.target.dataset.rankIndex);
+                    const memberIndex = parseInt(e.target.dataset.memberIndex);
+                    departmentData.rankPositions[rankIndex].members[memberIndex].name = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.rank-member-callsign').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const rankIndex = parseInt(e.target.dataset.rankIndex);
+                    const memberIndex = parseInt(e.target.dataset.memberIndex);
+                    departmentData.rankPositions[rankIndex].members[memberIndex].callSign = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.rank-member-job').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const rankIndex = parseInt(e.target.dataset.rankIndex);
+                    const memberIndex = parseInt(e.target.dataset.memberIndex);
+                    departmentData.rankPositions[rankIndex].members[memberIndex].jobTitle = e.target.value;
+                });
+            });
+        }
+
         function attachCommandListeners() {
             document.querySelectorAll('.command-name').forEach(input => {
                 input.addEventListener('input', (e) => {
                     const index = parseInt(e.target.dataset.index);
                     departmentData.commandPositions[index].name = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.command-job').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.commandPositions[index].jobTitle = e.target.value;
                 });
             });
         }

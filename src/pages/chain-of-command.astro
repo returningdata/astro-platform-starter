@@ -4,21 +4,46 @@ import Layout from '../layouts/Layout.astro';
 export const prerender = false;
 
 // Fetch command positions data
-let commandPositions: Array<{rank: string, name: string, callSign: string}> = [];
+let commandPositions: Array<{rank: string, name: string, callSign: string, jobTitle?: string}> = [];
+let tierPositions: Array<{tierName: string, members: Array<{name: string, jobTitle: string}>}> = [];
+let rankPositions: Array<{rank: string, members: Array<{name: string, callSign: string, jobTitle: string}>}> = [];
+
 try {
     const response = await fetch(new URL('/api/department-data', Astro.url.origin));
     if (response.ok) {
         const data = await response.json();
         commandPositions = data.commandPositions || [];
+        tierPositions = data.tierPositions || [];
+        rankPositions = data.rankPositions || [];
     }
 } catch (e) {
-    // Use empty array as fallback
+    // Use empty arrays as fallback
 }
 
 // Helper function to get officer info for a rank
 function getOfficerInfo(rankName: string) {
     const position = commandPositions.find(p => p.rank === rankName);
-    return position ? { name: position.name, callSign: position.callSign } : null;
+    return position ? { name: position.name, callSign: position.callSign, jobTitle: position.jobTitle } : null;
+}
+
+// Helper function to get tier members (legacy support)
+function getTierMembers(tierName: string) {
+    const tier = tierPositions.find(t => t.tierName === tierName);
+    if (tier) {
+        // Filter to only members with name or job title filled in
+        return tier.members.filter(m => m.name || m.jobTitle);
+    }
+    return [];
+}
+
+// Helper function to get rank-based members
+function getRankMembers(rankName: string) {
+    const rankPos = rankPositions.find(rp => rp.rank === rankName);
+    if (rankPos) {
+        // Filter to only members with data filled in
+        return rankPos.members.filter(m => m.name || m.callSign || m.jobTitle);
+    }
+    return [];
 }
 
 // Rank hierarchy data
@@ -104,6 +129,9 @@ const rankHierarchy = [
         ranks: ["Cadet"]
     }
 ];
+
+// Ranks that support multiple members
+const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lieutenant", "Master Sergeant"];
 ---
 
 <Layout title="Chain of Command - Del Perro Police Department">
@@ -132,25 +160,82 @@ const rankHierarchy = [
                             <div class={`flex flex-wrap justify-center gap-4 ${tier.ranks.length === 1 ? 'justify-center' : ''}`}>
                                 {tier.ranks.map((rank) => {
                                     const officerInfo = getOfficerInfo(rank);
+                                    const rankMembers = getRankMembers(rank);
+                                    const hasMultipleMembers = ranksWithMultipleMembers.includes(rank);
+
                                     return (
                                         <div class="group relative">
-                                            <div class={`flex items-center gap-3 px-5 py-3 rounded-lg border ${tier.borderColor} bg-slate-800/60 hover:bg-slate-700/60 transition-all duration-200`}>
-                                                <!-- Rank Icon -->
-                                                <div class={`w-10 h-10 rounded-full bg-gradient-to-br ${tier.color} flex items-center justify-center flex-shrink-0`}>
-                                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                    </svg>
+                                            {/* Main rank card - for single-officer ranks or ranks without multiple member support */}
+                                            {!hasMultipleMembers ? (
+                                                <div class={`flex items-center gap-3 px-5 py-3 rounded-lg border ${tier.borderColor} bg-slate-800/60 hover:bg-slate-700/60 transition-all duration-200`}>
+                                                    {/* Rank Icon */}
+                                                    <div class={`w-10 h-10 rounded-full bg-gradient-to-br ${tier.color} flex items-center justify-center flex-shrink-0`}>
+                                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                        </svg>
+                                                    </div>
+                                                    {/* Rank Name and Officer Info */}
+                                                    <div class="flex flex-col">
+                                                        <span class={`font-semibold ${tier.textColor}`}>{rank}</span>
+                                                        {officerInfo && (officerInfo.name || officerInfo.callSign || officerInfo.jobTitle) && (
+                                                            <div class="flex flex-col">
+                                                                {(officerInfo.name || officerInfo.callSign) && (
+                                                                    <span class="text-sm text-white/70 italic">
+                                                                        {officerInfo.name}{officerInfo.name && officerInfo.callSign ? ' - ' : ''}{officerInfo.callSign}
+                                                                    </span>
+                                                                )}
+                                                                {officerInfo.jobTitle && (
+                                                                    <span class="text-xs text-white/50">{officerInfo.jobTitle}</span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <!-- Rank Name and Officer Info -->
-                                                <div class="flex flex-col">
-                                                    <span class={`font-semibold ${tier.textColor}`}>{rank}</span>
-                                                    {officerInfo && (officerInfo.name || officerInfo.callSign) && (
-                                                        <span class="text-sm text-white/70 italic">
-                                                            {officerInfo.name}{officerInfo.name && officerInfo.callSign ? ' - ' : ''}{officerInfo.callSign}
-                                                        </span>
+                                            ) : (
+                                                /* Rank card for ranks with multiple members */
+                                                <div class={`flex flex-col rounded-lg border ${tier.borderColor} bg-slate-800/60 overflow-hidden min-w-[200px]`}>
+                                                    {/* Rank header */}
+                                                    <div class={`flex items-center gap-3 px-5 py-3 bg-gradient-to-r ${tier.color}`}>
+                                                        <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                                                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                            </svg>
+                                                        </div>
+                                                        <span class="font-semibold text-white">{rank}</span>
+                                                    </div>
+                                                    {/* Members list */}
+                                                    {rankMembers.length > 0 ? (
+                                                        <div class="p-3 space-y-2">
+                                                            {rankMembers.map((member) => (
+                                                                <div class={`flex items-center gap-2 px-3 py-2 rounded border ${tier.borderColor} bg-slate-900/40`}>
+                                                                    <div class={`w-6 h-6 rounded-full bg-gradient-to-br ${tier.color} flex items-center justify-center flex-shrink-0`}>
+                                                                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                                        </svg>
+                                                                    </div>
+                                                                    <div class="flex flex-col min-w-0">
+                                                                        <div class="flex items-center gap-2">
+                                                                            {member.name && (
+                                                                                <span class={`text-sm font-medium ${tier.textColor} truncate`}>{member.name}</span>
+                                                                            )}
+                                                                            {member.callSign && (
+                                                                                <span class="text-xs text-white/60 font-mono">({member.callSign})</span>
+                                                                            )}
+                                                                        </div>
+                                                                        {member.jobTitle && (
+                                                                            <span class="text-xs text-white/50 italic truncate">{member.jobTitle}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div class="p-3 text-center text-white/40 text-sm">
+                                                            No members assigned
+                                                        </div>
                                                     )}
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                     );
                                 })}

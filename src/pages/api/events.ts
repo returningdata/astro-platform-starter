@@ -12,6 +12,7 @@ export interface CommunityEvent {
     description: string;
     category: 'patrol' | 'community' | 'training' | 'ceremony' | 'other';
     status: 'upcoming' | 'ongoing' | 'completed';
+    image?: string; // Optional image URL or blob key
 }
 
 const defaultEventsData: CommunityEvent[] = [

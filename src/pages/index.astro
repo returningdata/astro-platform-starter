@@ -119,6 +119,23 @@ import Layout from '../layouts/Layout.astro';
             <p class="text-white/70 mb-4">
                 We have specialized divisions for officers to join and advance their careers. Apply now for:
             </p>
+            <!-- Subdivision Overseer -->
+            <div id="subdivisionOverseerSection" class="mb-6 hidden">
+                <div class="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-sm text-orange-400 font-semibold">Subdivision Overseer</div>
+                            <div id="overseerName" class="text-white font-bold"></div>
+                            <div id="overseerDetails" class="text-xs text-white/60"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div id="subdivisionsGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
                 <div class="text-center py-4 text-white/60 col-span-full">Loading subdivisions...</div>
             </div>
@@ -147,13 +164,42 @@ import Layout from '../layouts/Layout.astro';
             }
         }
 
-        async function loadSubdivisions() {
+        async function loadSubdivisionsAndOverseer() {
             const container = document.getElementById('subdivisionsGrid');
-            try {
-                const response = await fetch('/api/subdivisions');
-                const data = await response.json();
-                const subdivisions = data.subdivisions || [];
+            const overseerSection = document.getElementById('subdivisionOverseerSection');
+            const overseerNameEl = document.getElementById('overseerName');
+            const overseerDetailsEl = document.getElementById('overseerDetails');
 
+            try {
+                // Fetch both subdivisions and department data
+                const [subResponse, deptResponse] = await Promise.all([
+                    fetch('/api/subdivisions'),
+                    fetch('/api/department-data')
+                ]);
+
+                const subData = await subResponse.json();
+                const deptData = await deptResponse.json();
+
+                const subdivisions = subData.subdivisions || [];
+                const subdivisionLeadership = deptData.subdivisionLeadership || [];
+
+                // Find the subdivision overseer by subdivisionId
+                const overseer = subdivisionLeadership.find(leader =>
+                    leader.subdivisionId === 'subdivision-overseer' ||
+                    (leader.division && leader.division.toLowerCase().includes('subdivision overseer'))
+                );
+
+                // Display overseer if found and has a name
+                if (overseer && overseer.name) {
+                    overseerNameEl.textContent = overseer.name;
+                    let details = [];
+                    if (overseer.callSign) details.push(overseer.callSign);
+                    if (overseer.jobTitle) details.push(overseer.jobTitle);
+                    overseerDetailsEl.textContent = details.join(' • ');
+                    overseerSection.classList.remove('hidden');
+                }
+
+                // Display subdivisions
                 if (subdivisions.length === 0) {
                     container.innerHTML = `<div class="text-center py-4 text-white/60 col-span-full">No subdivisions available.</div>`;
                     return;
@@ -171,6 +217,11 @@ import Layout from '../layouts/Layout.astro';
                                 </div>
                             </div>
                             <div class="text-sm text-white/60">${sub.name}</div>
+                            ${sub.owner ? `
+                            <div class="text-xs text-white/50 mt-1 italic">
+                                Head: ${sub.owner}${sub.ownerCallSign ? ` (${sub.ownerCallSign})` : ''}
+                            </div>
+                            ` : ''}
                         </div>
                     `;
                 }).join('');
@@ -180,6 +231,6 @@ import Layout from '../layouts/Layout.astro';
             }
         }
 
-        loadSubdivisions();
+        loadSubdivisionsAndOverseer();
     </script>
 </Layout>

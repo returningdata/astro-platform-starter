@@ -128,7 +128,18 @@ import Layout from '../../layouts/Layout.astro';
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Subdivision ID</label>
+                            <input
+                                type="text"
+                                value="${subdivision.id || ''}"
+                                placeholder="e.g., swat"
+                                class="subdivision-id w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-cyan-300 font-mono focus:ring-2 focus:ring-primary focus:border-transparent"
+                                data-index="${index}"
+                            >
+                            <p class="text-xs text-white/50 mt-1">Used to link leadership entries</p>
+                        </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-1">Abbreviation</label>
                             <input
@@ -182,12 +193,19 @@ import Layout from '../../layouts/Layout.astro';
         }
 
         function attachEventListeners() {
+            // Subdivision ID inputs
+            document.querySelectorAll('.subdivision-id').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    subdivisionsData[index].id = e.target.value.toLowerCase().replace(/\s+/g, '-');
+                });
+            });
+
             // Abbreviation inputs
             document.querySelectorAll('.subdivision-abbreviation').forEach(input => {
                 input.addEventListener('input', (e) => {
                     const index = parseInt(e.target.dataset.index);
                     subdivisionsData[index].abbreviation = e.target.value;
-                    subdivisionsData[index].id = e.target.value.toLowerCase().replace(/\s+/g, '-');
                 });
             });
 

@@ -6,6 +6,7 @@ export const prerender = false;
 export interface AwardRecipient {
     awardName: string;
     recipientName: string;
+    imageUrl?: string;  // Used for Photo of the Week
 }
 
 export interface CommandPosition {
@@ -41,6 +42,7 @@ export interface SubdivisionLeader {
     name: string;
     callSign: string;
     jobTitle: string;
+    subdivisionId?: string;  // Links to subdivision ID for reliable matching
 }
 
 export interface DepartmentData {

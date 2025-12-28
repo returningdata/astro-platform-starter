@@ -71,6 +71,9 @@ import Layout from '../../layouts/Layout.astro';
         const errorMessage = document.getElementById('errorMessage');
         const submitBtn = document.getElementById('submitBtn');
 
+        // Clear any existing session on login page load
+        sessionStorage.removeItem('adminUser');
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -93,6 +96,8 @@ import Layout from '../../layouts/Layout.astro';
                 const data = await response.json();
 
                 if (data.success) {
+                    // Store user data in session storage
+                    sessionStorage.setItem('adminUser', JSON.stringify(data.user));
                     window.location.href = '/admin';
                 } else {
                     errorMessage.textContent = data.error || 'Login failed';

@@ -38,6 +38,31 @@ import Layout from '../../layouts/Layout.astro';
     </div>
 
     <script type="module">
+        // Check permissions
+        const adminUserData = sessionStorage.getItem('adminUser');
+        if (!adminUserData) {
+            window.location.href = '/admin/login';
+        }
+        const adminUser = adminUserData ? JSON.parse(adminUserData) : null;
+
+        function hasPermission() {
+            if (!adminUser) return false;
+            if (adminUser.role === 'super_admin') return true;
+            return adminUser.permissions && adminUser.permissions.includes('warehouse');
+        }
+
+        if (!hasPermission()) {
+            document.body.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                    <div class="text-center p-8">
+                        <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                        <p class="text-white/70 mb-4">You don't have permission to access this page.</p>
+                        <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                    </div>
+                </div>
+            `;
+        }
+
         const icons = ['vehicle', 'firearm', 'communication', 'protection', 'investigation', 'traffic'];
         const statusOptions = ['available', 'limited', 'out'];
 

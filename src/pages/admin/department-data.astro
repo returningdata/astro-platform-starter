@@ -25,7 +25,7 @@ import Layout from '../../layouts/Layout.astro';
         </div>
 
         <!-- Chain of Command Section - High Command -->
-        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+        <div id="commandSection" class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
             <h2 class="text-2xl font-bold mb-4 text-teal-400">Chain of Command - High Command</h2>
             <p class="text-white/60 mb-6">Assign names and job titles to high command positions.</p>
 
@@ -44,7 +44,7 @@ import Layout from '../../layouts/Layout.astro';
         </div>
 
         <!-- Subdivision Leadership Section -->
-        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+        <div id="subdivisionSection" class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h2 class="text-2xl font-bold text-orange-400">Subdivision Leadership</h2>
@@ -66,7 +66,7 @@ import Layout from '../../layouts/Layout.astro';
         </div>
 
         <!-- Awards Recipients Section -->
-        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+        <div id="awardsSection" class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
             <h2 class="text-2xl font-bold mb-4 text-yellow-400">Recent Awards & Recognition</h2>
             <p class="text-white/60 mb-6">Assign recipient names to awards. Names will appear in italic on the About page.</p>
 
@@ -79,6 +79,51 @@ import Layout from '../../layouts/Layout.astro';
     </div>
 
     <script type="module">
+        // Check permissions
+        const adminUserData = sessionStorage.getItem('adminUser');
+        if (!adminUserData) {
+            window.location.href = '/admin/login';
+        }
+        const adminUser = adminUserData ? JSON.parse(adminUserData) : null;
+
+        // Check if user has permission for department data
+        function hasFullPermission() {
+            if (!adminUser) return false;
+            if (adminUser.role === 'super_admin') return true;
+            return adminUser.permissions && adminUser.permissions.includes('department-data');
+        }
+
+        function hasSubdivisionOnlyPermission() {
+            if (!adminUser) return false;
+            if (adminUser.role === 'subdivision_overseer') return true;
+            return adminUser.permissions && adminUser.permissions.includes('department-data-subdivisions');
+        }
+
+        if (!hasFullPermission() && !hasSubdivisionOnlyPermission()) {
+            document.body.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                    <div class="text-center p-8">
+                        <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                        <p class="text-white/70 mb-4">You don't have permission to access this page.</p>
+                        <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Hide sections that subdivision overseer shouldn't see
+        const isSubdivisionOnly = !hasFullPermission() && hasSubdivisionOnlyPermission();
+        if (isSubdivisionOnly) {
+            // Hide chain of command, rank positions, and awards sections
+            const commandSection = document.getElementById('commandSection');
+            const rankSection = document.getElementById('rankPositionsSections');
+            const awardsSection = document.getElementById('awardsSection');
+
+            if (commandSection) commandSection.style.display = 'none';
+            if (rankSection) rankSection.style.display = 'none';
+            if (awardsSection) awardsSection.style.display = 'none';
+        }
+
         let departmentData = {
             awardRecipients: [],
             commandPositions: [],

@@ -9,7 +9,7 @@ export interface Resource {
     description: string;
     url: string;
     icon: 'document' | 'spreadsheet' | 'link' | 'video' | 'other';
-    category: 'official' | 'training' | 'reference' | 'other';
+    category: 'official' | 'training' | 'reference' | 'subdivision' | 'other';
 }
 
 const defaultResourcesData: Resource[] = [

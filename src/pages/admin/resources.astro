@@ -38,8 +38,33 @@ import Layout from '../../layouts/Layout.astro';
     </div>
 
     <script type="module">
+        // Check permissions
+        const adminUserData = sessionStorage.getItem('adminUser');
+        if (!adminUserData) {
+            window.location.href = '/admin/login';
+        }
+        const adminUser = adminUserData ? JSON.parse(adminUserData) : null;
+
+        function hasPermission() {
+            if (!adminUser) return false;
+            if (adminUser.role === 'super_admin') return true;
+            return adminUser.permissions && adminUser.permissions.includes('resources');
+        }
+
+        if (!hasPermission()) {
+            document.body.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                    <div class="text-center p-8">
+                        <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                        <p class="text-white/70 mb-4">You don't have permission to access this page.</p>
+                        <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                    </div>
+                </div>
+            `;
+        }
+
         const iconOptions = ['document', 'spreadsheet', 'link', 'video', 'other'];
-        const categoryOptions = ['official', 'training', 'reference', 'other'];
+        const categoryOptions = ['official', 'training', 'reference', 'subdivision', 'other'];
 
         const iconSvgs = {
             document: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>',
@@ -53,6 +78,7 @@ import Layout from '../../layouts/Layout.astro';
             official: 'bg-blue-600',
             training: 'bg-purple-600',
             reference: 'bg-green-600',
+            subdivision: 'bg-cyan-600',
             other: 'bg-gray-600'
         };
 

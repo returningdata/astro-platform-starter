@@ -164,6 +164,26 @@ import Layout from '../layouts/Layout.astro';
             }
         }
 
+        // Cache for loaded images
+        const imageCache = new Map();
+
+        async function loadSubdivisionImage(imageKey) {
+            if (imageCache.has(imageKey)) {
+                return imageCache.get(imageKey);
+            }
+            try {
+                const response = await fetch(`/api/subdivisions?image=${imageKey}`);
+                const data = await response.json();
+                if (data.image) {
+                    imageCache.set(imageKey, data.image);
+                    return data.image;
+                }
+            } catch (e) {
+                console.error('Failed to load subdivision image:', e);
+            }
+            return null;
+        }
+
         async function loadSubdivisionsAndOverseer() {
             const container = document.getElementById('subdivisionsGrid');
             const overseerSection = document.getElementById('subdivisionOverseerSection');
@@ -208,23 +228,49 @@ import Layout from '../layouts/Layout.astro';
                 container.innerHTML = subdivisions.map(sub => {
                     const config = getAvailabilityConfig(sub.availability);
                     return `
-                        <div class="bg-white/5 rounded-lg p-3 border border-white/10">
-                            <div class="flex items-center justify-between mb-1">
-                                <div class="font-bold text-primary">${sub.abbreviation}</div>
-                                <div class="flex items-center gap-1.5">
-                                    <span class="inline-block w-2 h-2 ${config.color} rounded-full"></span>
-                                    <span class="text-xs ${config.textColor}">${config.text}</span>
+                        <div class="bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:bg-white/10 transition-all">
+                            ${sub.imageKey ? `
+                                <div class="aspect-video bg-slate-800 relative overflow-hidden">
+                                    <img
+                                        src=""
+                                        alt="${sub.name}"
+                                        class="subdivision-img w-full h-full object-cover opacity-0 transition-opacity duration-300"
+                                        data-image-key="${sub.imageKey}"
+                                    >
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                                 </div>
-                            </div>
-                            <div class="text-sm text-white/60">${sub.name}</div>
-                            ${sub.owner ? `
-                            <div class="text-xs text-white/50 mt-1 italic">
-                                Head: ${sub.owner}${sub.ownerCallSign ? ` (${sub.ownerCallSign})` : ''}
-                            </div>
                             ` : ''}
+                            <div class="p-3">
+                                <div class="flex items-center justify-between mb-1">
+                                    <div class="font-bold text-primary">${sub.abbreviation}</div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="inline-block w-2 h-2 ${config.color} rounded-full"></span>
+                                        <span class="text-xs ${config.textColor}">${config.text}</span>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-white/60">${sub.name}</div>
+                                ${sub.owner ? `
+                                <div class="text-xs text-white/50 mt-1 italic">
+                                    Head: ${sub.owner}${sub.ownerCallSign ? ` (${sub.ownerCallSign})` : ''}
+                                </div>
+                                ` : ''}
+                            </div>
                         </div>
                     `;
                 }).join('');
+
+                // Load images asynchronously
+                document.querySelectorAll('.subdivision-img').forEach(async (img) => {
+                    const imageKey = img.dataset.imageKey;
+                    if (imageKey) {
+                        const imageSrc = await loadSubdivisionImage(imageKey);
+                        if (imageSrc) {
+                            img.src = imageSrc;
+                            img.classList.remove('opacity-0');
+                        }
+                    }
+                });
+
             } catch (error) {
                 console.error('Failed to load subdivisions:', error);
                 container.innerHTML = `<div class="text-center py-4 text-white/60 col-span-full">Failed to load subdivisions.</div>`;

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logThemeChange } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -59,6 +60,9 @@ export const POST: APIRoute = async ({ request }) => {
         };
 
         await store.setJSON('settings', settingsToSave);
+
+        // Log to Discord
+        await logThemeChange(`Theme changed to: ${settingsToSave.activeTheme}`);
 
         return new Response(JSON.stringify({ success: true }), {
             status: 200,

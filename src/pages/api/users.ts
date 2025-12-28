@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logUserManagement } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -145,6 +146,14 @@ export const POST: APIRoute = async ({ request }) => {
             users.push(newUser);
             await store.setJSON('users', users);
 
+            // Log the user creation to Discord
+            await logUserManagement(
+                'create',
+                newUser.displayName,
+                undefined,
+                `New user created: ${newUser.username} (${newUser.role})`
+            );
+
             return new Response(JSON.stringify({
                 success: true,
                 user: { ...newUser, password: undefined }
@@ -201,6 +210,14 @@ export const POST: APIRoute = async ({ request }) => {
 
             await store.setJSON('users', users);
 
+            // Log the user update to Discord
+            await logUserManagement(
+                'update',
+                users[index].displayName,
+                undefined,
+                `User updated: ${users[index].username}`
+            );
+
             return new Response(JSON.stringify({
                 success: true,
                 user: { ...users[index], password: undefined }
@@ -233,8 +250,17 @@ export const POST: APIRoute = async ({ request }) => {
                 });
             }
 
+            const deletedUser = users[index];
             users.splice(index, 1);
             await store.setJSON('users', users);
+
+            // Log the user deletion to Discord
+            await logUserManagement(
+                'delete',
+                deletedUser.displayName,
+                undefined,
+                `User deleted: ${deletedUser.username}`
+            );
 
             return new Response(JSON.stringify({ success: true }), {
                 status: 200,

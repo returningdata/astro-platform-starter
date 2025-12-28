@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logDepartmentDataChange } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -212,6 +213,10 @@ export const POST: APIRoute = async ({ request }) => {
         const data = await request.json();
         const store = getStore({ name: 'department-data', consistency: 'strong' });
         await store.setJSON('department-data', data);
+
+        // Log to Discord
+        await logDepartmentDataChange('Department hierarchy and command structure updated');
+
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
             headers: {

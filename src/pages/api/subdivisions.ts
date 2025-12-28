@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logSubdivisionChange } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -11,6 +12,7 @@ export interface Subdivision {
     availability: 'tryouts' | 'open' | 'handpicked' | 'closed';
     owner?: string;
     ownerCallSign?: string;
+    imageKey?: string; // Key to image stored in blob storage
 }
 
 // Helper to get the subdivisions store
@@ -21,6 +23,11 @@ function getSubdivisionsStore() {
 // Helper to get department data store
 function getDepartmentDataStore() {
     return getStore({ name: 'department-data', consistency: 'strong' });
+}
+
+// Helper to get the subdivision images store
+function getSubdivisionImagesStore() {
+    return getStore({ name: 'subdivision-images', consistency: 'strong' });
 }
 
 const defaultSubdivisionsData: Subdivision[] = [
@@ -134,7 +141,32 @@ function findLeaderForSubdivision(subdivision: Subdivision, leadership: Array<{d
     return null;
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ url }) => {
+    // Check if requesting a specific image
+    const imageKey = url.searchParams.get('image');
+    if (imageKey) {
+        try {
+            const imagesStore = getSubdivisionImagesStore();
+            const imageData = await imagesStore.get(imageKey);
+            if (imageData) {
+                return new Response(JSON.stringify({ image: imageData }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            return new Response(JSON.stringify({ image: null }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (error) {
+            console.error('Error fetching subdivision image:', error);
+            return new Response(JSON.stringify({ image: null, error: 'Failed to load image' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+    }
+
     const subdivisionsData = await getSubdivisionsData();
     const leadershipData = await getSubdivisionLeadership();
 
@@ -159,9 +191,101 @@ export const POST: APIRoute = async ({ request }) => {
         const data = await request.json();
         const store = getSubdivisionsStore();
         const departmentStore = getDepartmentDataStore();
+        const imagesStore = getSubdivisionImagesStore();
+
+        // Get existing subdivisions for comparison
+        const existingSubdivisions = await getSubdivisionsData();
+        const newSubdivisions = data.subdivisions as (Subdivision & { image?: string; _deleteImage?: boolean })[];
+
+        // Process images for each subdivision
+        const subdivisionsToSave: Subdivision[] = [];
+        for (const subdivision of newSubdivisions) {
+            const subdivisionToSave: Subdivision = {
+                id: subdivision.id,
+                name: subdivision.name,
+                abbreviation: subdivision.abbreviation,
+                description: subdivision.description,
+                availability: subdivision.availability
+            };
+
+            // Handle image upload
+            if (subdivision.image && subdivision.image.startsWith('data:')) {
+                // New image (base64), save to store
+                const imageKey = `subdivision-${subdivision.id}-${Date.now()}`;
+                await imagesStore.set(imageKey, subdivision.image);
+                subdivisionToSave.imageKey = imageKey;
+
+                // Delete old image if exists
+                const oldSub = existingSubdivisions.find(s => s.id === subdivision.id);
+                if (oldSub?.imageKey) {
+                    try {
+                        await imagesStore.delete(oldSub.imageKey);
+                    } catch (e) {
+                        console.error('Failed to delete old image:', e);
+                    }
+                }
+            } else if (subdivision.imageKey) {
+                // Keep existing image key
+                subdivisionToSave.imageKey = subdivision.imageKey;
+            }
+
+            // Handle image deletion
+            if (subdivision._deleteImage) {
+                const oldSub = existingSubdivisions.find(s => s.id === subdivision.id);
+                if (oldSub?.imageKey) {
+                    try {
+                        await imagesStore.delete(oldSub.imageKey);
+                    } catch (e) {
+                        console.error('Failed to delete image:', e);
+                    }
+                }
+                // Don't include imageKey in saved data
+            }
+
+            subdivisionsToSave.push(subdivisionToSave);
+        }
 
         // Save the subdivisions data
-        await store.setJSON('data', data.subdivisions);
+        await store.setJSON('data', subdivisionsToSave);
+
+        // Build a summary of changes for logging
+        const changes: string[] = [];
+        const existingIds = new Set(existingSubdivisions.map(s => s.id));
+        const newIds = new Set(newSubdivisions.map(s => s.id));
+
+        // Check for new subdivisions
+        for (const sub of newSubdivisions) {
+            if (!existingIds.has(sub.id)) {
+                changes.push(`Added: ${sub.name} (${sub.abbreviation})`);
+            }
+        }
+
+        // Check for deleted subdivisions
+        for (const sub of existingSubdivisions) {
+            if (!newIds.has(sub.id)) {
+                changes.push(`Removed: ${sub.name} (${sub.abbreviation})`);
+            }
+        }
+
+        // Check for modifications
+        for (const newSub of newSubdivisions) {
+            const oldSub = existingSubdivisions.find(s => s.id === newSub.id);
+            if (oldSub) {
+                if (oldSub.availability !== newSub.availability) {
+                    changes.push(`${newSub.abbreviation}: Status changed from ${oldSub.availability} to ${newSub.availability}`);
+                }
+                if (oldSub.name !== newSub.name) {
+                    changes.push(`${newSub.abbreviation}: Name changed`);
+                }
+            }
+        }
+
+        // Log to Discord
+        if (changes.length > 0) {
+            await logSubdivisionChange('update', 'Multiple', changes.join('\n'));
+        } else {
+            await logSubdivisionChange('update', 'Subdivisions', 'Subdivisions list saved (no changes detected)');
+        }
 
         // Sync subdivisions to department-data's subdivisionLeadership
         try {
@@ -176,7 +300,7 @@ export const POST: APIRoute = async ({ request }) => {
                     // Try to find a matching subdivision and add the subdivisionId
                     const normalizedDivision = leader.division.toLowerCase();
 
-                    for (const subdivision of (data.subdivisions as Subdivision[])) {
+                    for (const subdivision of subdivisionsToSave) {
                         const normalizedSubName = subdivision.name.toLowerCase();
                         const normalizedAbbrev = subdivision.abbreviation.toLowerCase();
 
@@ -198,7 +322,7 @@ export const POST: APIRoute = async ({ request }) => {
             }
 
             // Second pass: Check for new subdivisions that need leadership entries
-            for (const subdivision of (data.subdivisions as Subdivision[])) {
+            for (const subdivision of subdivisionsToSave) {
                 // Check if this subdivision already has a leadership entry (by subdivisionId)
                 const hasLeadershipById = existingLeadership.some((leader: any) =>
                     leader.subdivisionId === subdivision.id

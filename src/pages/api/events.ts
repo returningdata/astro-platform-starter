@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logEventsChange } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -97,6 +98,11 @@ export const POST: APIRoute = async ({ request }) => {
         const data = await request.json();
         const store = getStore({ name: 'events', consistency: 'strong' });
         await store.setJSON('events', data.events);
+
+        // Log to Discord
+        const eventCount = data.events?.length || 0;
+        await logEventsChange(`Updated community events (${eventCount} events total)`);
+
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
             headers: {

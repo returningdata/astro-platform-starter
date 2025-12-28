@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logUniformsChange } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -93,6 +94,11 @@ export const POST: APIRoute = async ({ request }) => {
         const data = await request.json();
         const store = getStore({ name: 'uniforms', consistency: 'strong' });
         await store.setJSON('categories', data.uniforms);
+
+        // Log to Discord
+        const categoryCount = data.uniforms?.length || 0;
+        await logUniformsChange(`Updated uniform categories (${categoryCount} categories total)`);
+
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
             headers: {

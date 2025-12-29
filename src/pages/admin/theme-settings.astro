@@ -241,7 +241,10 @@ export const prerender = false;
             try {
                 const response = await fetch('/api/theme-settings', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-User': JSON.stringify(adminUser)
+                    },
                     body: JSON.stringify({
                         settings: {
                             activeTheme: currentTheme,

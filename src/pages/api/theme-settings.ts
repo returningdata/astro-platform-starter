@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logDataSave, extractUserFromHeaders } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -46,7 +47,12 @@ export const GET: APIRoute = async () => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+    const user = extractUserFromHeaders(request);
+
     try {
+        // Get current settings for comparison
+        const oldSettings = await getThemeSettings();
+
         const data = await request.json();
         const store = getThemeStore();
 
@@ -60,12 +66,32 @@ export const POST: APIRoute = async ({ request }) => {
 
         await store.setJSON('settings', settingsToSave);
 
+        // Log the change to Discord
+        await logDataSave(
+            'THEME_SETTINGS',
+            user,
+            oldSettings,
+            settingsToSave,
+            true
+        );
+
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
         console.error('Error saving theme settings:', error);
+
+        // Log the failed attempt
+        await logDataSave(
+            'THEME_SETTINGS',
+            user,
+            null,
+            null,
+            false,
+            'Failed to save theme settings'
+        );
+
         return new Response(JSON.stringify({ success: false, error: 'Failed to save theme settings' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }

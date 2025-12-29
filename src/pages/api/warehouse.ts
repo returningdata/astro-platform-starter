@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logArrayDataChange, extractUserFromHeaders } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -185,9 +186,14 @@ export const GET: APIRoute = async ({ url }) => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+    const user = extractUserFromHeaders(request);
+
     try {
         const data = await request.json();
         const warehouseStore = getWarehouseStore();
+
+        // Get current data for comparison
+        const oldData = await getWarehouseData();
 
         // Process each category - now using image URLs instead of blob storage
         const categoriesToSave: WarehouseCategory[] = [];
@@ -216,12 +222,36 @@ export const POST: APIRoute = async ({ request }) => {
 
         await warehouseStore.setJSON('categories', categoriesToSave);
 
+        // Log the change to Discord
+        await logArrayDataChange(
+            'WAREHOUSE',
+            user,
+            oldData,
+            categoriesToSave,
+            'id',
+            'name',
+            true
+        );
+
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
         console.error('Error saving warehouse data:', error);
+
+        // Log the failed attempt
+        await logArrayDataChange(
+            'WAREHOUSE',
+            user,
+            [],
+            [],
+            'id',
+            'name',
+            false,
+            'Failed to save warehouse data'
+        );
+
         return new Response(JSON.stringify({ success: false, error: 'Failed to save warehouse data' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }

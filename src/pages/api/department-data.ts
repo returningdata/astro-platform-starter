@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logDataSave, extractUserFromHeaders } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -218,10 +219,24 @@ export const GET: APIRoute = async () => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+    const user = extractUserFromHeaders(request);
+
     try {
+        // Get current data for comparison
+        const oldData = await getDepartmentData();
+
         const data = await request.json();
         const store = getStore({ name: 'department-data', consistency: 'strong' });
         await store.setJSON('department-data', data);
+
+        // Log the change to Discord
+        await logDataSave(
+            'DEPARTMENT_DATA',
+            user,
+            oldData,
+            data,
+            true
+        );
 
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
@@ -231,6 +246,17 @@ export const POST: APIRoute = async ({ request }) => {
         });
     } catch (error) {
         console.error('Error saving department data:', error);
+
+        // Log the failed attempt
+        await logDataSave(
+            'DEPARTMENT_DATA',
+            user,
+            null,
+            null,
+            false,
+            'Failed to save department data'
+        );
+
         return new Response(JSON.stringify({ success: false, error: 'Failed to save department data' }), {
             status: 500,
             headers: {

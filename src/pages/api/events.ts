@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logArrayDataChange, extractUserFromHeaders } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -93,10 +94,26 @@ export const GET: APIRoute = async () => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+    const user = extractUserFromHeaders(request);
+
     try {
+        // Get current data for comparison
+        const oldData = await getEventsData();
+
         const data = await request.json();
         const store = getStore({ name: 'events', consistency: 'strong' });
         await store.setJSON('events', data.events);
+
+        // Log the change to Discord
+        await logArrayDataChange(
+            'EVENTS',
+            user,
+            oldData,
+            data.events,
+            'id',
+            'title',
+            true
+        );
 
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
@@ -106,6 +123,19 @@ export const POST: APIRoute = async ({ request }) => {
         });
     } catch (error) {
         console.error('Error saving events data:', error);
+
+        // Log the failed attempt
+        await logArrayDataChange(
+            'EVENTS',
+            user,
+            [],
+            [],
+            'id',
+            'title',
+            false,
+            'Failed to save events data'
+        );
+
         return new Response(JSON.stringify({ success: false, error: 'Failed to save events data' }), {
             status: 500,
             headers: {

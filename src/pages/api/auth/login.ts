@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logLogin } from '../../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -72,6 +73,13 @@ export const POST: APIRoute = async ({ request }) => {
         const { username, password } = body;
 
         if (!username || !password) {
+            // Log failed login attempt (missing credentials)
+            await logLogin(
+                { username: username || 'Unknown' },
+                false,
+                'Missing username or password'
+            );
+
             return new Response(JSON.stringify({
                 success: false,
                 error: 'Username and password are required'
@@ -91,6 +99,17 @@ export const POST: APIRoute = async ({ request }) => {
         );
 
         if (user) {
+            // Log successful login
+            await logLogin(
+                {
+                    id: user.id,
+                    username: user.username,
+                    displayName: user.displayName,
+                    role: user.role
+                },
+                true
+            );
+
             // Return user info (without password) for client-side storage
             return new Response(JSON.stringify({
                 success: true,
@@ -107,6 +126,13 @@ export const POST: APIRoute = async ({ request }) => {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
+
+        // Log failed login attempt (invalid credentials)
+        await logLogin(
+            { username },
+            false,
+            'Invalid credentials'
+        );
 
         return new Response(JSON.stringify({
             success: false,

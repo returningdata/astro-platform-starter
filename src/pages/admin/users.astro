@@ -308,7 +308,8 @@ import Layout from '../../layouts/Layout.astro';
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentUser.id}`
+                        'Authorization': `Bearer ${currentUser.id}`,
+                        'X-Admin-User': JSON.stringify(currentUser)
                     },
                     body: JSON.stringify({
                         action: 'delete',
@@ -426,7 +427,8 @@ import Layout from '../../layouts/Layout.astro';
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentUser.id}`
+                        'Authorization': `Bearer ${currentUser.id}`,
+                        'X-Admin-User': JSON.stringify(currentUser)
                     },
                     body: JSON.stringify({
                         action: userId ? 'update' : 'create',

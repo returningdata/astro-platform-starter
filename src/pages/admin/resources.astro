@@ -263,7 +263,8 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/resources', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-Admin-User': JSON.stringify(adminUser)
                     },
                     body: JSON.stringify({ resources: resourcesData })
                 });

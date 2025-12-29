@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logUserManagement, extractUserFromHeaders } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -101,6 +102,8 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+    const performedBy = extractUserFromHeaders(request);
+
     try {
         const body = await request.json();
         const { action, user, userId } = body;
@@ -144,6 +147,16 @@ export const POST: APIRoute = async ({ request }) => {
 
             users.push(newUser);
             await store.setJSON('users', users);
+
+            // Log the user creation to Discord
+            await logUserManagement(
+                'CREATE',
+                performedBy,
+                { id: newUser.id, username: newUser.username, displayName: newUser.displayName, role: newUser.role },
+                undefined,
+                newUser,
+                true
+            );
 
             return new Response(JSON.stringify({
                 success: true,
@@ -191,6 +204,9 @@ export const POST: APIRoute = async ({ request }) => {
                 });
             }
 
+            // Save old data for comparison
+            const oldUserData = { ...users[index] };
+
             users[index] = {
                 ...users[index],
                 ...user,
@@ -200,6 +216,16 @@ export const POST: APIRoute = async ({ request }) => {
             };
 
             await store.setJSON('users', users);
+
+            // Log the user update to Discord
+            await logUserManagement(
+                'UPDATE',
+                performedBy,
+                { id: users[index].id, username: users[index].username, displayName: users[index].displayName, role: users[index].role },
+                oldUserData,
+                users[index],
+                true
+            );
 
             return new Response(JSON.stringify({
                 success: true,
@@ -233,8 +259,21 @@ export const POST: APIRoute = async ({ request }) => {
                 });
             }
 
+            // Save deleted user data for logging
+            const deletedUser = users[index];
+
             users.splice(index, 1);
             await store.setJSON('users', users);
+
+            // Log the user deletion to Discord
+            await logUserManagement(
+                'DELETE',
+                performedBy,
+                { id: deletedUser.id, username: deletedUser.username, displayName: deletedUser.displayName, role: deletedUser.role },
+                deletedUser,
+                undefined,
+                true
+            );
 
             return new Response(JSON.stringify({ success: true }), {
                 status: 200,

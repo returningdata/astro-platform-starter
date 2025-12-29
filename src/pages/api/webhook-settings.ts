@@ -412,19 +412,78 @@ function buildSiteStatusEmbed(stats: SiteStats): any {
     const timestamp = new Date().toISOString();
     return {
         embeds: [{
-            title: `${SITE_CONFIG.shortName} Site Status`,
+            title: `📊 ${SITE_CONFIG.shortName} Site Status`,
             description: `Real-time status and statistics for the **${SITE_CONFIG.name}** website.`,
             color: SITE_CONFIG.color,
             timestamp,
             thumbnail: { url: 'https://cdn-icons-png.flaticon.com/512/1828/1828490.png' },
             fields: [
-                { name: 'Site Information', value: [`**Version:** \`v${SITE_CONFIG.version}\``, `**Owner:** ${SITE_CONFIG.owner}`, `**URL:** [Visit Site](${SITE_CONFIG.siteUrl})`].join('\n'), inline: false },
-                { name: 'System Status', value: [`**Status:** Operational`, `**Uptime:** 99.9%`, `**Visitors Online:** ${stats.activeUsers}`, `**Last Update:** ${getDiscordTimestamp()}`].join('\n'), inline: true },
-                { name: 'Quick Stats', value: [`**Admin Users:** ${stats.adminUsers}`, `**Resources:** ${stats.resources}`, `**Subdivisions:** ${stats.subdivisions.total}`].join('\n'), inline: true },
-                { name: 'Community Events', value: [`**Total Events:** ${stats.events.total}`, `Upcoming: ${stats.events.upcoming}`, `Ongoing: ${stats.events.ongoing}`, `Completed: ${stats.events.completed}`].join('\n'), inline: true },
-                { name: 'Warehouse', value: [`**Vehicles:** ${stats.warehouse.totalVehicles}`].join('\n'), inline: true },
-                { name: 'Subdivisions', value: [`**Total:** ${stats.subdivisions.total}`, `Open: ${stats.subdivisions.open}`, `Tryouts: ${stats.subdivisions.tryouts}`, `Handpicked: ${stats.subdivisions.handpicked}`, `Closed: ${stats.subdivisions.closed}`].join('\n'), inline: true },
-                { name: 'Personnel Overview', value: [`**Command Staff:** ${stats.personnel.filledCommandPositions}/${stats.personnel.commandPositions}`, `**Rank Categories:** ${stats.personnel.totalRanks}`, `**Active Personnel:** ${stats.personnel.totalPersonnel}`, `**Division Leaders:** ${stats.personnel.subdivisionLeaders}`].join('\n'), inline: false }
+                {
+                    name: '🌐 Site Information',
+                    value: [
+                        `**Version:** \`v${SITE_CONFIG.version}\``,
+                        `**Owner:** ${SITE_CONFIG.owner}`,
+                        `**URL:** [Visit Site](${SITE_CONFIG.siteUrl})`
+                    ].join('\n'),
+                    inline: false
+                },
+                {
+                    name: '🖥️ System Status',
+                    value: [
+                        `✅ **Status:** Operational`,
+                        `📈 **Uptime:** 99.9%`,
+                        `👥 **Visitors Online:** ${stats.activeUsers}`,
+                        `🕐 **Last Update:** ${getDiscordTimestamp()}`
+                    ].join('\n'),
+                    inline: true
+                },
+                {
+                    name: '⚡ Quick Stats',
+                    value: [
+                        `🔑 **Admin Users:** ${stats.adminUsers}`,
+                        `📁 **Resources:** ${stats.resources}`,
+                        `🏛️ **Subdivisions:** ${stats.subdivisions.total}`
+                    ].join('\n'),
+                    inline: true
+                },
+                {
+                    name: '📅 Community Events',
+                    value: [
+                        `**Total Events:** ${stats.events.total}`,
+                        `🔜 Upcoming: ${stats.events.upcoming}`,
+                        `🔴 Ongoing: ${stats.events.ongoing}`,
+                        `✔️ Completed: ${stats.events.completed}`
+                    ].join('\n'),
+                    inline: true
+                },
+                {
+                    name: '🚗 Warehouse',
+                    value: [
+                        `**Vehicles:** ${stats.warehouse.totalVehicles}`
+                    ].join('\n'),
+                    inline: true
+                },
+                {
+                    name: '🏛️ Subdivisions',
+                    value: [
+                        `**Total:** ${stats.subdivisions.total}`,
+                        `🟢 Open: ${stats.subdivisions.open}`,
+                        `🟡 Tryouts: ${stats.subdivisions.tryouts}`,
+                        `🟠 Handpicked: ${stats.subdivisions.handpicked}`,
+                        `🔴 Closed: ${stats.subdivisions.closed}`
+                    ].join('\n'),
+                    inline: true
+                },
+                {
+                    name: '👮 Personnel Overview',
+                    value: [
+                        `⭐ **Command Staff:** ${stats.personnel.filledCommandPositions}/${stats.personnel.commandPositions}`,
+                        `📊 **Rank Categories:** ${stats.personnel.totalRanks}`,
+                        `👥 **Active Personnel:** ${stats.personnel.totalPersonnel}`,
+                        `🎖️ **Division Leaders:** ${stats.personnel.subdivisionLeaders}`
+                    ].join('\n'),
+                    inline: false
+                }
             ],
             footer: { text: `${SITE_CONFIG.name} | Updates every 1 minute`, icon_url: 'https://cdn-icons-png.flaticon.com/512/6941/6941697.png' }
         }]

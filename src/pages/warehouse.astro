@@ -132,9 +132,9 @@ import Layout from '../layouts/Layout.astro';
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                         </svg>
                                     </button>
-                                    <div class="gallery-dots absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                                    <div class="gallery-dots absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
                                         ${images.map((_, i) => `
-                                            <button class="gallery-dot w-2 h-2 rounded-full transition-colors ${i === 0 ? 'bg-white' : 'bg-white/50'}" data-category="${catIndex}" data-index="${i}"></button>
+                                            <button class="gallery-dot w-4 h-4 rounded-full transition-all hover:scale-125 shadow-md border border-white/30 ${i === 0 ? 'bg-white' : 'bg-white/50'}" data-category="${catIndex}" data-index="${i}" title="Image ${i + 1}"></button>
                                         `).join('')}
                                     </div>
                                     <span class="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">${images.length} photos</span>
@@ -242,7 +242,7 @@ import Layout from '../layouts/Layout.astro';
                 // Update dots
                 const dots = container.querySelectorAll('.gallery-dot');
                 dots.forEach((dot, i) => {
-                    dot.className = `gallery-dot w-2 h-2 rounded-full transition-colors ${i === index ? 'bg-white' : 'bg-white/50'}`;
+                    dot.className = `gallery-dot w-4 h-4 rounded-full transition-all hover:scale-125 shadow-md border border-white/30 ${i === index ? 'bg-white' : 'bg-white/50'}`;
                 });
             }
         }

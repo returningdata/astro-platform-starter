@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
-import { logDepartmentDataChange } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -199,13 +198,23 @@ async function getDepartmentData(): Promise<DepartmentData> {
 }
 
 export const GET: APIRoute = async () => {
-    const departmentData = await getDepartmentData();
-    return new Response(JSON.stringify(departmentData), {
-        status: 200,
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    });
+    try {
+        const departmentData = await getDepartmentData();
+        return new Response(JSON.stringify(departmentData), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch (error) {
+        console.error('Error in department-data GET:', error);
+        return new Response(JSON.stringify(defaultDepartmentData), {
+            status: 200,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    }
 };
 
 export const POST: APIRoute = async ({ request }) => {
@@ -213,9 +222,6 @@ export const POST: APIRoute = async ({ request }) => {
         const data = await request.json();
         const store = getStore({ name: 'department-data', consistency: 'strong' });
         await store.setJSON('department-data', data);
-
-        // Log to Discord
-        await logDepartmentDataChange('Department hierarchy and command structure updated');
 
         return new Response(JSON.stringify({ success: true }), {
             status: 200,

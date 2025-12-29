@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
-import { logResourcesChange } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -77,10 +76,6 @@ export const POST: APIRoute = async ({ request }) => {
         const data = await request.json();
         const store = getStore({ name: 'resources', consistency: 'strong' });
         await store.setJSON('resources', data.resources);
-
-        // Log to Discord
-        const resourceCount = data.resources?.length || 0;
-        await logResourcesChange(`Updated department resources (${resourceCount} resources total)`);
 
         return new Response(JSON.stringify({ success: true }), {
             status: 200,

@@ -77,17 +77,24 @@ import Layout from '../../layouts/Layout.astro';
                 const data = await response.json();
                 warehouseData = data.warehouse || [];
 
-                // Load images for categories that have imageKeys
-                await loadImages();
-
+                // Render categories immediately (images will show placeholders)
                 renderCategories();
+
+                // Load images one at a time in the background
+                // Each image re-renders as it loads, so user sees progress
+                loadImages().catch(err => {
+                    console.error('Failed to load images:', err);
+                });
             } catch (error) {
                 console.error('Failed to load warehouse:', error);
                 showStatus('Failed to load warehouse data', 'error');
+                // Show empty state even on error
+                warehouseData = [];
+                renderCategories();
             }
         }
 
-        // Load images from the separate image store
+        // Load images from the separate image store - one at a time to avoid overloading
         async function loadImages() {
             // Collect all image keys from both single imageKey and multiple imageKeys
             const allImageKeys = [];
@@ -103,18 +110,20 @@ import Layout from '../../layouts/Layout.astro';
                 }
             }
 
-            const imagePromises = allImageKeys.map(async (key) => {
+            // Load images one at a time (sequentially) to prevent overloading
+            for (const key of allImageKeys) {
                 try {
                     const response = await fetch(`/api/warehouse?image=${encodeURIComponent(key)}`);
                     const data = await response.json();
                     if (data.image) {
                         imageCache[key] = data.image;
+                        // Re-render after each image loads so user sees progress
+                        renderCategories();
                     }
                 } catch (e) {
                     console.error('Failed to load image:', key, e);
                 }
-            });
-            await Promise.all(imagePromises);
+            }
         }
 
         function showStatus(message, type = 'success') {
@@ -146,7 +155,7 @@ import Layout from '../../layouts/Layout.astro';
                 const imageKeys = category.imageKeys || (category.imageKey ? [category.imageKey] : []);
                 // Include pending images (new uploads not yet saved)
                 const pendingImages = category.images || [];
-                const allImages = [...imageKeys.map(key => ({ type: 'key', value: key, src: imageCache[key] || '' }))];
+                const allImages = [...imageKeys.filter(key => imageCache[key]).map(key => ({ type: 'key', value: key, src: imageCache[key] }))];
                 // Add pending base64 images
                 for (const img of pendingImages) {
                     if (img && img.startsWith('data:')) {
@@ -154,7 +163,9 @@ import Layout from '../../layouts/Layout.astro';
                     }
                 }
                 const hasImages = allImages.length > 0;
-                const canAddMore = allImages.length < MAX_IMAGES_PER_VEHICLE;
+                const totalImageKeys = imageKeys.length + pendingImages.filter(img => img && img.startsWith('data:')).length;
+                const isLoadingImages = imageKeys.length > 0 && imageKeys.some(key => !imageCache[key]);
+                const canAddMore = totalImageKeys < MAX_IMAGES_PER_VEHICLE;
 
                 return `
                 <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20" data-category-index="${catIndex}">
@@ -184,7 +195,7 @@ import Layout from '../../layouts/Layout.astro';
                             <!-- Multiple Images Upload Section -->
                             <div class="border border-slate-600 rounded-lg p-4 bg-slate-700/30">
                                 <div class="flex items-center justify-between mb-3">
-                                    <label class="block text-sm font-medium text-slate-300">Vehicle Images (${allImages.length}/${MAX_IMAGES_PER_VEHICLE})</label>
+                                    <label class="block text-sm font-medium text-slate-300">Vehicle Images (${allImages.length}/${MAX_IMAGES_PER_VEHICLE})${isLoadingImages ? ' <span class="text-cyan-400 text-xs">(loading...)</span>' : ''}</label>
                                     ${canAddMore ? `
                                         <label class="add-image-btn px-3 py-1.5 bg-primary hover:bg-primary/80 rounded-lg cursor-pointer text-sm font-medium transition-colors">
                                             + Add Image
@@ -209,6 +220,10 @@ import Layout from '../../layouts/Layout.astro';
                                                 <span class="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">${imgIndex + 1}</span>
                                             </div>
                                         `).join('')}
+                                    </div>
+                                ` : isLoadingImages ? `
+                                    <div class="text-center py-6 text-cyan-400/70 border-2 border-dashed border-slate-600 rounded-lg">
+                                        <p class="text-sm">Loading images...</p>
                                     </div>
                                 ` : `
                                     <div class="text-center py-6 text-white/50 border-2 border-dashed border-slate-600 rounded-lg">

@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
-import { logLogin } from '../../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -92,9 +91,6 @@ export const POST: APIRoute = async ({ request }) => {
         );
 
         if (user) {
-            // Log the successful login to Discord
-            await logLogin(user.username, user.displayName, user.role);
-
             // Return user info (without password) for client-side storage
             return new Response(JSON.stringify({
                 success: true,

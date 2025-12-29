@@ -41,6 +41,10 @@ import Layout from '../../layouts/Layout.astro';
                     <span class="text-sm text-white/70">Handpicked</span>
                 </div>
                 <div class="flex items-center gap-2">
+                    <span class="inline-block w-3 h-3 bg-orange-500 rounded-full"></span>
+                    <span class="text-sm text-white/70">Tryouts/Handpicked</span>
+                </div>
+                <div class="flex items-center gap-2">
                     <span class="inline-block w-3 h-3 bg-red-500 rounded-full"></span>
                     <span class="text-sm text-white/70">Closed</span>
                 </div>
@@ -117,6 +121,7 @@ import Layout from '../../layouts/Layout.astro';
                 case 'open': return 'bg-green-500';
                 case 'tryouts': return 'bg-yellow-500';
                 case 'handpicked': return 'bg-purple-500';
+                case 'tryouts-handpicked': return 'bg-orange-500';
                 case 'closed': return 'bg-red-500';
                 default: return 'bg-gray-500';
             }
@@ -127,6 +132,7 @@ import Layout from '../../layouts/Layout.astro';
                 case 'open': return 'Open Applications';
                 case 'tryouts': return 'Tryouts';
                 case 'handpicked': return 'Handpicked';
+                case 'tryouts-handpicked': return 'Tryouts/Handpicked';
                 case 'closed': return 'Closed';
                 default: return 'Unknown';
             }
@@ -215,6 +221,7 @@ import Layout from '../../layouts/Layout.astro';
                                 <option value="open" ${subdivision.availability === 'open' ? 'selected' : ''}>Open Applications</option>
                                 <option value="tryouts" ${subdivision.availability === 'tryouts' ? 'selected' : ''}>Tryouts</option>
                                 <option value="handpicked" ${subdivision.availability === 'handpicked' ? 'selected' : ''}>Handpicked</option>
+                                <option value="tryouts-handpicked" ${subdivision.availability === 'tryouts-handpicked' ? 'selected' : ''}>Tryouts/Handpicked</option>
                                 <option value="closed" ${subdivision.availability === 'closed' ? 'selected' : ''}>Closed</option>
                             </select>
                         </div>

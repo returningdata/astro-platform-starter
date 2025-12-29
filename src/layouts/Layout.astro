@@ -569,6 +569,96 @@ const playerStyle = themePlayerStyles[activeTheme];
             } else {
                 initialize();
             }
+
+            // ==========================================
+            // Visitor Tracking / Real-time User Count
+            // ==========================================
+            const VISITOR_SESSION_KEY = 'dppd-visitor-session';
+            const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+            let visitorSessionId = null;
+            let heartbeatTimer = null;
+
+            // Get or create session ID
+            function getOrCreateSessionId() {
+                let sessionId = sessionStorage.getItem(VISITOR_SESSION_KEY);
+                if (!sessionId) {
+                    sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+                    sessionStorage.setItem(VISITOR_SESSION_KEY, sessionId);
+                }
+                return sessionId;
+            }
+
+            // Send heartbeat to server
+            async function sendHeartbeat() {
+                try {
+                    const response = await fetch('/api/visitor-heartbeat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId: visitorSessionId })
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        // Update session ID if server generated one
+                        if (data.sessionId && !visitorSessionId) {
+                            visitorSessionId = data.sessionId;
+                            sessionStorage.setItem(VISITOR_SESSION_KEY, visitorSessionId);
+                        }
+                    }
+                } catch (error) {
+                    // Silently fail - don't disrupt user experience
+                    console.debug('Heartbeat failed:', error);
+                }
+            }
+
+            // Remove session when leaving
+            async function removeSession() {
+                if (visitorSessionId) {
+                    // Use sendBeacon for reliable delivery on page unload
+                    navigator.sendBeacon('/api/visitor-heartbeat', JSON.stringify({
+                        sessionId: visitorSessionId,
+                        action: 'leave'
+                    }));
+                }
+            }
+
+            // Initialize visitor tracking
+            function initVisitorTracking() {
+                visitorSessionId = getOrCreateSessionId();
+
+                // Send initial heartbeat
+                sendHeartbeat();
+
+                // Set up regular heartbeat
+                heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+
+                // Handle page visibility changes
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        // Page became visible - send heartbeat immediately
+                        sendHeartbeat();
+                        // Restart heartbeat timer
+                        if (!heartbeatTimer) {
+                            heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+                        }
+                    } else {
+                        // Page hidden - clear timer but keep session
+                        if (heartbeatTimer) {
+                            clearInterval(heartbeatTimer);
+                            heartbeatTimer = null;
+                        }
+                    }
+                });
+
+                // Try to remove session when page unloads
+                window.addEventListener('beforeunload', removeSession);
+            }
+
+            // Start visitor tracking when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initVisitorTracking);
+            } else {
+                initVisitorTracking();
+            }
         </script>
 
         <!-- YouTube Music Player -->

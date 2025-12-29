@@ -230,9 +230,9 @@ import Layout from '../layouts/Layout.astro';
                                     <img src="${imageUrls[0]}" alt="${sub.name}" class="w-full h-32 object-contain cursor-pointer hover:opacity-80 transition-opacity subdivision-image" data-sub-id="${sub.id}" onerror="this.parentElement.parentElement.remove()">
                                 </div>
                                 ${imageUrls.length > 1 ? `
-                                <div class="absolute bottom-1 right-1 flex gap-1">
+                                <div class="absolute bottom-2 right-2 flex gap-2">
                                     ${imageUrls.map((_, i) => `
-                                        <button class="gallery-dot w-2 h-2 rounded-full ${i === 0 ? 'bg-primary' : 'bg-white/50'} transition-colors" data-sub-id="${sub.id}" data-img-index="${i}"></button>
+                                        <button class="gallery-dot w-4 h-4 rounded-full ${i === 0 ? 'bg-primary' : 'bg-white/50'} transition-all hover:scale-125 hover:bg-primary/80 shadow-md border border-white/30" data-sub-id="${sub.id}" data-img-index="${i}" title="Image ${i + 1}"></button>
                                     `).join('')}
                                 </div>
                                 ` : ''}

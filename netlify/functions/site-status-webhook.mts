@@ -217,7 +217,15 @@ async function fetchSiteStats(): Promise<SiteStats> {
         const lines = csvText.split('\n').slice(1); // Skip header row
         stats.personnel.totalPersonnel = lines.filter(line => {
             const columns = line.split(',');
-            return columns[3] && columns[3].trim() !== '';
+            const nameValue = columns[3]?.trim() || '';
+            // Skip empty rows and rows that are label/header rows (containing "Name" or similar labels)
+            if (!nameValue) return false;
+            // Exclude rows where the name column contains header text like "Name"
+            const lowerName = nameValue.toLowerCase();
+            if (lowerName === 'name' || lowerName === 'names' || lowerName === 'personnel name' || lowerName === 'officer name') {
+                return false;
+            }
+            return true;
         }).length;
     }
 

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { logArrayDataChange, extractUserFromHeaders } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -164,7 +165,12 @@ export const GET: APIRoute = async () => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+    const user = extractUserFromHeaders(request);
+
     try {
+        // Get current data for comparison
+        const oldData = await getSubdivisionsData();
+
         const data = await request.json();
         const store = getSubdivisionsStore();
         const departmentStore = getDepartmentDataStore();
@@ -277,12 +283,36 @@ export const POST: APIRoute = async ({ request }) => {
             // Don't fail the main operation if sync fails
         }
 
+        // Log the change to Discord
+        await logArrayDataChange(
+            'SUBDIVISIONS',
+            user,
+            oldData,
+            subdivisionsToSave,
+            'id',
+            'name',
+            true
+        );
+
         return new Response(JSON.stringify({ success: true }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
         console.error('Error saving subdivisions data:', error);
+
+        // Log the failed attempt
+        await logArrayDataChange(
+            'SUBDIVISIONS',
+            user,
+            [],
+            [],
+            'id',
+            'name',
+            false,
+            'Failed to save subdivisions data'
+        );
+
         return new Response(JSON.stringify({ success: false, error: 'Failed to save subdivisions data' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }

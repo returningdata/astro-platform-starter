@@ -161,9 +161,13 @@ const playerStyle = themePlayerStyles[activeTheme];
             const musicId = document.body.dataset.musicId;
             let player = null;
             let isPlaying = false;
+            let shouldStayPaused = false; // Flag to enforce paused state after seekTo
 
             // Storage key for music state persistence
             const MUSIC_STATE_KEY = 'dppd-music-state';
+
+            // Track if user has ever interacted with music (to distinguish first visit from returning)
+            const MUSIC_VISITED_KEY = 'dppd-music-visited';
 
             // Get saved music state from localStorage
             function getSavedMusicState() {
@@ -180,6 +184,16 @@ const playerStyle = themePlayerStyles[activeTheme];
                     console.error('Error reading music state:', e);
                 }
                 return null;
+            }
+
+            // Check if user has visited before (to know if we should auto-play on first visit)
+            function hasVisitedBefore() {
+                return localStorage.getItem(MUSIC_VISITED_KEY) === 'true';
+            }
+
+            // Mark that user has visited
+            function markAsVisited() {
+                localStorage.setItem(MUSIC_VISITED_KEY, 'true');
             }
 
             // Save music state to localStorage
@@ -407,6 +421,9 @@ const playerStyle = themePlayerStyles[activeTheme];
                         'onReady': function(event) {
                             player.setVolume(30);
 
+                            // Mark that user has visited the site
+                            markAsVisited();
+
                             // Restore playback position and state if available
                             if (savedState) {
                                 // Seek to saved position (account for small time drift)
@@ -419,18 +436,37 @@ const playerStyle = themePlayerStyles[activeTheme];
                                     seekTime = seekTime % duration; // Handle wrap-around for looping
                                 }
 
-                                player.seekTo(seekTime, true);
-
                                 // Only play if it was playing before navigation
                                 if (savedState.isPlaying) {
+                                    player.seekTo(seekTime, true);
                                     player.playVideo();
+                                } else {
+                                    // Music was paused - keep it paused
+                                    // Set internal state and update UI immediately
+                                    isPlaying = false;
+                                    shouldStayPaused = true; // Flag to prevent auto-play from seekTo
+                                    updatePlayIcon();
+                                    // Seek to position - if it triggers play, onStateChange will pause it
+                                    player.seekTo(seekTime, true);
+                                    // Also explicitly pause as a fallback
+                                    player.pauseVideo();
                                 }
+                            } else if (!hasVisitedBefore()) {
+                                // First visit ever - start playing automatically
+                                player.playVideo();
                             } else {
-                                // First visit or theme changed - start playing
+                                // Returning visitor with no saved state (theme changed) - start playing
                                 player.playVideo();
                             }
                         },
                         'onStateChange': function(event) {
+                            // If we should stay paused but YouTube started playing (from seekTo), pause it again
+                            if (shouldStayPaused && event.data === YT.PlayerState.PLAYING) {
+                                player.pauseVideo();
+                                shouldStayPaused = false; // Only enforce once
+                                return;
+                            }
+
                             if (event.data === YT.PlayerState.PLAYING) {
                                 isPlaying = true;
                                 updatePlayIcon();

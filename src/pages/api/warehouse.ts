@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
-import { logWarehouseChange } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -201,11 +200,19 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     // Return warehouse data
-    const warehouseData = await getWarehouseData();
-    return new Response(JSON.stringify({ warehouse: warehouseData }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-    });
+    try {
+        const warehouseData = await getWarehouseData();
+        return new Response(JSON.stringify({ warehouse: warehouseData }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error fetching warehouse data:', error);
+        return new Response(JSON.stringify({ warehouse: defaultWarehouseData }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
 };
 
 export const POST: APIRoute = async ({ request }) => {
@@ -304,9 +311,6 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         await warehouseStore.setJSON('categories', categoriesToSave);
-
-        // Log to Discord
-        await logWarehouseChange(`Updated ${categoriesToSave.length} vehicle/equipment categories`);
 
         return new Response(JSON.stringify({ success: true }), {
             status: 200,

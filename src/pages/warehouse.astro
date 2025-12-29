@@ -77,7 +77,6 @@ import Layout from '../layouts/Layout.astro';
         };
 
         let warehouseData = [];
-        let imageCache = {}; // Cache for loaded images
         let modalState = { images: [], currentIndex: 0 }; // Modal state for image gallery
 
         async function loadWarehouse() {
@@ -85,9 +84,6 @@ import Layout from '../layouts/Layout.astro';
                 const response = await fetch('/api/warehouse');
                 const data = await response.json();
                 warehouseData = data.warehouse || [];
-
-                // Load images for categories that have imageKeys
-                await loadImages();
 
                 renderWarehouse();
                 setupModal();
@@ -99,36 +95,6 @@ import Layout from '../layouts/Layout.astro';
                     </div>
                 `;
             }
-        }
-
-        // Load images from the separate image store (supports multiple images per category)
-        async function loadImages() {
-            // Collect all image keys from both single imageKey and multiple imageKeys
-            const allImageKeys = [];
-            for (const cat of warehouseData) {
-                if (cat.imageKeys && cat.imageKeys.length > 0) {
-                    for (const key of cat.imageKeys) {
-                        if (!imageCache[key]) {
-                            allImageKeys.push(key);
-                        }
-                    }
-                } else if (cat.imageKey && !imageCache[cat.imageKey]) {
-                    allImageKeys.push(cat.imageKey);
-                }
-            }
-
-            const imagePromises = allImageKeys.map(async (key) => {
-                try {
-                    const response = await fetch(`/api/warehouse?image=${encodeURIComponent(key)}`);
-                    const data = await response.json();
-                    if (data.image) {
-                        imageCache[key] = data.image;
-                    }
-                } catch (e) {
-                    console.error('Failed to load image:', key, e);
-                }
-            });
-            await Promise.all(imagePromises);
         }
 
         function renderWarehouse() {
@@ -144,9 +110,8 @@ import Layout from '../layouts/Layout.astro';
             }
 
             grid.innerHTML = warehouseData.map((category, catIndex) => {
-                // Get all images for this category (support both single and multiple)
-                const imageKeys = category.imageKeys || (category.imageKey ? [category.imageKey] : []);
-                const images = imageKeys.map(key => imageCache[key]).filter(Boolean);
+                // Get image URLs directly
+                const images = category.imageUrls || [];
                 const hasImages = images.length > 0;
                 const hasMultipleImages = images.length > 1;
 
@@ -155,7 +120,7 @@ import Layout from '../layouts/Layout.astro';
                     ${hasImages ? `
                         <div class="mb-4 -mx-2 -mt-2 relative group">
                             <div class="gallery-container" data-category="${catIndex}">
-                                <img src="${images[0]}" alt="${category.name}" class="gallery-image w-full h-40 object-cover rounded-lg cursor-pointer" data-category="${catIndex}" data-index="0">
+                                <img src="${images[0]}" alt="${category.name}" class="gallery-image w-full h-40 object-cover rounded-lg cursor-pointer" data-category="${catIndex}" data-index="0" onerror="this.style.display='none'">
                                 ${hasMultipleImages ? `
                                     <button class="gallery-prev absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" data-category="${catIndex}">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,8 +169,7 @@ import Layout from '../layouts/Layout.astro';
         function attachGalleryListeners() {
             // Initialize gallery state
             warehouseData.forEach((category, catIndex) => {
-                const imageKeys = category.imageKeys || (category.imageKey ? [category.imageKey] : []);
-                const images = imageKeys.map(key => imageCache[key]).filter(Boolean);
+                const images = category.imageUrls || [];
                 galleryState[catIndex] = { images, currentIndex: 0 };
             });
 

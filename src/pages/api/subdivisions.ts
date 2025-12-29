@@ -11,6 +11,7 @@ export interface Subdivision {
     availability: 'tryouts' | 'open' | 'handpicked' | 'closed';
     owner?: string;
     ownerCallSign?: string;
+    imageUrls?: string[]; // Array of image URLs (Discord CDN or Imgur links) - max 3
 }
 
 // Helper to get the subdivisions store
@@ -171,13 +172,27 @@ export const POST: APIRoute = async ({ request }) => {
         const newSubdivisions = data.subdivisions as Subdivision[];
 
         // Process subdivisions
-        const subdivisionsToSave: Subdivision[] = newSubdivisions.map(subdivision => ({
-            id: subdivision.id,
-            name: subdivision.name,
-            abbreviation: subdivision.abbreviation,
-            description: subdivision.description,
-            availability: subdivision.availability
-        }));
+        const subdivisionsToSave: Subdivision[] = newSubdivisions.map(subdivision => {
+            const subToSave: Subdivision = {
+                id: subdivision.id,
+                name: subdivision.name,
+                abbreviation: subdivision.abbreviation,
+                description: subdivision.description,
+                availability: subdivision.availability
+            };
+
+            // Handle image URLs (Discord CDN or Imgur links) - max 3
+            if (subdivision.imageUrls && Array.isArray(subdivision.imageUrls)) {
+                const validUrls = subdivision.imageUrls
+                    .filter((url: string) => url && typeof url === 'string' && url.trim() !== '')
+                    .slice(0, 3); // Limit to 3 images
+                if (validUrls.length > 0) {
+                    subToSave.imageUrls = validUrls;
+                }
+            }
+
+            return subToSave;
+        });
 
         // Save the subdivisions data
         await store.setJSON('data', subdivisionsToSave);

@@ -207,8 +207,25 @@ import Layout from '../layouts/Layout.astro';
 
                 container.innerHTML = subdivisions.map(sub => {
                     const config = getAvailabilityConfig(sub.availability);
+                    const imageUrls = sub.imageUrls || [];
+                    const hasImages = imageUrls.length > 0;
+
                     return `
                         <div class="bg-white/5 rounded-lg overflow-hidden border border-white/10 hover:bg-white/10 transition-all">
+                            ${hasImages ? `
+                            <div class="relative">
+                                <div class="subdivision-gallery" data-sub-id="${sub.id}">
+                                    <img src="${imageUrls[0]}" alt="${sub.name}" class="w-full h-24 object-cover" onerror="this.parentElement.parentElement.remove()">
+                                </div>
+                                ${imageUrls.length > 1 ? `
+                                <div class="absolute bottom-1 right-1 flex gap-1">
+                                    ${imageUrls.map((_, i) => `
+                                        <button class="gallery-dot w-2 h-2 rounded-full ${i === 0 ? 'bg-primary' : 'bg-white/50'} transition-colors" data-sub-id="${sub.id}" data-img-index="${i}"></button>
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+                            ` : ''}
                             <div class="p-3">
                                 <div class="flex items-center justify-between mb-1">
                                     <div class="font-bold text-primary">${sub.abbreviation}</div>
@@ -228,10 +245,45 @@ import Layout from '../layouts/Layout.astro';
                     `;
                 }).join('');
 
+                // Add gallery navigation functionality
+                attachGalleryListeners(subdivisions);
+
             } catch (error) {
                 console.error('Failed to load subdivisions:', error);
                 container.innerHTML = `<div class="text-center py-4 text-white/60 col-span-full">Failed to load subdivisions.</div>`;
             }
+        }
+
+        function attachGalleryListeners(subdivisions) {
+            // Store current image indices
+            const currentIndices = {};
+
+            document.querySelectorAll('.gallery-dot').forEach(dot => {
+                dot.addEventListener('click', (e) => {
+                    const subId = e.target.dataset.subId;
+                    const imgIndex = parseInt(e.target.dataset.imgIndex);
+                    const sub = subdivisions.find(s => s.id === subId);
+
+                    if (sub && sub.imageUrls && sub.imageUrls[imgIndex]) {
+                        // Update the image
+                        const gallery = document.querySelector(`.subdivision-gallery[data-sub-id="${subId}"] img`);
+                        if (gallery) {
+                            gallery.src = sub.imageUrls[imgIndex];
+                        }
+
+                        // Update dot styles
+                        document.querySelectorAll(`.gallery-dot[data-sub-id="${subId}"]`).forEach((d, i) => {
+                            if (i === imgIndex) {
+                                d.classList.remove('bg-white/50');
+                                d.classList.add('bg-primary');
+                            } else {
+                                d.classList.remove('bg-primary');
+                                d.classList.add('bg-white/50');
+                            }
+                        });
+                    }
+                });
+            });
         }
 
         loadSubdivisionsAndOverseer();

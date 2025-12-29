@@ -67,7 +67,6 @@ import Layout from '../../layouts/Layout.astro';
         const statusOptions = ['available', 'limited', 'out'];
 
         let warehouseData = [];
-        let imageCache = {}; // Cache for loaded images
         const MAX_IMAGES_PER_VEHICLE = 10;
 
         // Load warehouse data
@@ -76,53 +75,12 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/warehouse');
                 const data = await response.json();
                 warehouseData = data.warehouse || [];
-
-                // Render categories immediately (images will show placeholders)
                 renderCategories();
-
-                // Load images one at a time in the background
-                // Each image re-renders as it loads, so user sees progress
-                loadImages().catch(err => {
-                    console.error('Failed to load images:', err);
-                });
             } catch (error) {
                 console.error('Failed to load warehouse:', error);
                 showStatus('Failed to load warehouse data', 'error');
-                // Show empty state even on error
                 warehouseData = [];
                 renderCategories();
-            }
-        }
-
-        // Load images from the separate image store - one at a time to avoid overloading
-        async function loadImages() {
-            // Collect all image keys from both single imageKey and multiple imageKeys
-            const allImageKeys = [];
-            for (const cat of warehouseData) {
-                if (cat.imageKeys && cat.imageKeys.length > 0) {
-                    for (const key of cat.imageKeys) {
-                        if (!imageCache[key]) {
-                            allImageKeys.push(key);
-                        }
-                    }
-                } else if (cat.imageKey && !imageCache[cat.imageKey]) {
-                    allImageKeys.push(cat.imageKey);
-                }
-            }
-
-            // Load images one at a time (sequentially) to prevent overloading
-            for (const key of allImageKeys) {
-                try {
-                    const response = await fetch(`/api/warehouse?image=${encodeURIComponent(key)}`);
-                    const data = await response.json();
-                    if (data.image) {
-                        imageCache[key] = data.image;
-                        // Re-render after each image loads so user sees progress
-                        renderCategories();
-                    }
-                } catch (e) {
-                    console.error('Failed to load image:', key, e);
-                }
             }
         }
 
@@ -151,21 +109,10 @@ import Layout from '../../layouts/Layout.astro';
             }
 
             container.innerHTML = warehouseData.map((category, catIndex) => {
-                // Get images from cache - support both single imageKey and multiple imageKeys
-                const imageKeys = category.imageKeys || (category.imageKey ? [category.imageKey] : []);
-                // Include pending images (new uploads not yet saved)
-                const pendingImages = category.images || [];
-                const allImages = [...imageKeys.filter(key => imageCache[key]).map(key => ({ type: 'key', value: key, src: imageCache[key] }))];
-                // Add pending base64 images
-                for (const img of pendingImages) {
-                    if (img && img.startsWith('data:')) {
-                        allImages.push({ type: 'new', value: img, src: img });
-                    }
-                }
-                const hasImages = allImages.length > 0;
-                const totalImageKeys = imageKeys.length + pendingImages.filter(img => img && img.startsWith('data:')).length;
-                const isLoadingImages = imageKeys.length > 0 && imageKeys.some(key => !imageCache[key]);
-                const canAddMore = totalImageKeys < MAX_IMAGES_PER_VEHICLE;
+                // Get image URLs
+                const imageUrls = category.imageUrls || [];
+                const hasImages = imageUrls.length > 0;
+                const canAddMore = imageUrls.length < MAX_IMAGES_PER_VEHICLE;
 
                 return `
                 <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20" data-category-index="${catIndex}">
@@ -192,44 +139,36 @@ import Layout from '../../layouts/Layout.astro';
                                 </div>
                             </div>
 
-                            <!-- Multiple Images Upload Section -->
+                            <!-- Image URLs Section -->
                             <div class="border border-slate-600 rounded-lg p-4 bg-slate-700/30">
                                 <div class="flex items-center justify-between mb-3">
-                                    <label class="block text-sm font-medium text-slate-300">Vehicle Images (${allImages.length}/${MAX_IMAGES_PER_VEHICLE})${isLoadingImages ? ' <span class="text-cyan-400 text-xs">(loading...)</span>' : ''}</label>
-                                    ${canAddMore ? `
-                                        <label class="add-image-btn px-3 py-1.5 bg-primary hover:bg-primary/80 rounded-lg cursor-pointer text-sm font-medium transition-colors">
-                                            + Add Image
-                                            <input type="file" accept="image/*" class="image-upload hidden" data-category-index="${catIndex}">
-                                        </label>
-                                    ` : `
-                                        <span class="text-sm text-yellow-400">Max images reached</span>
-                                    `}
+                                    <label class="block text-sm font-medium text-slate-300">Vehicle Images (${imageUrls.length}/${MAX_IMAGES_PER_VEHICLE})</label>
                                 </div>
-                                ${hasImages ? `
-                                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                        ${allImages.map((img, imgIndex) => `
-                                            <div class="relative group">
-                                                <img src="${img.src}" alt="Vehicle image ${imgIndex + 1}" class="w-full h-24 object-cover rounded-lg border border-slate-600">
-                                                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                                                    <button class="remove-single-image p-1.5 bg-red-500 hover:bg-red-600 rounded-full text-white transition-colors" data-category-index="${catIndex}" data-image-index="${imgIndex}" data-image-key="${img.type === 'key' ? img.value : ''}" title="Remove image">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                                <span class="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">${imgIndex + 1}</span>
+                                <p class="text-xs text-white/50 mb-3">Paste Discord CDN or Imgur image URLs below</p>
+
+                                <!-- Existing Image URLs -->
+                                <div class="space-y-2 mb-3">
+                                    ${imageUrls.map((url, imgIndex) => `
+                                        <div class="flex gap-2 items-center">
+                                            <div class="w-16 h-16 flex-shrink-0 bg-slate-800 rounded-lg overflow-hidden">
+                                                <img src="${url}" alt="Preview ${imgIndex + 1}" class="w-full h-full object-cover" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23666%22><path d=%22M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z%22/></svg>'">
                                             </div>
-                                        `).join('')}
-                                    </div>
-                                ` : isLoadingImages ? `
-                                    <div class="text-center py-6 text-cyan-400/70 border-2 border-dashed border-slate-600 rounded-lg">
-                                        <p class="text-sm">Loading images...</p>
-                                    </div>
+                                            <input type="text" value="${url}" class="image-url flex-grow px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}" data-url-index="${imgIndex}" placeholder="https://cdn.discordapp.com/... or https://i.imgur.com/...">
+                                            <button class="remove-image-url p-2 text-red-400 hover:text-red-300 transition-colors" data-category-index="${catIndex}" data-url-index="${imgIndex}" title="Remove image">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+
+                                ${canAddMore ? `
+                                    <button class="add-image-url w-full py-2 border-2 border-dashed border-slate-600 rounded-lg hover:border-primary hover:bg-white/5 transition-colors text-white/70 hover:text-white text-sm" data-category-index="${catIndex}">
+                                        + Add Image URL
+                                    </button>
                                 ` : `
-                                    <div class="text-center py-6 text-white/50 border-2 border-dashed border-slate-600 rounded-lg">
-                                        <p class="text-sm">No images uploaded yet</p>
-                                        <p class="text-xs mt-1">Add up to ${MAX_IMAGES_PER_VEHICLE} images per vehicle</p>
-                                    </div>
+                                    <span class="text-sm text-yellow-400">Max images reached</span>
                                 `}
                             </div>
 
@@ -333,71 +272,43 @@ import Layout from '../../layouts/Layout.astro';
                 });
             });
 
-            // Image upload - now adds to images array
-            document.querySelectorAll('.image-upload').forEach(input => {
+            // Image URL changes
+            document.querySelectorAll('.image-url').forEach(input => {
                 input.addEventListener('change', (e) => {
                     const catIndex = parseInt(e.target.dataset.categoryIndex);
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            // Initialize images array if not exists
-                            if (!warehouseData[catIndex].images) {
-                                warehouseData[catIndex].images = [];
-                            }
-                            // Check current total images count
-                            const existingImageKeys = warehouseData[catIndex].imageKeys || (warehouseData[catIndex].imageKey ? [warehouseData[catIndex].imageKey] : []);
-                            const pendingImages = warehouseData[catIndex].images || [];
-                            const totalImages = existingImageKeys.length + pendingImages.length;
+                    const urlIndex = parseInt(e.target.dataset.urlIndex);
+                    if (!warehouseData[catIndex].imageUrls) {
+                        warehouseData[catIndex].imageUrls = [];
+                    }
+                    warehouseData[catIndex].imageUrls[urlIndex] = e.target.value.trim();
+                    // Re-render to update the preview
+                    renderCategories();
+                });
+            });
 
-                            if (totalImages < MAX_IMAGES_PER_VEHICLE) {
-                                warehouseData[catIndex].images.push(event.target.result);
-                                renderCategories();
-                            } else {
-                                showStatus(`Maximum of ${MAX_IMAGES_PER_VEHICLE} images allowed per vehicle`, 'error');
-                            }
-                        };
-                        reader.readAsDataURL(file);
+            // Add image URL
+            document.querySelectorAll('.add-image-url').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const catIndex = parseInt(e.target.dataset.categoryIndex);
+                    if (!warehouseData[catIndex].imageUrls) {
+                        warehouseData[catIndex].imageUrls = [];
+                    }
+                    if (warehouseData[catIndex].imageUrls.length < MAX_IMAGES_PER_VEHICLE) {
+                        warehouseData[catIndex].imageUrls.push('');
+                        renderCategories();
                     }
                 });
             });
 
-            // Remove single image from gallery
-            document.querySelectorAll('.remove-single-image').forEach(btn => {
+            // Remove image URL
+            document.querySelectorAll('.remove-image-url').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const catIndex = parseInt(e.target.closest('[data-category-index]').dataset.categoryIndex);
-                    const imgIndex = parseInt(e.target.closest('[data-image-index]').dataset.imageIndex);
-                    const imageKey = e.target.closest('[data-image-key]').dataset.imageKey;
-
-                    const category = warehouseData[catIndex];
-                    const imageKeys = category.imageKeys || (category.imageKey ? [category.imageKey] : []);
-                    const pendingImages = category.images || [];
-
-                    // Check if removing an existing image (has imageKey) or a pending upload
-                    if (imgIndex < imageKeys.length) {
-                        // Removing an existing saved image
-                        const keyToRemove = imageKeys[imgIndex];
-                        if (!category._deleteImages) {
-                            category._deleteImages = [];
-                        }
-                        category._deleteImages.push(keyToRemove);
-
-                        // Remove from imageKeys
-                        if (category.imageKeys) {
-                            category.imageKeys.splice(imgIndex, 1);
-                        } else if (category.imageKey) {
-                            delete category.imageKey;
-                            category.imageKeys = [];
-                        }
-                    } else {
-                        // Removing a pending (not yet saved) image
-                        const pendingIndex = imgIndex - imageKeys.length;
-                        if (category.images && pendingIndex >= 0 && pendingIndex < category.images.length) {
-                            category.images.splice(pendingIndex, 1);
-                        }
+                    const urlIndex = parseInt(e.target.closest('[data-url-index]').dataset.urlIndex);
+                    if (warehouseData[catIndex].imageUrls) {
+                        warehouseData[catIndex].imageUrls.splice(urlIndex, 1);
+                        renderCategories();
                     }
-
-                    renderCategories();
                 });
             });
         }

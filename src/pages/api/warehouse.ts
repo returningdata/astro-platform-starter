@@ -13,18 +13,12 @@ export interface WarehouseCategory {
     name: string;
     icon: string;
     items: WarehouseItem[];
-    imageKey?: string; // Legacy: single image reference (kept for backwards compatibility)
-    imageKeys?: string[]; // Array of image keys (up to 10 images per vehicle)
+    imageUrls?: string[]; // Array of image URLs (Discord CDN or Imgur links)
 }
 
 // Helper to get the warehouse store
 function getWarehouseStore() {
     return getStore({ name: 'warehouse', consistency: 'strong' });
-}
-
-// Helper to get the images store
-function getImagesStore() {
-    return getStore({ name: 'warehouse-images', consistency: 'strong' });
 }
 
 const defaultWarehouseData: WarehouseCategory[] = [
@@ -174,31 +168,6 @@ async function getWarehouseData(): Promise<WarehouseCategory[]> {
 }
 
 export const GET: APIRoute = async ({ url }) => {
-    // Check if requesting a specific image
-    const imageKey = url.searchParams.get('image');
-    if (imageKey) {
-        try {
-            const imagesStore = getImagesStore();
-            const imageData = await imagesStore.get(imageKey);
-            if (imageData) {
-                return new Response(JSON.stringify({ image: imageData }), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
-            return new Response(JSON.stringify({ image: null }), {
-                status: 404,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        } catch (error) {
-            console.error('Error fetching image:', error);
-            return new Response(JSON.stringify({ image: null, error: 'Failed to load image' }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-    }
-
     // Return warehouse data
     try {
         const warehouseData = await getWarehouseData();
@@ -219,9 +188,8 @@ export const POST: APIRoute = async ({ request }) => {
     try {
         const data = await request.json();
         const warehouseStore = getWarehouseStore();
-        const imagesStore = getImagesStore();
 
-        // Process each category and handle images separately
+        // Process each category - now using image URLs instead of blob storage
         const categoriesToSave: WarehouseCategory[] = [];
 
         for (const category of data.warehouse) {
@@ -232,78 +200,14 @@ export const POST: APIRoute = async ({ request }) => {
                 items: category.items
             };
 
-            // Handle multiple images (new system with imageKeys array)
-            if (category.images && Array.isArray(category.images)) {
-                const newImageKeys: string[] = [];
-                const existingImageKeys = category.imageKeys || [];
-                const imagesToDelete = category._deleteImages || [];
-
-                // Delete images marked for deletion
-                for (const keyToDelete of imagesToDelete) {
-                    try {
-                        await imagesStore.delete(keyToDelete);
-                    } catch (e) {
-                        console.error('Failed to delete image:', keyToDelete, e);
-                    }
-                }
-
-                // Process each image in the images array
-                for (let i = 0; i < category.images.length; i++) {
-                    const img = category.images[i];
-                    if (img && img.startsWith('data:')) {
-                        // New image (base64), save to store
-                        const imageKey = `category-${category.id}-${Date.now()}-${i}`;
-                        await imagesStore.set(imageKey, img);
-                        newImageKeys.push(imageKey);
-                    } else if (img && existingImageKeys.includes(img)) {
-                        // Existing image key, keep it
-                        newImageKeys.push(img);
-                    }
-                }
-
-                if (newImageKeys.length > 0) {
-                    categoryToSave.imageKeys = newImageKeys;
-                }
-
-                // Clean up old images that are no longer used
-                for (const oldKey of existingImageKeys) {
-                    if (!newImageKeys.includes(oldKey) && !imagesToDelete.includes(oldKey)) {
-                        try {
-                            await imagesStore.delete(oldKey);
-                        } catch (e) {
-                            console.error('Failed to delete unused image:', oldKey, e);
-                        }
-                    }
-                }
-            } else {
-                // Legacy single image handling (for backwards compatibility)
-                if (category.image && category.image.startsWith('data:')) {
-                    const imageKey = `category-${category.id}-${Date.now()}`;
-                    await imagesStore.set(imageKey, category.image);
-                    categoryToSave.imageKeys = [imageKey];
-
-                    // Delete old image if there was one
-                    if (category.imageKey && category.imageKey !== imageKey) {
-                        try {
-                            await imagesStore.delete(category.imageKey);
-                        } catch (e) {
-                            console.error('Failed to delete old image:', e);
-                        }
-                    }
-                } else if (category.imageKey) {
-                    // Migrate single imageKey to imageKeys array
-                    categoryToSave.imageKeys = [category.imageKey];
-                } else if (category.imageKeys && category.imageKeys.length > 0) {
-                    categoryToSave.imageKeys = category.imageKeys;
-                }
-
-                // Handle image deletion
-                if (category._deleteImage && category.imageKey) {
-                    try {
-                        await imagesStore.delete(category.imageKey);
-                    } catch (e) {
-                        console.error('Failed to delete image:', e);
-                    }
+            // Handle image URLs (Discord CDN or Imgur links)
+            if (category.imageUrls && Array.isArray(category.imageUrls)) {
+                // Filter to only include valid URLs
+                const validUrls = category.imageUrls.filter((url: string) =>
+                    url && typeof url === 'string' && url.trim() !== ''
+                );
+                if (validUrls.length > 0) {
+                    categoryToSave.imageUrls = validUrls;
                 }
             }
 

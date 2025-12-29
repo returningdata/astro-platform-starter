@@ -1,34 +1,77 @@
 ---
+import { getStore } from '@netlify/blobs';
 
+interface FooterLink {
+    label: string;
+    url: string;
+}
+
+interface FooterData {
+    departmentName: string;
+    departmentDescription: string;
+    quickLinks: FooterLink[];
+    emergencyNumber: string;
+    nonEmergencyNumber: string;
+    dispatchNumber: string;
+    copyrightText: string;
+}
+
+const defaultFooterData: FooterData = {
+    departmentName: 'Del Perro Police Department',
+    departmentDescription: 'Serving and protecting the Del Perro community with integrity and dedication.',
+    quickLinks: [
+        { label: 'About DPPD', url: '/about' },
+        { label: 'Resources', url: '/resources' },
+        { label: 'Chain of Command', url: '/chain-of-command' },
+        { label: 'Community Events', url: '/community-events' }
+    ],
+    emergencyNumber: '911',
+    nonEmergencyNumber: '(555) 123-4567',
+    dispatchNumber: '(555) 123-4568',
+    copyrightText: 'Del Perro Police Department. All rights reserved.'
+};
+
+let footerData: FooterData = defaultFooterData;
+
+try {
+    const store = getStore({ name: 'footer', consistency: 'strong' });
+    const data = await store.get('footer', { type: 'json' });
+    if (data && typeof data === 'object') {
+        footerData = data as FooterData;
+    }
+} catch (error) {
+    console.error('Error fetching footer data:', error);
+}
+
+const currentYear = new Date().getFullYear();
 ---
 
 <footer class="pt-16 pb-12 sm:pt-20 sm:pb-16 border-t border-white/10">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
-            <h3 class="font-bold text-lg mb-3">Del Perro Police Department</h3>
+            <h3 class="font-bold text-lg mb-3">{footerData.departmentName}</h3>
             <p class="text-sm text-white/60">
-                Serving and protecting the Del Perro community with integrity and dedication.
+                {footerData.departmentDescription}
             </p>
         </div>
         <div>
             <h3 class="font-bold text-sm mb-3 text-white/80">Quick Links</h3>
             <ul class="space-y-2 text-sm text-white/60">
-                <li><a href="/about" class="hover:text-primary">About DPPD</a></li>
-                <li><a href="/resources" class="hover:text-primary">Resources</a></li>
-                <li><a href="/chain-of-command" class="hover:text-primary">Chain of Command</a></li>
-                <li><a href="/community-events" class="hover:text-primary">Community Events</a></li>
+                {footerData.quickLinks.map((link) => (
+                    <li><a href={link.url} class="hover:text-primary">{link.label}</a></li>
+                ))}
             </ul>
         </div>
         <div>
             <h3 class="font-bold text-sm mb-3 text-white/80">Emergency Contact</h3>
             <ul class="space-y-2 text-sm text-white/60">
-                <li>Emergency: <span class="text-primary font-semibold">911</span></li>
-                <li>Non-Emergency: <span class="text-white/80">(555) 123-4567</span></li>
-                <li>Dispatch: <span class="text-white/80">(555) 123-4568</span></li>
+                <li>Emergency: <span class="text-primary font-semibold">{footerData.emergencyNumber}</span></li>
+                <li>Non-Emergency: <span class="text-white/80">{footerData.nonEmergencyNumber}</span></li>
+                <li>Dispatch: <span class="text-white/80">{footerData.dispatchNumber}</span></li>
             </ul>
         </div>
     </div>
     <div class="mt-8 pt-8 border-t border-white/10 text-center text-sm text-white/50">
-        <p>&copy; 2024 Del Perro Police Department. All rights reserved.</p>
+        <p>&copy; {currentYear} {footerData.copyrightText}</p>
     </div>
 </footer>

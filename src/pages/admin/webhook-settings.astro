@@ -1,0 +1,391 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Admin - Webhook Settings">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Webhook Settings</h1>
+                <p class="text-white/70">Configure Discord webhook for site status updates</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border"></div>
+
+        <!-- Access Denied Message (shown if not super admin) -->
+        <div id="accessDenied" class="hidden bg-red-500/20 border border-red-500/50 rounded-lg p-8 text-center">
+            <svg class="w-16 h-16 mx-auto text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h2 class="text-2xl font-bold text-red-400 mb-2">Access Denied</h2>
+            <p class="text-white/70">Only Super Admins can manage webhook settings.</p>
+            <a href="/admin" class="inline-block mt-4 px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                Return to Dashboard
+            </a>
+        </div>
+
+        <!-- Settings Container -->
+        <div id="settingsContainer" class="space-y-6">
+            <div class="text-center py-12 text-white/60">
+                Loading settings...
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Check permissions
+        const adminUserData = sessionStorage.getItem('adminUser');
+        if (!adminUserData) {
+            window.location.href = '/admin/login';
+        }
+
+        const currentUser = adminUserData ? JSON.parse(adminUserData) : null;
+
+        // Only super_admin can access webhook settings
+        if (!currentUser || currentUser.role !== 'super_admin') {
+            document.getElementById('settingsContainer').classList.add('hidden');
+            document.getElementById('accessDenied').classList.remove('hidden');
+        } else {
+            loadSettings();
+        }
+
+        let webhookSettings = {
+            discordWebhookUrl: '',
+            lastMessageId: null,
+            lastSentAt: null,
+            enabled: true,
+            discordWebhookUrlMasked: ''
+        };
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/webhook-settings', {
+                    headers: {
+                        'X-Admin-User': JSON.stringify(currentUser)
+                    }
+                });
+                const data = await response.json();
+                if (data.settings) {
+                    webhookSettings = data.settings;
+                }
+                renderSettings();
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+                showStatus('Failed to load webhook settings', 'error');
+            }
+        }
+
+        function formatLastSent(timestamp) {
+            if (!timestamp) return 'Never';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+
+            if (diff < 60) return `${diff} seconds ago`;
+            if (diff < 3600) return `${Math.floor(diff / 60)} minute${Math.floor(diff / 60) === 1 ? '' : 's'} ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+            return date.toLocaleString();
+        }
+
+        // Display update interval reference
+        let displayUpdateInterval = null;
+
+        // Start the display updater (updates "Last Update" text in real-time)
+        function startDisplayUpdater() {
+            if (displayUpdateInterval) clearInterval(displayUpdateInterval);
+
+            displayUpdateInterval = setInterval(() => {
+                // Update the "Last Update" display in real-time
+                const lastSentEl = document.getElementById('lastSentDisplay');
+                if (lastSentEl && webhookSettings.lastSentAt) {
+                    lastSentEl.textContent = formatLastSent(webhookSettings.lastSentAt);
+                }
+            }, 1000); // Update every second
+
+            // Periodically refresh settings from server to get updated lastSentAt
+            setInterval(() => {
+                loadSettings();
+            }, 30000); // Refresh every 30 seconds
+        }
+
+        function renderSettings() {
+            const container = document.getElementById('settingsContainer');
+            const isConfigured = webhookSettings.discordWebhookUrl && webhookSettings.discordWebhookUrl !== '';
+
+            container.innerHTML = `
+                <!-- Webhook URL Configuration -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+                        <span class="text-2xl">🔗</span>
+                        Discord Webhook URL
+                    </h2>
+                    <p class="text-white/60 mb-4">Enter the Discord webhook URL where site status updates will be posted. The webhook will automatically send updates every 1 minute.</p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Webhook URL</label>
+                            <input
+                                type="url"
+                                id="webhookUrl"
+                                placeholder="https://discord.com/api/webhooks/..."
+                                class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
+                            >
+                            <p class="text-xs text-white/50 mt-2">
+                                ${isConfigured ? `Current: ${webhookSettings.discordWebhookUrlMasked}` : 'No webhook URL configured'}
+                            </p>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <button id="saveUrlBtn" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                                Save URL
+                            </button>
+                            <button id="clearUrlBtn" class="px-6 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors ${!isConfigured ? 'opacity-50 cursor-not-allowed' : ''}">
+                                Clear URL
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status & Actions -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+                        <span class="text-2xl">📊</span>
+                        Webhook Status
+                    </h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-slate-700/30 rounded-lg p-4">
+                            <p class="text-sm text-white/60 mb-1">⚙️ Status</p>
+                            <p class="text-xl font-bold ${isConfigured ? 'text-green-400' : 'text-yellow-400'}">
+                                ${isConfigured ? '✅ Configured' : '⚠️ Not Configured'}
+                            </p>
+                        </div>
+                        <div class="bg-slate-700/30 rounded-lg p-4">
+                            <p class="text-sm text-white/60 mb-1">🕐 Last Update</p>
+                            <p id="lastSentDisplay" class="text-xl font-bold text-white">${formatLastSent(webhookSettings.lastSentAt)}</p>
+                        </div>
+                        <div class="bg-slate-700/30 rounded-lg p-4">
+                            <p class="text-sm text-white/60 mb-1">🆔 Message ID</p>
+                            <p class="text-sm font-mono text-white/80 truncate" title="${webhookSettings.lastMessageId || 'None'}">
+                                ${webhookSettings.lastMessageId ? webhookSettings.lastMessageId.substring(0, 12) + '...' : 'None'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Update Info Section -->
+                <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-6">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
+                        <span class="text-2xl">🔄</span>
+                        Automatic Updates
+                    </h2>
+                    <p class="text-white/60 mb-4">The Discord webhook automatically updates every minute via a server-side scheduled function. No need to keep this page open.</p>
+
+                    <div class="flex flex-col md:flex-row gap-6 items-center">
+                        <div class="bg-slate-700/50 rounded-lg p-6 text-center min-w-[200px]">
+                            <p class="text-sm text-white/60 mb-2">⏰ Update Frequency</p>
+                            <p class="text-4xl font-bold text-purple-400 font-mono">1</p>
+                            <p class="text-sm text-white/60 mt-1">minute</p>
+                        </div>
+
+                        <div class="flex-1 space-y-3">
+                            <div class="flex items-center gap-2 text-white/70">
+                                <span class="w-3 h-3 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-gray-500'}"></span>
+                                <span>${isConfigured ? '🟢 Server-side auto-update is active (runs automatically in background)' : '⚪ Configure webhook URL to enable auto-updates'}</span>
+                            </div>
+
+                            <div class="flex gap-4">
+                                <button id="sendNowBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors text-sm font-semibold ${!isConfigured ? 'opacity-50 cursor-not-allowed' : ''}">
+                                    📤 Send Update Now
+                                </button>
+                                <button id="deleteMessageBtn" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors text-sm font-semibold ${!isConfigured ? 'opacity-50 cursor-not-allowed' : ''}">
+                                    🗑️ Delete Current Message
+                                </button>
+                            </div>
+
+                            <p class="text-xs text-white/50">
+                                ℹ️ Updates run on the server automatically every minute. Use the buttons above for immediate manual control.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Box -->
+                <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6">
+                    <h3 class="text-lg font-bold mb-3 text-blue-300 flex items-center gap-2">
+                        <span class="text-lg">ℹ️</span>
+                        How It Works
+                    </h3>
+                    <ul class="space-y-2 text-white/70 text-sm">
+                        <li>🖥️ <strong>Server-side scheduled function:</strong> Runs automatically every minute on Netlify's servers - no need to keep the page open.</li>
+                        <li>🗑️ Each update <strong>deletes the previous message</strong> and sends a new one to keep the channel clean.</li>
+                        <li>📊 The status includes: visitor count, events, warehouse items, subdivisions, personnel, and more.</li>
+                        <li>👆 Use the manual buttons above to trigger an immediate update or delete the current message.</li>
+                        <li>⚠️ <strong>Note:</strong> Scheduled functions only run on published deploys (not on Deploy Previews or branch deploys).</li>
+                    </ul>
+                </div>
+            `;
+
+            // Attach event listeners
+            document.getElementById('saveUrlBtn').addEventListener('click', saveWebhookUrl);
+            document.getElementById('clearUrlBtn').addEventListener('click', clearWebhookUrl);
+
+            // Manual action button listeners
+            const sendNowBtn = document.getElementById('sendNowBtn');
+            const deleteMessageBtn = document.getElementById('deleteMessageBtn');
+            if (sendNowBtn) sendNowBtn.addEventListener('click', sendNow);
+            if (deleteMessageBtn) deleteMessageBtn.addEventListener('click', deleteCurrentMessage);
+
+            // Start the display updater
+            startDisplayUpdater();
+        }
+
+        async function sendNow() {
+            if (!webhookSettings.discordWebhookUrl) {
+                showStatus('No webhook URL configured', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Sending update to Discord...');
+                const response = await fetch('/api/webhook-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-User': JSON.stringify(currentUser)
+                    },
+                    body: JSON.stringify({ action: 'send_now' })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Discord message sent successfully!');
+                    loadSettings();
+                } else {
+                    showStatus(result.error || 'Failed to send message', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to send message', 'error');
+            }
+        }
+
+        async function deleteCurrentMessage() {
+            if (!webhookSettings.discordWebhookUrl) {
+                showStatus('No webhook URL configured', 'error');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to delete the current Discord message?')) {
+                return;
+            }
+
+            try {
+                showStatus('Deleting current message...');
+                const response = await fetch('/api/webhook-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-User': JSON.stringify(currentUser)
+                    },
+                    body: JSON.stringify({ action: 'clear_message' })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Message deleted successfully!');
+                    loadSettings();
+                } else {
+                    showStatus(result.error || 'Failed to delete message', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to delete message', 'error');
+            }
+        }
+
+        async function saveWebhookUrl() {
+            const urlInput = document.getElementById('webhookUrl');
+            const url = urlInput.value.trim();
+
+            if (!url) {
+                showStatus('Please enter a webhook URL', 'error');
+                return;
+            }
+
+            if (!url.startsWith('https://discord.com/api/webhooks/')) {
+                showStatus('Invalid Discord webhook URL format', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/webhook-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-User': JSON.stringify(currentUser)
+                    },
+                    body: JSON.stringify({
+                        action: 'update_url',
+                        discordWebhookUrl: url
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Webhook URL saved successfully');
+                    urlInput.value = '';
+                    loadSettings();
+                } else {
+                    showStatus(result.error || 'Failed to save URL', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to save URL', 'error');
+            }
+        }
+
+        async function clearWebhookUrl() {
+            if (!confirm('Are you sure you want to clear the webhook URL? This will stop automatic status updates.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/webhook-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-User': JSON.stringify(currentUser)
+                    },
+                    body: JSON.stringify({
+                        action: 'update_url',
+                        discordWebhookUrl: ''
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Webhook URL cleared');
+                    loadSettings();
+                } else {
+                    showStatus(result.error || 'Failed to clear URL', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to clear URL', 'error');
+            }
+        }
+    </script>
+</Layout>

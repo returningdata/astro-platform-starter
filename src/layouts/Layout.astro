@@ -122,6 +122,59 @@ const playerStyle = themePlayerStyles[activeTheme];
 
         <!-- Theme Effects Script - Uses server-provided theme -->
         <script>
+            // Falling Effects Toggle
+            const EFFECTS_VISIBLE_KEY = 'dppd-effects-visible';
+
+            // Get saved effects visibility preference (default to visible/true)
+            function getEffectsVisible() {
+                const saved = localStorage.getItem(EFFECTS_VISIBLE_KEY);
+                if (saved === null) return true; // Default to showing effects
+                return saved === 'true';
+            }
+
+            // Save effects visibility preference
+            function setEffectsVisible(visible) {
+                localStorage.setItem(EFFECTS_VISIBLE_KEY, visible.toString());
+            }
+
+            // Update effects container visibility and button text
+            function updateEffectsVisibility(visible) {
+                const container = document.getElementById('effects-container');
+                const toggleText = document.getElementById('effects-toggle-text');
+
+                if (container) {
+                    container.style.display = visible ? 'block' : 'none';
+                }
+                if (toggleText) {
+                    toggleText.textContent = visible ? 'Hide Effects' : 'Show Effects';
+                }
+            }
+
+            // Initialize effects toggle on page load
+            function initEffectsToggle() {
+                const effectsVisible = getEffectsVisible();
+                updateEffectsVisibility(effectsVisible);
+
+                const toggleButton = document.getElementById('effects-toggle');
+                if (toggleButton) {
+                    toggleButton.addEventListener('click', () => {
+                        const currentlyVisible = getEffectsVisible();
+                        const newVisible = !currentlyVisible;
+                        setEffectsVisible(newVisible);
+                        updateEffectsVisibility(newVisible);
+                    });
+                }
+            }
+
+            // Run initialization
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initEffectsToggle);
+            } else {
+                initEffectsToggle();
+            }
+        </script>
+
+        <script>
             // Theme configuration
             const themeConfig = {
                 christmas: {
@@ -682,6 +735,11 @@ const playerStyle = themePlayerStyles[activeTheme];
         <div id="youtube-player-container" class="hidden">
             <div id="youtube-player"></div>
         </div>
+
+        <!-- Falling Effects Toggle Button (bottom left) - hidden for default theme since it has no effects -->
+        <button id="effects-toggle" class={`fixed bottom-4 left-4 z-50 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border-2 transition-all hover:scale-105 text-white text-xs font-medium ${playerStyle.playerClass} ${activeTheme === 'default' ? 'hidden' : ''}`}>
+            <span id="effects-toggle-text">Hide Effects</span>
+        </button>
 
         <div class="flex flex-col min-h-screen px-6 bg-noise sm:px-12">
             <div class="flex flex-col w-full max-w-5xl mx-auto grow">

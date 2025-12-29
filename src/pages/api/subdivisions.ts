@@ -9,7 +9,7 @@ export interface Subdivision {
     name: string;
     abbreviation: string;
     description: string;
-    availability: 'tryouts' | 'open' | 'handpicked' | 'closed';
+    availability: 'tryouts' | 'open' | 'handpicked' | 'closed' | 'tryouts-handpicked';
     owner?: string;
     ownerCallSign?: string;
     imageUrls?: string[]; // Array of image URLs (Discord CDN or Imgur links) - max 3

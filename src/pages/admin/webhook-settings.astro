@@ -103,89 +103,25 @@ import Layout from '../../layouts/Layout.astro';
             return date.toLocaleString();
         }
 
-        // Check if last update was 1+ minutes ago (returns seconds since last update)
-        function getSecondsSinceLastUpdate() {
-            if (!webhookSettings.lastSentAt) return Infinity;
-            const now = Date.now();
-            return Math.floor((now - webhookSettings.lastSentAt) / 1000);
-        }
+        // Display update interval reference
+        let displayUpdateInterval = null;
 
-        // Auto-update interval reference
-        let autoUpdateInterval = null;
-        let isAutoUpdating = false;
+        // Start the display updater (updates "Last Update" text in real-time)
+        function startDisplayUpdater() {
+            if (displayUpdateInterval) clearInterval(displayUpdateInterval);
 
-        // Start the auto-update checker
-        function startAutoUpdateChecker() {
-            if (autoUpdateInterval) clearInterval(autoUpdateInterval);
-
-            autoUpdateInterval = setInterval(async () => {
-                const secondsSince = getSecondsSinceLastUpdate();
-
+            displayUpdateInterval = setInterval(() => {
                 // Update the "Last Update" display in real-time
                 const lastSentEl = document.getElementById('lastSentDisplay');
                 if (lastSentEl && webhookSettings.lastSentAt) {
                     lastSentEl.textContent = formatLastSent(webhookSettings.lastSentAt);
                 }
+            }, 1000); // Update every second
 
-                // Update the countdown display if it exists
-                const countdownEl = document.getElementById('autoUpdateCountdown');
-                if (countdownEl) {
-                    const timeUntilUpdate = Math.max(0, 60 - secondsSince);
-                    if (timeUntilUpdate > 0 && !isAutoUpdating) {
-                        countdownEl.textContent = `${timeUntilUpdate}`;
-                    } else if (isAutoUpdating) {
-                        countdownEl.textContent = '⏳';
-                    } else {
-                        countdownEl.textContent = '0';
-                    }
-                }
-
-                // If 1+ minutes have passed (60+ seconds), trigger auto-update
-                if (secondsSince >= 60 && !isAutoUpdating && webhookSettings.discordWebhookUrl) {
-                    isAutoUpdating = true;
-                    console.log('🔄 Auto-triggering delete and send (Last Update: 1+ minute ago)');
-                    showStatus('🔄 Auto-updating Discord message...');
-
-                    try {
-                        // First delete the current message
-                        if (webhookSettings.lastMessageId) {
-                            console.log('🗑️ Deleting old message...');
-                            await fetch('/api/webhook-settings', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-Admin-User': JSON.stringify(currentUser)
-                                },
-                                body: JSON.stringify({ action: 'clear_message' })
-                            });
-                        }
-
-                        // Then send a new message
-                        console.log('📤 Sending new message...');
-                        const response = await fetch('/api/webhook-settings', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Admin-User': JSON.stringify(currentUser)
-                            },
-                            body: JSON.stringify({ action: 'send_now' })
-                        });
-
-                        const result = await response.json();
-                        if (result.success) {
-                            showStatus('✅ Auto-updated Discord message!');
-                            loadSettings();
-                        } else {
-                            showStatus('❌ Auto-update failed: ' + (result.error || 'Unknown error'), 'error');
-                        }
-                    } catch (error) {
-                        console.error('Auto-update failed:', error);
-                        showStatus('❌ Auto-update failed', 'error');
-                    } finally {
-                        isAutoUpdating = false;
-                    }
-                }
-            }, 1000); // Check every second
+            // Periodically refresh settings from server to get updated lastSentAt
+            setInterval(() => {
+                loadSettings();
+            }, 30000); // Refresh every 30 seconds
         }
 
         function renderSettings() {
@@ -253,25 +189,25 @@ import Layout from '../../layouts/Layout.astro';
                     </div>
                 </div>
 
-                <!-- Auto-Update Trigger Section -->
+                <!-- Auto-Update Info Section -->
                 <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-6">
                     <h2 class="text-2xl font-bold mb-4 flex items-center gap-3">
                         <span class="text-2xl">🔄</span>
-                        Auto-Update Timer
+                        Automatic Updates
                     </h2>
-                    <p class="text-white/60 mb-4">When "Last Update" shows 1 minute ago, this page will automatically trigger delete + resend.</p>
+                    <p class="text-white/60 mb-4">The Discord webhook automatically updates every minute via a server-side scheduled function. No need to keep this page open.</p>
 
                     <div class="flex flex-col md:flex-row gap-6 items-center">
                         <div class="bg-slate-700/50 rounded-lg p-6 text-center min-w-[200px]">
-                            <p class="text-sm text-white/60 mb-2">⏱️ Next Auto-Update In</p>
-                            <p id="autoUpdateCountdown" class="text-4xl font-bold text-purple-400 font-mono">--</p>
-                            <p class="text-sm text-white/60 mt-1">seconds</p>
+                            <p class="text-sm text-white/60 mb-2">⏰ Update Frequency</p>
+                            <p class="text-4xl font-bold text-purple-400 font-mono">1</p>
+                            <p class="text-sm text-white/60 mt-1">minute</p>
                         </div>
 
                         <div class="flex-1 space-y-3">
                             <div class="flex items-center gap-2 text-white/70">
-                                <span class="w-3 h-3 rounded-full ${isConfigured ? 'bg-purple-500 animate-pulse' : 'bg-gray-500'}"></span>
-                                <span>${isConfigured ? '🟢 Auto-update is active on this page' : '⚪ Configure webhook URL to enable auto-update'}</span>
+                                <span class="w-3 h-3 rounded-full ${isConfigured ? 'bg-green-500' : 'bg-gray-500'}"></span>
+                                <span>${isConfigured ? '🟢 Server-side auto-update is active (runs automatically in background)' : '⚪ Configure webhook URL to enable auto-updates'}</span>
                             </div>
 
                             <div class="flex gap-4">
@@ -284,7 +220,7 @@ import Layout from '../../layouts/Layout.astro';
                             </div>
 
                             <p class="text-xs text-white/50">
-                                ℹ️ Auto-update triggers when "Last Update" is 1+ minute ago. It deletes the old message first, then sends a new one.
+                                ℹ️ Updates run on the server automatically every minute. Use the buttons above for immediate manual control.
                             </p>
                         </div>
                     </div>
@@ -297,11 +233,11 @@ import Layout from '../../layouts/Layout.astro';
                         How It Works
                     </h3>
                     <ul class="space-y-2 text-white/70 text-sm">
-                        <li>🔄 <strong>Auto-update on this page:</strong> When "Last Update" shows <strong>1 minute ago</strong>, it automatically deletes & resends.</li>
-                        <li>🖥️ <strong>Server-side backup:</strong> A scheduled function also runs every minute on the server.</li>
+                        <li>🖥️ <strong>Server-side scheduled function:</strong> Runs automatically every minute on Netlify's servers - no need to keep the page open.</li>
                         <li>🗑️ Each update <strong>deletes the previous message</strong> and sends a new one to keep the channel clean.</li>
                         <li>📊 The status includes: visitor count, events, warehouse items, subdivisions, personnel, and more.</li>
-                        <li>👆 Use the buttons above to manually trigger an update or delete the current message.</li>
+                        <li>👆 Use the manual buttons above to trigger an immediate update or delete the current message.</li>
+                        <li>⚠️ <strong>Note:</strong> Scheduled functions only run on published deploys (not on Deploy Previews or branch deploys).</li>
                     </ul>
                 </div>
             `;
@@ -316,8 +252,8 @@ import Layout from '../../layouts/Layout.astro';
             if (sendNowBtn) sendNowBtn.addEventListener('click', sendNow);
             if (deleteMessageBtn) deleteMessageBtn.addEventListener('click', deleteCurrentMessage);
 
-            // Start the auto-update checker
-            startAutoUpdateChecker();
+            // Start the display updater
+            startDisplayUpdater();
         }
 
         async function sendNow() {

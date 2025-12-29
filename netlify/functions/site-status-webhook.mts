@@ -99,6 +99,7 @@ async function saveWebhookSettings(settings: WebhookSettings): Promise<void> {
 
 /**
  * Fetch all site statistics from Netlify Blobs
+ * Uses parallel fetching to stay within 30-second scheduled function limit
  */
 async function fetchSiteStats(): Promise<SiteStats> {
     const stats: SiteStats = {
@@ -111,124 +112,146 @@ async function fetchSiteStats(): Promise<SiteStats> {
         activeUsers: 0
     };
 
-    try {
+    // Run all fetches in parallel for faster execution
+    const [
+        eventsResult,
+        warehouseResult,
+        subdivisionsResult,
+        personnelResult,
+        deptResult,
+        usersResult,
+        resourcesResult,
+        visitorsResult
+    ] = await Promise.allSettled([
         // Fetch events data
-        const eventsStore = getStore({ name: 'events', consistency: 'strong' });
-        const eventsData = await eventsStore.get('events', { type: 'json' }) as any[] | null;
-        if (eventsData && Array.isArray(eventsData)) {
-            stats.events.total = eventsData.length;
-            stats.events.upcoming = eventsData.filter(e => e.status === 'upcoming').length;
-            stats.events.ongoing = eventsData.filter(e => e.status === 'ongoing').length;
-            stats.events.completed = eventsData.filter(e => e.status === 'completed').length;
-        }
-    } catch (error) {
-        console.error('Error fetching events:', error);
-    }
-
-    try {
-        // Fetch warehouse data - count total vehicles (categories)
-        const warehouseStore = getStore({ name: 'warehouse', consistency: 'strong' });
-        const warehouseData = await warehouseStore.get('categories', { type: 'json' }) as any[] | null;
-        if (warehouseData && Array.isArray(warehouseData)) {
-            stats.warehouse.totalVehicles = warehouseData.length;
-        }
-    } catch (error) {
-        console.error('Error fetching warehouse:', error);
-    }
-
-    try {
+        (async () => {
+            const eventsStore = getStore({ name: 'events', consistency: 'strong' });
+            return await eventsStore.get('events', { type: 'json' }) as any[] | null;
+        })(),
+        // Fetch warehouse data
+        (async () => {
+            const warehouseStore = getStore({ name: 'warehouse', consistency: 'strong' });
+            return await warehouseStore.get('categories', { type: 'json' }) as any[] | null;
+        })(),
         // Fetch subdivisions data
-        const subdivisionsStore = getStore({ name: 'subdivisions', consistency: 'strong' });
-        const subdivisionsData = await subdivisionsStore.get('data', { type: 'json' }) as any[] | null;
-        if (subdivisionsData && Array.isArray(subdivisionsData)) {
-            stats.subdivisions.total = subdivisionsData.length;
-            for (const sub of subdivisionsData) {
-                switch (sub.availability) {
-                    case 'open': stats.subdivisions.open++; break;
-                    case 'tryouts': stats.subdivisions.tryouts++; break;
-                    case 'handpicked': stats.subdivisions.handpicked++; break;
-                    case 'closed': stats.subdivisions.closed++; break;
-                    case 'tryouts-handpicked':
-                        stats.subdivisions.tryouts++;
-                        stats.subdivisions.handpicked++;
-                        break;
+        (async () => {
+            const subdivisionsStore = getStore({ name: 'subdivisions', consistency: 'strong' });
+            return await subdivisionsStore.get('data', { type: 'json' }) as any[] | null;
+        })(),
+        // Fetch personnel from Google Sheets with timeout
+        (async () => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            try {
+                const response = await fetch(ROSTER_SPREADSHEET_URL, {
+                    redirect: 'follow',
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                if (response.ok) {
+                    return await response.text();
                 }
+                return null;
+            } catch {
+                clearTimeout(timeoutId);
+                return null;
+            }
+        })(),
+        // Fetch department data
+        (async () => {
+            const deptStore = getStore({ name: 'department-data', consistency: 'strong' });
+            return await deptStore.get('department-data', { type: 'json' }) as any | null;
+        })(),
+        // Fetch admin users
+        (async () => {
+            const usersStore = getStore({ name: 'admin-users', consistency: 'strong' });
+            return await usersStore.get('users', { type: 'json' }) as any[] | null;
+        })(),
+        // Fetch resources
+        (async () => {
+            const resourcesStore = getStore({ name: 'resources', consistency: 'strong' });
+            return await resourcesStore.get('resources', { type: 'json' }) as any[] | null;
+        })(),
+        // Fetch active visitors
+        (async () => {
+            const visitorStore = getStore({ name: 'visitor-tracking', consistency: 'strong' });
+            return await visitorStore.get('active-sessions', { type: 'json' }) as Record<string, number> | null;
+        })()
+    ]);
+
+    // Process events
+    if (eventsResult.status === 'fulfilled' && eventsResult.value && Array.isArray(eventsResult.value)) {
+        const eventsData = eventsResult.value;
+        stats.events.total = eventsData.length;
+        stats.events.upcoming = eventsData.filter(e => e.status === 'upcoming').length;
+        stats.events.ongoing = eventsData.filter(e => e.status === 'ongoing').length;
+        stats.events.completed = eventsData.filter(e => e.status === 'completed').length;
+    }
+
+    // Process warehouse
+    if (warehouseResult.status === 'fulfilled' && warehouseResult.value && Array.isArray(warehouseResult.value)) {
+        stats.warehouse.totalVehicles = warehouseResult.value.length;
+    }
+
+    // Process subdivisions
+    if (subdivisionsResult.status === 'fulfilled' && subdivisionsResult.value && Array.isArray(subdivisionsResult.value)) {
+        const subdivisionsData = subdivisionsResult.value;
+        stats.subdivisions.total = subdivisionsData.length;
+        for (const sub of subdivisionsData) {
+            switch (sub.availability) {
+                case 'open': stats.subdivisions.open++; break;
+                case 'tryouts': stats.subdivisions.tryouts++; break;
+                case 'handpicked': stats.subdivisions.handpicked++; break;
+                case 'closed': stats.subdivisions.closed++; break;
+                case 'tryouts-handpicked':
+                    stats.subdivisions.tryouts++;
+                    stats.subdivisions.handpicked++;
+                    break;
             }
         }
-    } catch (error) {
-        console.error('Error fetching subdivisions:', error);
     }
 
-    try {
-        // Fetch department data from Google Sheets (count non-empty column D - Discord IDs)
-        const response = await fetch(ROSTER_SPREADSHEET_URL, { redirect: 'follow' });
-        if (response.ok) {
-            const csvText = await response.text();
-            const lines = csvText.split('\n').slice(1); // Skip header row
-            // Count rows that have a non-empty value in column D (index 3)
-            stats.personnel.totalPersonnel = lines.filter(line => {
-                const columns = line.split(',');
-                return columns[3] && columns[3].trim() !== '';
-            }).length;
-        }
-    } catch (error) {
-        console.error('Error fetching personnel from Google Sheets:', error);
+    // Process personnel from Google Sheets CSV
+    if (personnelResult.status === 'fulfilled' && personnelResult.value) {
+        const csvText = personnelResult.value;
+        const lines = csvText.split('\n').slice(1); // Skip header row
+        stats.personnel.totalPersonnel = lines.filter(line => {
+            const columns = line.split(',');
+            return columns[3] && columns[3].trim() !== '';
+        }).length;
     }
 
-    try {
-        // Fetch department data for command positions
-        const deptStore = getStore({ name: 'department-data', consistency: 'strong' });
-        const deptData = await deptStore.get('department-data', { type: 'json' }) as any | null;
-        if (deptData) {
-            if (deptData.commandPositions && Array.isArray(deptData.commandPositions)) {
-                stats.personnel.commandPositions = deptData.commandPositions.length;
-                stats.personnel.filledCommandPositions = deptData.commandPositions.filter((p: any) => p.name && p.name.trim() !== '').length;
-            }
-            if (deptData.rankPositions && Array.isArray(deptData.rankPositions)) {
-                stats.personnel.totalRanks = deptData.rankPositions.length;
-            }
-            if (deptData.subdivisionLeadership && Array.isArray(deptData.subdivisionLeadership)) {
-                stats.personnel.subdivisionLeaders = deptData.subdivisionLeadership.filter((l: any) => l.name && l.name.trim() !== '').length;
-            }
+    // Process department data
+    if (deptResult.status === 'fulfilled' && deptResult.value) {
+        const deptData = deptResult.value;
+        if (deptData.commandPositions && Array.isArray(deptData.commandPositions)) {
+            stats.personnel.commandPositions = deptData.commandPositions.length;
+            stats.personnel.filledCommandPositions = deptData.commandPositions.filter((p: any) => p.name && p.name.trim() !== '').length;
         }
-    } catch (error) {
-        console.error('Error fetching department data:', error);
+        if (deptData.rankPositions && Array.isArray(deptData.rankPositions)) {
+            stats.personnel.totalRanks = deptData.rankPositions.length;
+        }
+        if (deptData.subdivisionLeadership && Array.isArray(deptData.subdivisionLeadership)) {
+            stats.personnel.subdivisionLeaders = deptData.subdivisionLeadership.filter((l: any) => l.name && l.name.trim() !== '').length;
+        }
     }
 
-    try {
-        // Fetch admin users count
-        const usersStore = getStore({ name: 'admin-users', consistency: 'strong' });
-        const usersData = await usersStore.get('users', { type: 'json' }) as any[] | null;
-        if (usersData && Array.isArray(usersData)) {
-            stats.adminUsers = usersData.length;
-        }
-    } catch (error) {
-        console.error('Error fetching users:', error);
+    // Process admin users
+    if (usersResult.status === 'fulfilled' && usersResult.value && Array.isArray(usersResult.value)) {
+        stats.adminUsers = usersResult.value.length;
     }
 
-    try {
-        // Fetch resources count
-        const resourcesStore = getStore({ name: 'resources', consistency: 'strong' });
-        const resourcesData = await resourcesStore.get('resources', { type: 'json' }) as any[] | null;
-        if (resourcesData && Array.isArray(resourcesData)) {
-            stats.resources = resourcesData.length;
-        }
-    } catch (error) {
-        console.error('Error fetching resources:', error);
+    // Process resources
+    if (resourcesResult.status === 'fulfilled' && resourcesResult.value && Array.isArray(resourcesResult.value)) {
+        stats.resources = resourcesResult.value.length;
     }
 
-    try {
-        // Fetch active users count (from visitor tracking)
-        const visitorStore = getStore({ name: 'visitor-tracking', consistency: 'strong' });
-        const activeVisitors = await visitorStore.get('active-sessions', { type: 'json' }) as Record<string, number> | null;
-        if (activeVisitors) {
-            // Count sessions active within the last 2 minutes (120 seconds)
-            const now = Date.now();
-            const activeThreshold = 2 * 60 * 1000; // 2 minutes
-            stats.activeUsers = Object.values(activeVisitors).filter(lastSeen => (now - lastSeen) < activeThreshold).length;
-        }
-    } catch (error) {
-        console.error('Error fetching active users:', error);
+    // Process active visitors
+    if (visitorsResult.status === 'fulfilled' && visitorsResult.value) {
+        const activeVisitors = visitorsResult.value;
+        const now = Date.now();
+        const activeThreshold = 2 * 60 * 1000; // 2 minutes
+        stats.activeUsers = Object.values(activeVisitors).filter(lastSeen => (now - lastSeen) < activeThreshold).length;
     }
 
     return stats;

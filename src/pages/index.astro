@@ -148,6 +148,16 @@ import Layout from '../layouts/Layout.astro';
         </div>
     </div>
 
+    <!-- Image Lightbox Modal -->
+    <div id="imageLightbox" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/90 backdrop-blur-sm cursor-pointer">
+        <button id="lightboxClose" class="absolute top-4 right-4 text-white/80 hover:text-white transition-colors z-10">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+        <img id="lightboxImage" src="" alt="Enlarged subdivision image" class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-default">
+    </div>
+
     <script type="module">
         function getAvailabilityConfig(availability) {
             switch (availability) {
@@ -217,7 +227,7 @@ import Layout from '../layouts/Layout.astro';
                             ${hasImages ? `
                             <div class="relative bg-black/30">
                                 <div class="subdivision-gallery" data-sub-id="${sub.id}">
-                                    <img src="${imageUrls[0]}" alt="${sub.name}" class="w-full h-32 object-contain" onerror="this.parentElement.parentElement.remove()">
+                                    <img src="${imageUrls[0]}" alt="${sub.name}" class="w-full h-32 object-contain cursor-pointer hover:opacity-80 transition-opacity subdivision-image" data-sub-id="${sub.id}" onerror="this.parentElement.parentElement.remove()">
                                 </div>
                                 ${imageUrls.length > 1 ? `
                                 <div class="absolute bottom-1 right-1 flex gap-1">
@@ -262,6 +272,7 @@ import Layout from '../layouts/Layout.astro';
 
             document.querySelectorAll('.gallery-dot').forEach(dot => {
                 dot.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent lightbox from opening when clicking dots
                     const subId = e.target.dataset.subId;
                     const imgIndex = parseInt(e.target.dataset.imgIndex);
                     const sub = subdivisions.find(s => s.id === subId);
@@ -286,7 +297,62 @@ import Layout from '../layouts/Layout.astro';
                     }
                 });
             });
+
+            // Add click listeners to subdivision images for lightbox
+            document.querySelectorAll('.subdivision-image').forEach(img => {
+                img.addEventListener('click', (e) => {
+                    openLightbox(e.target.src);
+                });
+            });
         }
+
+        // Lightbox functions
+        function openLightbox(imageSrc) {
+            const lightbox = document.getElementById('imageLightbox');
+            const lightboxImage = document.getElementById('lightboxImage');
+
+            lightboxImage.src = imageSrc;
+            lightbox.classList.remove('hidden');
+            lightbox.classList.add('flex');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('imageLightbox');
+            lightbox.classList.add('hidden');
+            lightbox.classList.remove('flex');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        // Set up lightbox event listeners
+        function initLightbox() {
+            const lightbox = document.getElementById('imageLightbox');
+            const lightboxClose = document.getElementById('lightboxClose');
+            const lightboxImage = document.getElementById('lightboxImage');
+
+            // Close when clicking the X button
+            lightboxClose.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeLightbox();
+            });
+
+            // Close when clicking the background (not the image)
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) {
+                    closeLightbox();
+                }
+            });
+
+            // Close on Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) {
+                    closeLightbox();
+                }
+            });
+        }
+
+        // Initialize lightbox on page load
+        initLightbox();
 
         loadSubdivisionsAndOverseer();
     </script>

@@ -47,6 +47,12 @@ interface SiteStats {
         totalPersonnel: number;
         subdivisionLeaders: number;
     };
+    arrestReports: {
+        total: number;
+        open: number;
+        closed: number;
+        unresolved: number;
+    };
     adminUsers: number;
     resources: number;
     activeUsers: number;
@@ -100,6 +106,7 @@ async function fetchSiteStats(): Promise<SiteStats> {
         warehouse: { totalVehicles: 0 },
         subdivisions: { total: 0, open: 0, tryouts: 0, handpicked: 0, closed: 0 },
         personnel: { commandPositions: 0, filledCommandPositions: 0, totalRanks: 0, totalPersonnel: 0, subdivisionLeaders: 0 },
+        arrestReports: { total: 0, open: 0, closed: 0, unresolved: 0 },
         adminUsers: 0,
         resources: 0,
         activeUsers: 0
@@ -215,6 +222,20 @@ async function fetchSiteStats(): Promise<SiteStats> {
         console.error('Error fetching active users:', error);
     }
 
+    // Fetch arrest reports statistics
+    try {
+        const arrestReportsStore = getStore({ name: 'arrest-reports', consistency: 'strong' });
+        const arrestReportsData = await arrestReportsStore.get('reports', { type: 'json' }) as any[] | null;
+        if (arrestReportsData && Array.isArray(arrestReportsData)) {
+            stats.arrestReports.total = arrestReportsData.length;
+            stats.arrestReports.open = arrestReportsData.filter(r => r.caseStatus === 'open').length;
+            stats.arrestReports.closed = arrestReportsData.filter(r => r.caseStatus === 'closed').length;
+            stats.arrestReports.unresolved = arrestReportsData.filter(r => r.caseStatus === 'unresolved').length;
+        }
+    } catch (error) {
+        console.error('Error fetching arrest reports:', error);
+    }
+
     return stats;
 }
 
@@ -239,6 +260,7 @@ function buildSiteStatusEmbed(stats: SiteStats): any {
                 { name: '📅 Community Events', value: [`**Total Events:** ${stats.events.total}`, `🔜 Upcoming: ${stats.events.upcoming}`, `🔴 Ongoing: ${stats.events.ongoing}`, `✔️ Completed: ${stats.events.completed}`].join('\n'), inline: true },
                 { name: '🚗 Warehouse', value: [`**Vehicles:** ${stats.warehouse.totalVehicles}`].join('\n'), inline: true },
                 { name: '🏛️ Subdivisions', value: [`**Total:** ${stats.subdivisions.total}`, `🟢 Open: ${stats.subdivisions.open}`, `🟡 Tryouts: ${stats.subdivisions.tryouts}`, `🟠 Handpicked: ${stats.subdivisions.handpicked}`, `🔴 Closed: ${stats.subdivisions.closed}`].join('\n'), inline: true },
+                { name: '🚔 Arrest Reports', value: [`**Total Reports:** ${stats.arrestReports.total}`, `🟠 Open: ${stats.arrestReports.open}`, `🟢 Closed: ${stats.arrestReports.closed}`, `🔴 Unresolved: ${stats.arrestReports.unresolved}`].join('\n'), inline: true },
                 { name: '👮 Personnel Overview', value: [`⭐ **Command Staff:** ${stats.personnel.filledCommandPositions}/${stats.personnel.commandPositions}`, `📊 **Rank Categories:** ${stats.personnel.totalRanks}`, `👥 **Active Personnel:** ${stats.personnel.totalPersonnel}`, `🎖️ **Division Leaders:** ${stats.personnel.subdivisionLeaders}`].join('\n'), inline: false }
             ],
             footer: { text: `${SITE_CONFIG.name} | Updates every 1 minute`, icon_url: 'https://cdn-icons-png.flaticon.com/512/6941/6941697.png' }

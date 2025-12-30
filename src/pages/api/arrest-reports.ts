@@ -12,6 +12,11 @@ export interface ArrestReport {
     createdAt: string;
     updatedAt: string;
     discordMessageId?: string;
+    // Approval fields
+    approvalStatus: 'pending' | 'approved' | 'denied';
+    approvedBy?: string;
+    approvedAt?: string;
+    approvalNote?: string;
     // Section 1: Discord Info
     discordUsername: string;
     discordId: string;
@@ -106,6 +111,18 @@ function buildArrestReportEmbeds(report: ArrestReport): any[] {
         unresolved: 0xFF0000 // Red
     };
 
+    const approvalColors = {
+        pending: 0xFFFF00,   // Yellow
+        approved: 0x00FF00,  // Green
+        denied: 0xFF0000     // Red
+    };
+
+    const approvalDisplay = {
+        pending: '⏳ Pending',
+        approved: '✅ Approved',
+        denied: '❌ Denied'
+    };
+
     const behaviorDisplay = report.suspectBehavior.length > 0
         ? report.suspectBehavior.join(', ')
         : 'Not specified';
@@ -117,6 +134,18 @@ function buildArrestReportEmbeds(report: ArrestReport): any[] {
     };
 
     return [
+        // Header: Approval Status
+        {
+            title: '🔒 Supervisor Approval Status',
+            color: approvalColors[report.approvalStatus] || 0xFFFF00,
+            fields: [
+                { name: 'Status', value: approvalDisplay[report.approvalStatus] || 'Pending', inline: true },
+                { name: 'Approved By', value: report.approvedBy || 'N/A', inline: true },
+                { name: 'Approved At', value: report.approvedAt ? new Date(report.approvedAt).toLocaleString() : 'N/A', inline: true },
+                ...(report.approvalNote ? [{ name: 'Note', value: report.approvalNote, inline: false }] : [])
+            ],
+            timestamp
+        },
         // Section 1: Discord Info
         {
             title: '📋 Section 1: Discord Information',
@@ -179,34 +208,45 @@ function buildArrestReportEmbeds(report: ArrestReport): any[] {
 }
 
 /**
- * Send arrest report to Discord with approve/deny buttons
+ * Get the site URL from environment or default
  */
-async function sendToDiscordWithButtons(report: ArrestReport): Promise<string | null> {
+function getSiteUrl(): string {
+    // Check for Netlify URL environment variable
+    const url = import.meta.env.SITE || import.meta.env.URL || 'https://delperro.netlify.app';
+    return url.replace(/\/$/, ''); // Remove trailing slash if present
+}
+
+/**
+ * Send arrest report to Discord with an Approve link
+ * Note: Discord webhooks don't support interactive button components,
+ * so we include the approval link in the embed instead.
+ */
+async function sendToDiscordWithApproveButton(report: ArrestReport): Promise<string | null> {
     try {
         const embeds = buildArrestReportEmbeds(report);
+        const siteUrl = getSiteUrl();
+        const approveUrl = `${siteUrl}/api/arrest-approve?id=${encodeURIComponent(report.id)}`;
+
+        // Add an approval action embed at the end with the clickable link
+        const approvalEmbed = {
+            title: '✅ Supervisor Action Required',
+            description: `**[Click here to Approve this Report](${approveUrl})**`,
+            color: 0x57F287, // Discord green
+            fields: [
+                {
+                    name: '📋 Instructions',
+                    value: 'Click the link above to open the approval form. You will need to enter your Discord User ID to approve this report.',
+                    inline: false
+                }
+            ],
+            footer: { text: `Report ID: ${report.id}` }
+        };
+
+        embeds.push(approvalEmbed);
 
         const payload = {
             content: `**New Arrest Report Submitted** - ID: \`${report.id}\``,
-            embeds,
-            components: [
-                {
-                    type: 1, // Action Row
-                    components: [
-                        {
-                            type: 2, // Button
-                            style: 3, // Green/Success
-                            label: 'Approve',
-                            custom_id: `arrest_approve_${report.id}`
-                        },
-                        {
-                            type: 2, // Button
-                            style: 4, // Red/Danger
-                            label: 'Deny',
-                            custom_id: `arrest_deny_${report.id}`
-                        }
-                    ]
-                }
-            ]
+            embeds
         };
 
         const response = await fetch(`${ARREST_REPORTS_WEBHOOK_URL}?wait=true`, {
@@ -280,6 +320,7 @@ export const POST: APIRoute = async ({ request }) => {
             id: generateId(officerName, existingReports),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            approvalStatus: 'pending',
             discordUsername: data.discordUsername || '',
             discordId: data.discordId || '',
             officerName: data.officerName || '',
@@ -304,8 +345,8 @@ export const POST: APIRoute = async ({ request }) => {
         // Save to blob storage
         await saveArrestReports(existingReports);
 
-        // Send to Discord with approve/deny buttons
-        const discordMessageId = await sendToDiscordWithButtons(newReport);
+        // Send to Discord with approve button
+        const discordMessageId = await sendToDiscordWithApproveButton(newReport);
 
         if (discordMessageId) {
             // Update report with message ID for future reference

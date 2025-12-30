@@ -101,6 +101,21 @@ function generateId(officerName: string, existingReports: ArrestReport[]): strin
 }
 
 /**
+ * Delete the original Discord message containing the "Supervisor Action Required" embed
+ */
+async function deleteOriginalDiscordMessage(messageId: string): Promise<boolean> {
+    try {
+        const response = await fetch(`${ARREST_REPORTS_WEBHOOK_URL}/messages/${messageId}`, {
+            method: 'DELETE'
+        });
+        return response.ok || response.status === 204 || response.status === 404;
+    } catch (error) {
+        console.error('Failed to delete Discord message:', error);
+        return false;
+    }
+}
+
+/**
  * Build Discord embeds for arrest report
  */
 function buildArrestReportEmbeds(report: ArrestReport): any[] {
@@ -420,6 +435,11 @@ export const PUT: APIRoute = async ({ request }) => {
         };
 
         await saveArrestReports(reports);
+
+        // If the report was just approved, delete the original Discord message with "Supervisor Action Required" embed
+        if (data.approvalStatus === 'approved' && oldReport.approvalStatus !== 'approved' && oldReport.discordMessageId) {
+            await deleteOriginalDiscordMessage(oldReport.discordMessageId);
+        }
 
         // Log the action
         await sendAuditLog({

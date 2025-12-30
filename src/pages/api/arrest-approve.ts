@@ -56,6 +56,21 @@ async function saveArrestReports(reports: ArrestReport[]): Promise<void> {
 }
 
 /**
+ * Delete the original Discord message containing the "Supervisor Action Required" embed
+ */
+async function deleteOriginalDiscordMessage(messageId: string): Promise<boolean> {
+    try {
+        const response = await fetch(`${ARREST_REPORTS_WEBHOOK_URL}/messages/${messageId}`, {
+            method: 'DELETE'
+        });
+        return response.ok || response.status === 204 || response.status === 404;
+    } catch (error) {
+        console.error('Failed to delete Discord message:', error);
+        return false;
+    }
+}
+
+/**
  * Send approval notification to Discord webhook
  */
 async function sendApprovalNotification(reportId: string, approverDiscordId: string): Promise<boolean> {
@@ -228,6 +243,11 @@ export const POST: APIRoute = async ({ request }) => {
     };
 
     await saveArrestReports(reports);
+
+    // Delete the original Discord message with "Supervisor Action Required" embed
+    if (report.discordMessageId) {
+        await deleteOriginalDiscordMessage(report.discordMessageId);
+    }
 
     // Send Discord notification
     const notificationSent = await sendApprovalNotification(reportId, discordId);

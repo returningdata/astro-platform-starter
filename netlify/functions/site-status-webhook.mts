@@ -58,6 +58,13 @@ interface SiteStats {
         open: number;
         closed: number;
         unresolved: number;
+        mostRecent: {
+            id: string;
+            suspectName: string;
+            officerName: string;
+            caseStatus: string;
+            createdAt: string;
+        } | null;
     };
     adminUsers: number;
     resources: number;
@@ -113,7 +120,7 @@ async function fetchSiteStats(): Promise<SiteStats> {
         warehouse: { totalVehicles: 0 },
         subdivisions: { total: 0, open: 0, tryouts: 0, handpicked: 0, closed: 0 },
         personnel: { commandPositions: 0, filledCommandPositions: 0, totalRanks: 0, totalPersonnel: 0, subdivisionLeaders: 0 },
-        arrestReports: { total: 0, open: 0, closed: 0, unresolved: 0 },
+        arrestReports: { total: 0, open: 0, closed: 0, unresolved: 0, mostRecent: null },
         adminUsers: 0,
         resources: 0,
         activeUsers: 0
@@ -282,6 +289,18 @@ async function fetchSiteStats(): Promise<SiteStats> {
         stats.arrestReports.open = arrestReportsData.filter(r => r.caseStatus === 'open').length;
         stats.arrestReports.closed = arrestReportsData.filter(r => r.caseStatus === 'closed').length;
         stats.arrestReports.unresolved = arrestReportsData.filter(r => r.caseStatus === 'unresolved').length;
+
+        // Get the most recent arrest report (first in array since they're unshifted)
+        if (arrestReportsData.length > 0) {
+            const mostRecent = arrestReportsData[0];
+            stats.arrestReports.mostRecent = {
+                id: mostRecent.id || 'N/A',
+                suspectName: mostRecent.suspectName || 'N/A',
+                officerName: mostRecent.officerName || 'N/A',
+                caseStatus: mostRecent.caseStatus || 'N/A',
+                createdAt: mostRecent.createdAt || ''
+            };
+        }
     }
 
     return stats;
@@ -381,7 +400,11 @@ function buildSiteStatusEmbed(stats: SiteStats): any {
                             `**Total Reports:** ${stats.arrestReports.total}`,
                             `🟠 Open: ${stats.arrestReports.open}`,
                             `🟢 Closed: ${stats.arrestReports.closed}`,
-                            `🔴 Unresolved: ${stats.arrestReports.unresolved}`
+                            `🔴 Unresolved: ${stats.arrestReports.unresolved}`,
+                            '',
+                            stats.arrestReports.mostRecent
+                                ? `📄 **Most Recent:**\n\`${stats.arrestReports.mostRecent.id}\`\n👤 ${stats.arrestReports.mostRecent.suspectName} | 👮 ${stats.arrestReports.mostRecent.officerName}\n📊 Status: ${stats.arrestReports.mostRecent.caseStatus.toUpperCase()}`
+                                : '📄 **Most Recent:** None'
                         ].join('\n'),
                         inline: true
                     },

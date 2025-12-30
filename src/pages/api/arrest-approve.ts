@@ -22,6 +22,7 @@ interface ArrestReport {
     suspectName: string;
     suspectDob: string;
     suspectGender: string;
+    suspectCid: string;
     suspectImage: string;
     reasonForStop: string;
     suspectBehavior: string[];
@@ -97,7 +98,8 @@ function buildArrestReportEmbeds(report: ArrestReport): any[] {
                 { name: '​', value: '​', inline: true },
                 { name: 'Suspect Name', value: report.suspectName || 'Not provided', inline: true },
                 { name: 'Suspect DOB', value: report.suspectDob || 'Not provided', inline: true },
-                { name: 'Suspect Gender', value: report.suspectGender || 'Not provided', inline: true }
+                { name: 'Suspect Gender', value: report.suspectGender || 'Not provided', inline: true },
+                { name: 'Suspect CID (CIVID)', value: report.suspectCid || 'Not provided', inline: true }
             ],
             image: report.suspectImage ? { url: report.suspectImage } : undefined,
             timestamp

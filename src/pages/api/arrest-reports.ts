@@ -26,6 +26,7 @@ export interface ArrestReport {
     suspectName: string;
     suspectDob: string;
     suspectGender: string;
+    suspectCid: string;
     suspectImage: string;
     // Section 3: Charges
     reasonForStop: string;
@@ -185,7 +186,8 @@ function buildArrestReportEmbeds(report: ArrestReport): any[] {
                 { name: '​', value: '​', inline: true },
                 { name: 'Suspect Name', value: report.suspectName || 'Not provided', inline: true },
                 { name: 'Suspect DOB', value: report.suspectDob || 'Not provided', inline: true },
-                { name: 'Suspect Gender', value: report.suspectGender || 'Not provided', inline: true }
+                { name: 'Suspect Gender', value: report.suspectGender || 'Not provided', inline: true },
+                { name: 'Suspect CID (CIVID)', value: report.suspectCid || 'Not provided', inline: true }
             ],
             image: report.suspectImage ? { url: report.suspectImage } : undefined,
             timestamp
@@ -347,6 +349,7 @@ export const POST: APIRoute = async ({ request }) => {
             suspectName: data.suspectName || '',
             suspectDob: data.suspectDob || '',
             suspectGender: data.suspectGender || '',
+            suspectCid: data.suspectCid || '',
             suspectImage: data.suspectImage || '',
             reasonForStop: data.reasonForStop || '',
             suspectBehavior: data.suspectBehavior || [],

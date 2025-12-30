@@ -111,6 +111,12 @@ import Layout from '../../layouts/Layout.astro';
             unresolved: { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400' }
         };
 
+        const approvalColors = {
+            pending: { bg: 'bg-yellow-500/20', border: 'border-yellow-500/30', text: 'text-yellow-400' },
+            approved: { bg: 'bg-green-500/20', border: 'border-green-500/30', text: 'text-green-400' },
+            denied: { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400' }
+        };
+
         let allReports = [];
 
         // Load all reports
@@ -159,18 +165,35 @@ import Layout from '../../layouts/Layout.astro';
 
         function renderReportCard(report, isSearchResult = false) {
             const colors = statusColors[report.caseStatus] || statusColors.open;
+            const approvalStatus = report.approvalStatus || 'pending';
+            const approval = approvalColors[approvalStatus] || approvalColors.pending;
             const containerId = isSearchResult ? 'search' : 'recent';
+
+            const approvalLabel = {
+                pending: 'Pending Approval',
+                approved: 'Approved',
+                denied: 'Denied'
+            };
 
             return `
                 <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20" data-report-id="${report.id}">
                     <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
                         <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
+                            <div class="flex items-center gap-3 mb-2 flex-wrap">
                                 <span class="font-mono text-lg font-bold text-primary">${report.id}</span>
                                 <span class="px-2 py-1 rounded-full text-xs font-semibold uppercase ${colors.bg} ${colors.border} ${colors.text} border">
                                     ${report.caseStatus}
                                 </span>
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold uppercase ${approval.bg} ${approval.border} ${approval.text} border">
+                                    ${approvalLabel[approvalStatus]}
+                                </span>
                             </div>
+                            ${report.approvedBy ? `
+                                <div class="text-sm text-white/60 mb-2">
+                                    <span class="text-white/50">Approved by:</span> ${report.approvedBy}
+                                    ${report.approvedAt ? ` on ${formatDate(report.approvedAt)}` : ''}
+                                </div>
+                            ` : ''}
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                                 <div>
                                     <span class="text-white/50">Suspect:</span>
@@ -194,16 +217,39 @@ import Layout from '../../layouts/Layout.astro';
                                 <span class="text-white ml-2">${report.charges ? (report.charges.length > 100 ? report.charges.substring(0, 100) + '...' : report.charges) : 'N/A'}</span>
                             </div>
                         </div>
-                        <div class="flex flex-col gap-2 lg:min-w-[200px]">
-                            <label class="text-sm text-white/60">Change Status:</label>
-                            <select class="status-select px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-report-id="${report.id}" data-container="${containerId}">
-                                <option value="open" ${report.caseStatus === 'open' ? 'selected' : ''}>Open</option>
-                                <option value="closed" ${report.caseStatus === 'closed' ? 'selected' : ''}>Closed</option>
-                                <option value="unresolved" ${report.caseStatus === 'unresolved' ? 'selected' : ''}>Unresolved</option>
-                            </select>
-                            <button class="update-status-btn px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors text-sm font-semibold" data-report-id="${report.id}" data-container="${containerId}">
-                                Update Status
-                            </button>
+                        <div class="flex flex-col gap-3 lg:min-w-[200px]">
+                            <!-- Approval Section -->
+                            <div class="border-b border-white/10 pb-3">
+                                <label class="text-sm text-white/60 block mb-2">Supervisor Approval:</label>
+                                <div class="flex gap-2">
+                                    <button class="approve-btn flex-1 px-3 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-sm font-semibold ${approvalStatus === 'approved' ? 'opacity-50 cursor-not-allowed' : ''}"
+                                            data-report-id="${report.id}"
+                                            data-container="${containerId}"
+                                            data-action="approve"
+                                            ${approvalStatus === 'approved' ? 'disabled' : ''}>
+                                        Approve
+                                    </button>
+                                    <button class="approve-btn flex-1 px-3 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors text-sm font-semibold ${approvalStatus === 'denied' ? 'opacity-50 cursor-not-allowed' : ''}"
+                                            data-report-id="${report.id}"
+                                            data-container="${containerId}"
+                                            data-action="deny"
+                                            ${approvalStatus === 'denied' ? 'disabled' : ''}>
+                                        Deny
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Status Section -->
+                            <div>
+                                <label class="text-sm text-white/60">Change Case Status:</label>
+                                <select class="status-select w-full mt-1 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-report-id="${report.id}" data-container="${containerId}">
+                                    <option value="open" ${report.caseStatus === 'open' ? 'selected' : ''}>Open</option>
+                                    <option value="closed" ${report.caseStatus === 'closed' ? 'selected' : ''}>Closed</option>
+                                    <option value="unresolved" ${report.caseStatus === 'unresolved' ? 'selected' : ''}>Unresolved</option>
+                                </select>
+                                <button class="update-status-btn w-full mt-2 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors text-sm font-semibold" data-report-id="${report.id}" data-container="${containerId}">
+                                    Update Status
+                                </button>
+                            </div>
                         </div>
                     </div>
                     ${report.additionalNotes ? `
@@ -251,6 +297,72 @@ import Layout from '../../layouts/Layout.astro';
         }
 
         function attachStatusListeners() {
+            // Approval button listeners
+            document.querySelectorAll('.approve-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const reportId = e.target.dataset.reportId;
+                    const containerId = e.target.dataset.container;
+                    const action = e.target.dataset.action;
+
+                    if (e.target.disabled) return;
+
+                    // Disable both buttons during update
+                    const container = e.target.closest('.flex.gap-2');
+                    const buttons = container.querySelectorAll('button');
+                    buttons.forEach(b => {
+                        b.disabled = true;
+                        b.classList.add('opacity-50');
+                    });
+                    e.target.textContent = action === 'approve' ? 'Approving...' : 'Denying...';
+
+                    try {
+                        const response = await fetch('/api/arrest-reports', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Admin-User': JSON.stringify(adminUser)
+                            },
+                            body: JSON.stringify({
+                                id: reportId,
+                                approvalStatus: action === 'approve' ? 'approved' : 'denied',
+                                approvedBy: adminUser?.username || 'Unknown',
+                                approvedAt: new Date().toISOString()
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            showStatus(`Report ${reportId} has been ${action === 'approve' ? 'approved' : 'denied'}`, 'success');
+                            // Reload reports to refresh the list
+                            await loadReports();
+
+                            // If this was a search result, re-search to update the card
+                            const searchInput = document.getElementById('searchInput');
+                            if (containerId === 'search' && searchInput.value) {
+                                searchReport(searchInput.value);
+                            }
+                        } else {
+                            showStatus(result.error || 'Failed to update approval status', 'error');
+                            buttons.forEach(b => {
+                                b.disabled = false;
+                                b.classList.remove('opacity-50');
+                            });
+                            e.target.textContent = action === 'approve' ? 'Approve' : 'Deny';
+                        }
+                    } catch (error) {
+                        console.error('Approval error:', error);
+                        showStatus('Failed to update approval status', 'error');
+                        buttons.forEach(b => {
+                            b.disabled = false;
+                            b.classList.remove('opacity-50');
+                        });
+                        e.target.textContent = action === 'approve' ? 'Approve' : 'Deny';
+                    }
+                });
+            });
+
+            // Status update button listeners
             document.querySelectorAll('.update-status-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const reportId = e.target.dataset.reportId;

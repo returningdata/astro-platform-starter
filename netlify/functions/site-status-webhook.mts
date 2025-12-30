@@ -53,6 +53,12 @@ interface SiteStats {
         totalPersonnel: number;
         subdivisionLeaders: number;
     };
+    arrestReports: {
+        total: number;
+        open: number;
+        closed: number;
+        unresolved: number;
+    };
     adminUsers: number;
     resources: number;
     activeUsers: number;
@@ -107,6 +113,7 @@ async function fetchSiteStats(): Promise<SiteStats> {
         warehouse: { totalVehicles: 0 },
         subdivisions: { total: 0, open: 0, tryouts: 0, handpicked: 0, closed: 0 },
         personnel: { commandPositions: 0, filledCommandPositions: 0, totalRanks: 0, totalPersonnel: 0, subdivisionLeaders: 0 },
+        arrestReports: { total: 0, open: 0, closed: 0, unresolved: 0 },
         adminUsers: 0,
         resources: 0,
         activeUsers: 0
@@ -121,7 +128,8 @@ async function fetchSiteStats(): Promise<SiteStats> {
         deptResult,
         usersResult,
         resourcesResult,
-        visitorsResult
+        visitorsResult,
+        arrestReportsResult
     ] = await Promise.allSettled([
         // Fetch events data
         (async () => {
@@ -176,6 +184,11 @@ async function fetchSiteStats(): Promise<SiteStats> {
         (async () => {
             const visitorStore = getStore({ name: 'visitor-tracking', consistency: 'strong' });
             return await visitorStore.get('active-sessions', { type: 'json' }) as Record<string, number> | null;
+        })(),
+        // Fetch arrest reports
+        (async () => {
+            const arrestReportsStore = getStore({ name: 'arrest-reports', consistency: 'strong' });
+            return await arrestReportsStore.get('reports', { type: 'json' }) as any[] | null;
         })()
     ]);
 
@@ -260,6 +273,15 @@ async function fetchSiteStats(): Promise<SiteStats> {
         const now = Date.now();
         const activeThreshold = 2 * 60 * 1000; // 2 minutes
         stats.activeUsers = Object.values(activeVisitors).filter(lastSeen => (now - lastSeen) < activeThreshold).length;
+    }
+
+    // Process arrest reports
+    if (arrestReportsResult.status === 'fulfilled' && arrestReportsResult.value && Array.isArray(arrestReportsResult.value)) {
+        const arrestReportsData = arrestReportsResult.value;
+        stats.arrestReports.total = arrestReportsData.length;
+        stats.arrestReports.open = arrestReportsData.filter(r => r.caseStatus === 'open').length;
+        stats.arrestReports.closed = arrestReportsData.filter(r => r.caseStatus === 'closed').length;
+        stats.arrestReports.unresolved = arrestReportsData.filter(r => r.caseStatus === 'unresolved').length;
     }
 
     return stats;
@@ -349,6 +371,17 @@ function buildSiteStatusEmbed(stats: SiteStats): any {
                             `🟡 Tryouts: ${stats.subdivisions.tryouts}`,
                             `🟠 Handpicked: ${stats.subdivisions.handpicked}`,
                             `🔴 Closed: ${stats.subdivisions.closed}`
+                        ].join('\n'),
+                        inline: true
+                    },
+                    // Arrest Reports Section
+                    {
+                        name: '🚔 Arrest Reports',
+                        value: [
+                            `**Total Reports:** ${stats.arrestReports.total}`,
+                            `🟠 Open: ${stats.arrestReports.open}`,
+                            `🟢 Closed: ${stats.arrestReports.closed}`,
+                            `🔴 Unresolved: ${stats.arrestReports.unresolved}`
                         ].join('\n'),
                         inline: true
                     },

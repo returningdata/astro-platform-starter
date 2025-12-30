@@ -134,18 +134,6 @@ function buildArrestReportEmbeds(report: ArrestReport): any[] {
     };
 
     return [
-        // Header: Approval Status
-        {
-            title: '🔒 Supervisor Approval Status',
-            color: approvalColors[report.approvalStatus] || 0xFFFF00,
-            fields: [
-                { name: 'Status', value: approvalDisplay[report.approvalStatus] || 'Pending', inline: true },
-                { name: 'Approved By', value: report.approvedBy || 'N/A', inline: true },
-                { name: 'Approved At', value: report.approvedAt ? new Date(report.approvedAt).toLocaleString() : 'N/A', inline: true },
-                ...(report.approvalNote ? [{ name: 'Note', value: report.approvalNote, inline: false }] : [])
-            ],
-            timestamp
-        },
         // Section 1: Discord Info
         {
             title: '📋 Section 1: Discord Information',

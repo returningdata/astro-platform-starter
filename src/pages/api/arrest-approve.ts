@@ -61,29 +61,21 @@ async function saveArrestReports(reports: ArrestReport[]): Promise<void> {
 async function sendApprovalNotification(reportId: string, approverDiscordId: string): Promise<boolean> {
     try {
         const now = new Date();
+        const unixTimestamp = Math.floor(now.getTime() / 1000);
         const dateApproved = now.toLocaleDateString('en-US', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit'
         });
-        const timeApproved = now.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
+        // Use sesh.fyi/Discord timestamp format for time
+        const timeApproved = `<t:${unixTimestamp}:t>`;
 
         const payload = {
-            content: [
-                `**Arrest Report ID:** \`${reportId}\``,
-                `**Approved By:** <@${approverDiscordId}>`,
-                `**Date Approved:** ${dateApproved}`,
-                `**Time Approved:** ${timeApproved}`
-            ].join('\n'),
             embeds: [{
                 title: '✅ Arrest Report Approved',
                 color: 0x00FF00,
                 fields: [
-                    { name: 'Report ID', value: `\`${reportId}\``, inline: true },
+                    { name: 'Arrest Report ID', value: `\`${reportId}\``, inline: true },
                     { name: 'Approved By', value: `<@${approverDiscordId}>`, inline: true },
                     { name: 'Date Approved', value: dateApproved, inline: true },
                     { name: 'Time Approved', value: timeApproved, inline: true }

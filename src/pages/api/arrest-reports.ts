@@ -65,10 +65,34 @@ async function saveArrestReports(reports: ArrestReport[]): Promise<void> {
 }
 
 /**
- * Generate unique ID for report
+ * Generate unique ID for report based on officer name, case count, and date
+ * Format: DPPD-{officerName}-{caseNumber}-{date}
  */
-function generateId(): string {
-    return `AR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+function generateId(officerName: string, existingReports: ArrestReport[]): string {
+    // Clean officer name: remove spaces and special characters, convert to uppercase
+    const cleanName = officerName
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toUpperCase() || 'UNKNOWN';
+
+    // Count how many cases this officer already has
+    const officerCaseCount = existingReports.filter(report => {
+        const reportOfficerName = report.officerName
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .toUpperCase();
+        return reportOfficerName === cleanName;
+    }).length;
+
+    // New case number is count + 1
+    const caseNumber = officerCaseCount + 1;
+
+    // Generate date in MMDDYYYY format
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const year = now.getFullYear();
+    const dateStr = `${month}${day}${year}`;
+
+    return `DPPD-${cleanName}-${caseNumber}-${dateStr}`;
 }
 
 /**
@@ -247,9 +271,13 @@ export const POST: APIRoute = async ({ request }) => {
         const data = await request.json();
         const user = extractUserFromHeaders(request);
 
+        // Get existing reports to generate unique ID based on officer's case count
+        const existingReports = await getArrestReports();
+        const officerName = data.officerName || 'UNKNOWN';
+
         // Create new report with generated ID and timestamps
         const newReport: ArrestReport = {
-            id: generateId(),
+            id: generateId(officerName, existingReports),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             discordUsername: data.discordUsername || '',
@@ -270,12 +298,11 @@ export const POST: APIRoute = async ({ request }) => {
             additionalNotes: data.additionalNotes || ''
         };
 
-        // Get existing reports and add new one
-        const reports = await getArrestReports();
-        reports.unshift(newReport); // Add to beginning
+        // Add new report to existing reports
+        existingReports.unshift(newReport); // Add to beginning
 
         // Save to blob storage
-        await saveArrestReports(reports);
+        await saveArrestReports(existingReports);
 
         // Send to Discord with approve/deny buttons
         const discordMessageId = await sendToDiscordWithButtons(newReport);
@@ -283,8 +310,8 @@ export const POST: APIRoute = async ({ request }) => {
         if (discordMessageId) {
             // Update report with message ID for future reference
             newReport.discordMessageId = discordMessageId;
-            reports[0] = newReport;
-            await saveArrestReports(reports);
+            existingReports[0] = newReport;
+            await saveArrestReports(existingReports);
         }
 
         // Log the action

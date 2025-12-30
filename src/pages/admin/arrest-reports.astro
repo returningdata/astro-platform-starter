@@ -1,0 +1,344 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Admin - Arrest Reports Management">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Arrest Reports</h1>
+                <p class="text-white/70">Lookup and manage arrest report case statuses</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/arrest-reports" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    View Submission Form
+                </a>
+                <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Statistics -->
+        <div id="statsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                <div class="text-3xl font-bold text-white" id="totalCount">-</div>
+                <div class="text-white/60 text-sm">Total Reports</div>
+            </div>
+            <div class="bg-orange-500/20 backdrop-blur-sm rounded-lg p-4 border border-orange-500/30">
+                <div class="text-3xl font-bold text-orange-400" id="openCount">-</div>
+                <div class="text-orange-400/70 text-sm">Open Cases</div>
+            </div>
+            <div class="bg-green-500/20 backdrop-blur-sm rounded-lg p-4 border border-green-500/30">
+                <div class="text-3xl font-bold text-green-400" id="closedCount">-</div>
+                <div class="text-green-400/70 text-sm">Closed Cases</div>
+            </div>
+            <div class="bg-red-500/20 backdrop-blur-sm rounded-lg p-4 border border-red-500/30">
+                <div class="text-3xl font-bold text-red-400" id="unresolvedCount">-</div>
+                <div class="text-red-400/70 text-sm">Unresolved Cases</div>
+            </div>
+        </div>
+
+        <!-- Search Section -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h2 class="text-xl font-bold mb-4">Lookup Case by ID</h2>
+            <div class="flex gap-4">
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Enter Case ID (e.g., AR-M1A2B3C4-XY12)"
+                    class="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-white/40 focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                <button id="searchBtn" class="px-6 py-3 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                    Search
+                </button>
+            </div>
+            <!-- Search Result -->
+            <div id="searchResult" class="hidden mt-4">
+            </div>
+        </div>
+
+        <!-- Recent Reports Section -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold text-white/90">Recent Reports</h2>
+                <button id="refreshBtn" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-sm">
+                    Refresh
+                </button>
+            </div>
+            <div id="recentReports" class="space-y-4">
+                <div class="text-center py-12 text-white/60">
+                    Loading recent reports...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Check permissions
+        const adminUserData = sessionStorage.getItem('adminUser');
+        if (!adminUserData) {
+            window.location.href = '/admin/login';
+        }
+        const adminUser = adminUserData ? JSON.parse(adminUserData) : null;
+
+        function hasPermission() {
+            if (!adminUser) return false;
+            if (adminUser.role === 'super_admin') return true;
+            return adminUser.permissions && adminUser.permissions.includes('arrest-reports');
+        }
+
+        if (!hasPermission()) {
+            document.body.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                    <div class="text-center p-8">
+                        <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                        <p class="text-white/70 mb-4">You don't have permission to access this page.</p>
+                        <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        const statusColors = {
+            open: { bg: 'bg-orange-500/20', border: 'border-orange-500/30', text: 'text-orange-400' },
+            closed: { bg: 'bg-green-500/20', border: 'border-green-500/30', text: 'text-green-400' },
+            unresolved: { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400' }
+        };
+
+        let allReports = [];
+
+        // Load all reports
+        async function loadReports() {
+            try {
+                const response = await fetch('/api/arrest-reports');
+                const data = await response.json();
+
+                if (data.success) {
+                    allReports = data.reports || [];
+
+                    // Update stats
+                    document.getElementById('totalCount').textContent = data.stats?.total || 0;
+                    document.getElementById('openCount').textContent = data.stats?.open || 0;
+                    document.getElementById('closedCount').textContent = data.stats?.closed || 0;
+                    document.getElementById('unresolvedCount').textContent = data.stats?.unresolved || 0;
+
+                    // Render recent reports (first 5)
+                    renderRecentReports(allReports.slice(0, 5));
+                } else {
+                    showStatus('Failed to load reports: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Failed to load reports:', error);
+                showStatus('Failed to load reports data', 'error');
+            }
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function renderReportCard(report, isSearchResult = false) {
+            const colors = statusColors[report.caseStatus] || statusColors.open;
+            const containerId = isSearchResult ? 'search' : 'recent';
+
+            return `
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20" data-report-id="${report.id}">
+                    <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="font-mono text-lg font-bold text-primary">${report.id}</span>
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold uppercase ${colors.bg} ${colors.border} ${colors.text} border">
+                                    ${report.caseStatus}
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span class="text-white/50">Suspect:</span>
+                                    <span class="text-white ml-2">${report.suspectName || 'N/A'}</span>
+                                </div>
+                                <div>
+                                    <span class="text-white/50">Officer:</span>
+                                    <span class="text-white ml-2">${report.officerName || 'N/A'} (${report.officerCallsign || 'N/A'})</span>
+                                </div>
+                                <div>
+                                    <span class="text-white/50">Created:</span>
+                                    <span class="text-white ml-2">${formatDate(report.createdAt)}</span>
+                                </div>
+                                <div>
+                                    <span class="text-white/50">Booking:</span>
+                                    <span class="text-white ml-2">${report.bookingLocation || 'N/A'}</span>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-sm">
+                                <span class="text-white/50">Charges:</span>
+                                <span class="text-white ml-2">${report.charges ? (report.charges.length > 100 ? report.charges.substring(0, 100) + '...' : report.charges) : 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2 lg:min-w-[200px]">
+                            <label class="text-sm text-white/60">Change Status:</label>
+                            <select class="status-select px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-report-id="${report.id}" data-container="${containerId}">
+                                <option value="open" ${report.caseStatus === 'open' ? 'selected' : ''}>Open</option>
+                                <option value="closed" ${report.caseStatus === 'closed' ? 'selected' : ''}>Closed</option>
+                                <option value="unresolved" ${report.caseStatus === 'unresolved' ? 'selected' : ''}>Unresolved</option>
+                            </select>
+                            <button class="update-status-btn px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors text-sm font-semibold" data-report-id="${report.id}" data-container="${containerId}">
+                                Update Status
+                            </button>
+                        </div>
+                    </div>
+                    ${report.additionalNotes ? `
+                        <div class="mt-4 pt-4 border-t border-white/10">
+                            <span class="text-white/50 text-sm">Notes:</span>
+                            <p class="text-white/80 text-sm mt-1">${report.additionalNotes}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderRecentReports(reports) {
+            const container = document.getElementById('recentReports');
+
+            if (reports.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-white/60">
+                        No arrest reports found.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = reports.map(report => renderReportCard(report, false)).join('');
+            attachStatusListeners();
+        }
+
+        function renderSearchResult(report) {
+            const container = document.getElementById('searchResult');
+
+            if (!report) {
+                container.innerHTML = `
+                    <div class="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-red-200">
+                        No report found with that ID. Please check the ID and try again.
+                    </div>
+                `;
+                container.classList.remove('hidden');
+                return;
+            }
+
+            container.innerHTML = renderReportCard(report, true);
+            container.classList.remove('hidden');
+            attachStatusListeners();
+        }
+
+        function attachStatusListeners() {
+            document.querySelectorAll('.update-status-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const reportId = e.target.dataset.reportId;
+                    const containerId = e.target.dataset.container;
+                    const select = document.querySelector(`.status-select[data-report-id="${reportId}"][data-container="${containerId}"]`);
+                    const newStatus = select.value;
+
+                    // Disable button during update
+                    e.target.disabled = true;
+                    e.target.textContent = 'Updating...';
+
+                    try {
+                        const response = await fetch('/api/arrest-reports', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Admin-User': JSON.stringify(adminUser)
+                            },
+                            body: JSON.stringify({
+                                id: reportId,
+                                caseStatus: newStatus
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            showStatus(`Case ${reportId} status updated to ${newStatus.toUpperCase()}`, 'success');
+                            // Reload reports to refresh stats and list
+                            await loadReports();
+
+                            // If this was a search result, re-search to update the card
+                            const searchInput = document.getElementById('searchInput');
+                            if (containerId === 'search' && searchInput.value) {
+                                searchReport(searchInput.value);
+                            }
+                        } else {
+                            showStatus(result.error || 'Failed to update status', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Update error:', error);
+                        showStatus('Failed to update status', 'error');
+                    } finally {
+                        e.target.disabled = false;
+                        e.target.textContent = 'Update Status';
+                    }
+                });
+            });
+        }
+
+        function searchReport(searchId) {
+            const searchTerm = searchId.trim().toUpperCase();
+
+            if (!searchTerm) {
+                document.getElementById('searchResult').classList.add('hidden');
+                return;
+            }
+
+            // Search for exact match or partial match
+            const report = allReports.find(r =>
+                r.id.toUpperCase() === searchTerm ||
+                r.id.toUpperCase().includes(searchTerm)
+            );
+
+            renderSearchResult(report);
+        }
+
+        // Search button click
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            const searchInput = document.getElementById('searchInput');
+            searchReport(searchInput.value);
+        });
+
+        // Search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchReport(e.target.value);
+            }
+        });
+
+        // Refresh button
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            loadReports();
+            document.getElementById('searchResult').classList.add('hidden');
+            document.getElementById('searchInput').value = '';
+        });
+
+        // Initialize
+        loadReports();
+    </script>
+</Layout>

@@ -56,16 +56,115 @@ async function saveArrestReports(reports: ArrestReport[]): Promise<void> {
 }
 
 /**
- * Delete the original Discord message containing the "Supervisor Action Required" embed
+ * Build Discord embeds for arrest report (without the approval embed)
  */
-async function deleteOriginalDiscordMessage(messageId: string): Promise<boolean> {
+function buildArrestReportEmbeds(report: ArrestReport): any[] {
+    const timestamp = new Date().toISOString();
+    const statusColors = {
+        open: 0xFFA500,      // Orange
+        closed: 0x00FF00,    // Green
+        unresolved: 0xFF0000 // Red
+    };
+
+    const behaviorDisplay = report.suspectBehavior.length > 0
+        ? report.suspectBehavior.join(', ')
+        : 'Not specified';
+
+    const mirandaDisplay: Record<string, string> = {
+        yes: '✅ Yes',
+        no: '❌ No',
+        refused: '🚫 Refused to Listen'
+    };
+
+    return [
+        // Section 1: Discord Info
+        {
+            title: '📋 Section 1: Discord Information',
+            color: 0x5865F2,
+            fields: [
+                { name: 'Discord Username', value: report.discordUsername || 'Not provided', inline: true },
+                { name: 'Discord ID', value: report.discordId ? `<@${report.discordId}>` : 'Not provided', inline: true }
+            ],
+            timestamp
+        },
+        // Section 2: Officer and Suspect Info
+        {
+            title: '👮 Section 2: Officer & Suspect Information',
+            color: 0x1e40af,
+            fields: [
+                { name: 'Officer Name', value: report.officerName || 'Not provided', inline: true },
+                { name: 'Officer Callsign', value: report.officerCallsign || 'Not provided', inline: true },
+                { name: '​', value: '​', inline: true },
+                { name: 'Suspect Name', value: report.suspectName || 'Not provided', inline: true },
+                { name: 'Suspect DOB', value: report.suspectDob || 'Not provided', inline: true },
+                { name: 'Suspect Gender', value: report.suspectGender || 'Not provided', inline: true }
+            ],
+            image: report.suspectImage ? { url: report.suspectImage } : undefined,
+            timestamp
+        },
+        // Section 3: Charges
+        {
+            title: '⚖️ Section 3: Charges',
+            color: 0x9932CC,
+            fields: [
+                { name: 'Reason for Initial Stop', value: report.reasonForStop || 'Not provided', inline: false },
+                { name: 'Suspect Behavior', value: behaviorDisplay, inline: false },
+                { name: 'List of Charges Applied', value: report.charges || 'Not provided', inline: false }
+            ],
+            timestamp
+        },
+        // Section 4: Transporting and Booking
+        {
+            title: '🚔 Section 4: Transporting & Booking',
+            color: 0x00BFFF,
+            fields: [
+                { name: 'Location of Booking', value: report.bookingLocation || 'Not provided', inline: false },
+                { name: 'Suspect Statements', value: report.suspectStatements || 'No statements recorded', inline: false }
+            ],
+            timestamp
+        },
+        // Section 5: Finalization
+        {
+            title: '📝 Section 5: Finalization',
+            color: statusColors[report.caseStatus] || 0x808080,
+            fields: [
+                { name: 'Miranda Rights Read?', value: mirandaDisplay[report.mirandaRights] || 'Unknown', inline: true },
+                { name: 'Case Status', value: report.caseStatus.toUpperCase(), inline: true },
+                { name: 'Additional Notes', value: report.additionalNotes || 'None', inline: false }
+            ],
+            footer: { text: `Report ID: ${report.id}` },
+            timestamp
+        }
+    ];
+}
+
+/**
+ * Remove the "Supervisor Action Required" embed from the Discord message by editing it
+ */
+async function removeApprovalEmbed(messageId: string, report: ArrestReport): Promise<boolean> {
     try {
+        // Build the embeds without the approval embed
+        const embeds = buildArrestReportEmbeds(report);
+
+        const payload = {
+            content: `**Arrest Report** - ID: \`${report.id}\` - ✅ Approved`,
+            embeds
+        };
+
         const response = await fetch(`${ARREST_REPORTS_WEBHOOK_URL}/messages/${messageId}`, {
-            method: 'DELETE'
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
-        return response.ok || response.status === 204 || response.status === 404;
+
+        if (!response.ok) {
+            console.error('Failed to edit Discord message:', response.status, await response.text());
+            return false;
+        }
+
+        return true;
     } catch (error) {
-        console.error('Failed to delete Discord message:', error);
+        console.error('Failed to edit Discord message:', error);
         return false;
     }
 }
@@ -244,9 +343,9 @@ export const POST: APIRoute = async ({ request }) => {
 
     await saveArrestReports(reports);
 
-    // Delete the original Discord message with "Supervisor Action Required" embed
+    // Edit the Discord message to remove the "Supervisor Action Required" embed
     if (report.discordMessageId) {
-        await deleteOriginalDiscordMessage(report.discordMessageId);
+        await removeApprovalEmbed(report.discordMessageId, reports[reportIndex]);
     }
 
     // Send Discord notification

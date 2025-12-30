@@ -101,16 +101,32 @@ function generateId(officerName: string, existingReports: ArrestReport[]): strin
 }
 
 /**
- * Delete the original Discord message containing the "Supervisor Action Required" embed
+ * Remove the "Supervisor Action Required" embed from the Discord message by editing it
  */
-async function deleteOriginalDiscordMessage(messageId: string): Promise<boolean> {
+async function removeApprovalEmbed(messageId: string, report: ArrestReport): Promise<boolean> {
     try {
+        // Build the embeds without the approval embed
+        const embeds = buildArrestReportEmbeds(report);
+
+        const payload = {
+            content: `**Arrest Report** - ID: \`${report.id}\` - ✅ Approved`,
+            embeds
+        };
+
         const response = await fetch(`${ARREST_REPORTS_WEBHOOK_URL}/messages/${messageId}`, {
-            method: 'DELETE'
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
-        return response.ok || response.status === 204 || response.status === 404;
+
+        if (!response.ok) {
+            console.error('Failed to edit Discord message:', response.status, await response.text());
+            return false;
+        }
+
+        return true;
     } catch (error) {
-        console.error('Failed to delete Discord message:', error);
+        console.error('Failed to edit Discord message:', error);
         return false;
     }
 }
@@ -436,9 +452,9 @@ export const PUT: APIRoute = async ({ request }) => {
 
         await saveArrestReports(reports);
 
-        // If the report was just approved, delete the original Discord message with "Supervisor Action Required" embed
+        // If the report was just approved, edit the Discord message to remove "Supervisor Action Required" embed
         if (data.approvalStatus === 'approved' && oldReport.approvalStatus !== 'approved' && oldReport.discordMessageId) {
-            await deleteOriginalDiscordMessage(oldReport.discordMessageId);
+            await removeApprovalEmbed(oldReport.discordMessageId, reports[reportIndex]);
         }
 
         // Log the action

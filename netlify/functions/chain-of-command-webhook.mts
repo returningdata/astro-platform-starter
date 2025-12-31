@@ -1,0 +1,419 @@
+/**
+ * Chain of Command Discord Webhook
+ *
+ * Posts the department's chain of command to Discord as professional embeds.
+ * Runs every 6 hours and deletes the old message before sending a new one.
+ */
+
+import type { Context, Config } from "@netlify/functions";
+import { getStore } from "@netlify/blobs";
+
+// Webhook URL for chain of command
+const WEBHOOK_URL = 'https://discord.com/api/webhooks/1416682696645541998/43pD9FZHnnWcCvdj35NdhxYAOAjS8agn4KbBDImDYDnA6kSfglmQ3im0otqr3gKkff1H';
+
+// DPPD Logo URL
+const DPPD_LOGO_URL = 'https://delperro.netlify.app/images/DPPD_Seal_3.png';
+
+// Color scheme for embeds
+const COLORS = {
+    primary: 0x1e40af,       // Professional blue
+    highCommand: 0x0d9488,   // Teal
+    trialHighCommand: 0x06b6d4, // Cyan
+    lowCommand: 0x3b82f6,    // Blue
+    trialLowCommand: 0x6366f1, // Indigo
+    warning: 0xfbbf24,       // Amber/Yellow for warning
+    footer: 0x14b8a6,        // Teal for footer
+};
+
+interface WebhookState {
+    lastMessageIds: string[];
+    lastSentAt: number | null;
+}
+
+interface CommandPosition {
+    rank: string;
+    name: string;
+    callSign: string;
+    jobTitle: string;
+    isLOA?: boolean;
+    discordId?: string;
+}
+
+interface RankMember {
+    name: string;
+    callSign: string;
+    jobTitle: string;
+    isLOA?: boolean;
+    discordId?: string;
+}
+
+interface RankPositions {
+    rank: string;
+    members: RankMember[];
+}
+
+interface DepartmentData {
+    commandPositions: CommandPosition[];
+    rankPositions: RankPositions[];
+}
+
+/**
+ * Get webhook state from blob store
+ */
+async function getWebhookState(): Promise<WebhookState> {
+    try {
+        const store = getStore({ name: 'chain-of-command-webhook', consistency: 'strong' });
+        const data = await store.get('state', { type: 'json' }) as WebhookState | null;
+        if (data) {
+            return data;
+        }
+        return {
+            lastMessageIds: [],
+            lastSentAt: null
+        };
+    } catch (error) {
+        console.error('Error fetching webhook state:', error);
+        return {
+            lastMessageIds: [],
+            lastSentAt: null
+        };
+    }
+}
+
+/**
+ * Save webhook state to blob store
+ */
+async function saveWebhookState(state: WebhookState): Promise<void> {
+    try {
+        const store = getStore({ name: 'chain-of-command-webhook', consistency: 'strong' });
+        await store.setJSON('state', state);
+    } catch (error) {
+        console.error('Error saving webhook state:', error);
+    }
+}
+
+/**
+ * Get department data from blob store
+ */
+async function getDepartmentData(): Promise<DepartmentData | null> {
+    try {
+        const store = getStore({ name: 'department-data', consistency: 'strong' });
+        const data = await store.get('department-data', { type: 'json' }) as DepartmentData | null;
+        return data;
+    } catch (error) {
+        console.error('Error fetching department data:', error);
+        return null;
+    }
+}
+
+/**
+ * Format a member for Discord display with mention
+ */
+function formatMember(name: string, callSign: string, jobTitle: string, discordId?: string, isLOA?: boolean): string {
+    if (!name && !callSign) return '';
+
+    const parts: string[] = [];
+
+    // Add Discord mention if available
+    if (discordId) {
+        parts.push(`<@${discordId}>`);
+    } else if (name) {
+        parts.push(`**${name}**`);
+    }
+
+    if (callSign) {
+        parts.push(`(${callSign})`);
+    }
+
+    if (jobTitle) {
+        parts.push(`- *${jobTitle}*`);
+    }
+
+    if (isLOA) {
+        parts.push('`[LOA]`');
+    }
+
+    return parts.join(' ');
+}
+
+/**
+ * Build embeds for chain of command
+ */
+function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
+    const embeds: any[] = [];
+    const timestamp = new Date().toISOString();
+
+    // Embed 1: Header/Introduction
+    embeds.push({
+        title: '**DEL PERRO POLICE DEPARTMENT**',
+        description: '**CHAIN OF COMMAND**\n\nThe official command structure of the Del Perro Police Department. All personnel are expected to follow this hierarchy.',
+        color: COLORS.primary,
+        thumbnail: {
+            url: DPPD_LOGO_URL
+        },
+        timestamp: timestamp
+    });
+
+    // Embed 2: High Command (Chief of Police through Lieutenant Colonel)
+    const highCommandRanks = ['Chief of Police', 'Deputy Chief of Police', 'Assistant Chief of Police', 'Colonel', 'Lieutenant Colonel'];
+    const highCommandMembers = data.commandPositions
+        .filter(p => highCommandRanks.includes(p.rank))
+        .map(p => {
+            const formatted = formatMember(p.name, p.callSign, p.jobTitle, p.discordId, p.isLOA);
+            return formatted ? `**${p.rank}**\n${formatted}` : `**${p.rank}**\n*Vacant*`;
+        });
+
+    if (highCommandMembers.length > 0) {
+        embeds.push({
+            title: 'High Command',
+            description: highCommandMembers.join('\n\n'),
+            color: COLORS.highCommand,
+            timestamp: timestamp
+        });
+    }
+
+    // Embed 3: Trial High Command (Commander)
+    const trialHighCommandRanks = ['Commander'];
+    const trialHighCommandMembers = data.commandPositions
+        .filter(p => trialHighCommandRanks.includes(p.rank))
+        .map(p => {
+            const formatted = formatMember(p.name, p.callSign, p.jobTitle, p.discordId, p.isLOA);
+            return formatted ? `**${p.rank}**\n${formatted}` : `**${p.rank}**\n*Vacant*`;
+        });
+
+    if (trialHighCommandMembers.length > 0) {
+        embeds.push({
+            title: 'Trial High Command',
+            description: trialHighCommandMembers.join('\n\n'),
+            color: COLORS.trialHighCommand,
+            timestamp: timestamp
+        });
+    }
+
+    // Embed 4: Low Command (Major, Captain, 1st Lieutenant, 2nd Lieutenant)
+    const lowCommandRanks = ['Major', 'Captain', '1st Lieutenant', '2nd Lieutenant'];
+    const lowCommandSections: string[] = [];
+
+    for (const rank of lowCommandRanks) {
+        const rankPos = data.rankPositions.find(rp => rp.rank === rank);
+        if (rankPos && rankPos.members) {
+            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
+            if (filledMembers.length > 0) {
+                const memberLines = filledMembers.map(m =>
+                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
+                ).filter(Boolean);
+                if (memberLines.length > 0) {
+                    lowCommandSections.push(`**${rank}**\n${memberLines.join('\n')}`);
+                }
+            }
+        }
+    }
+
+    if (lowCommandSections.length > 0) {
+        embeds.push({
+            title: 'Low Command',
+            description: lowCommandSections.join('\n\n'),
+            color: COLORS.lowCommand,
+            timestamp: timestamp
+        });
+    }
+
+    // Embed 5: Trial Low Command (Master Sergeant)
+    const trialLowCommandRanks = ['Master Sergeant'];
+    const trialLowCommandSections: string[] = [];
+
+    for (const rank of trialLowCommandRanks) {
+        const rankPos = data.rankPositions.find(rp => rp.rank === rank);
+        if (rankPos && rankPos.members) {
+            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
+            if (filledMembers.length > 0) {
+                const memberLines = filledMembers.map(m =>
+                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
+                ).filter(Boolean);
+                if (memberLines.length > 0) {
+                    trialLowCommandSections.push(`**${rank}**\n${memberLines.join('\n')}`);
+                }
+            }
+        }
+    }
+
+    if (trialLowCommandSections.length > 0) {
+        embeds.push({
+            title: 'Trial Low Command',
+            description: trialLowCommandSections.join('\n\n'),
+            color: COLORS.trialLowCommand,
+            timestamp: timestamp
+        });
+    }
+
+    // Embed 6: Important Notice/Warning
+    embeds.push({
+        title: 'Chain of Command Protocol',
+        description: [
+            '**At no time should the order of the chain of command be skipped in any shape or form, unless you have spoken to all options.**',
+            '',
+            '**Examples of this would be:**',
+            '',
+            'A probationary officer going to an of the higher officers to learn, then going to supervisors, then low command then high',
+            '',
+            '**Never should you ever skip this chain of command unless it is an urgent emergency.**',
+            '',
+            '*DPPD | High Command Team*'
+        ].join('\n'),
+        color: COLORS.warning,
+        timestamp: timestamp
+    });
+
+    // Embed 7: Footer with DPPD Logo
+    embeds.push({
+        title: 'Del Perro Police Department',
+        description: '*Protecting and serving the citizens of Del Perro*',
+        color: COLORS.footer,
+        image: {
+            url: DPPD_LOGO_URL
+        },
+        footer: {
+            text: 'DPPD Chain of Command | Updates every 6 hours',
+            icon_url: DPPD_LOGO_URL
+        },
+        timestamp: timestamp
+    });
+
+    return embeds;
+}
+
+/**
+ * Delete existing webhook messages
+ */
+async function deleteMessages(messageIds: string[]): Promise<void> {
+    for (const messageId of messageIds) {
+        try {
+            const deleteUrl = `${WEBHOOK_URL}/messages/${messageId}`;
+            const response = await fetch(deleteUrl, {
+                method: 'DELETE'
+            });
+
+            if (response.ok || response.status === 204) {
+                console.log('Successfully deleted message:', messageId);
+            } else if (response.status === 404) {
+                console.log('Message already deleted or not found:', messageId);
+            } else {
+                console.error('Failed to delete message:', messageId, response.status);
+            }
+        } catch (error) {
+            console.error('Error deleting message:', messageId, error);
+        }
+    }
+}
+
+/**
+ * Send embeds to Discord and return message IDs
+ */
+async function sendEmbeds(embeds: any[]): Promise<string[]> {
+    const messageIds: string[] = [];
+
+    // Discord allows max 10 embeds per message, but for better display,
+    // we'll send them individually or in small batches
+    for (const embed of embeds) {
+        try {
+            const response = await fetch(`${WEBHOOK_URL}?wait=true`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ embeds: [embed] })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Discord webhook error:', response.status, errorText);
+                continue;
+            }
+
+            const message = await response.json();
+            if (message.id) {
+                messageIds.push(message.id);
+                console.log('Sent embed with message ID:', message.id);
+            }
+
+            // Small delay between messages to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+            console.error('Failed to send embed:', error);
+        }
+    }
+
+    return messageIds;
+}
+
+export default async (req: Request, context: Context) => {
+    console.log('Chain of command webhook triggered');
+
+    try {
+        // Get current state
+        const state = await getWebhookState();
+
+        // Get department data
+        const departmentData = await getDepartmentData();
+        if (!departmentData) {
+            console.log('No department data found');
+            return new Response(JSON.stringify({
+                success: false,
+                message: 'No department data found'
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Build embeds
+        const embeds = buildChainOfCommandEmbeds(departmentData);
+
+        // Delete old messages
+        if (state.lastMessageIds && state.lastMessageIds.length > 0) {
+            await deleteMessages(state.lastMessageIds);
+        }
+
+        // Send new messages
+        const newMessageIds = await sendEmbeds(embeds);
+
+        if (newMessageIds.length > 0) {
+            // Save new state
+            await saveWebhookState({
+                lastMessageIds: newMessageIds,
+                lastSentAt: Date.now()
+            });
+
+            return new Response(JSON.stringify({
+                success: true,
+                message: 'Chain of command posted to Discord successfully',
+                messageCount: newMessageIds.length
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } else {
+            return new Response(JSON.stringify({
+                success: false,
+                message: 'Failed to send Discord messages'
+            }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+    } catch (error) {
+        console.error('Error in chain of command webhook:', error);
+        return new Response(JSON.stringify({
+            success: false,
+            error: String(error)
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+};
+
+export const config: Config = {
+    // Schedule to run every 6 hours (at 0:00, 6:00, 12:00, 18:00 UTC)
+    schedule: "0 */6 * * *"
+};

@@ -246,49 +246,64 @@ import Layout from '../../layouts/Layout.astro';
             }
 
             container.innerHTML = departmentData.commandPositions.map((position, index) => `
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${position.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Rank</label>
-                        <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-teal-300 font-semibold">
-                            ${position.rank}
+                <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${position.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Rank</label>
+                            <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-teal-300 font-semibold">
+                                ${position.rank}
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Call Sign</label>
-                        <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-cyan-300 font-mono">
-                            ${position.callSign}
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Call Sign</label>
+                            <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-cyan-300 font-mono">
+                                ${position.callSign}
+                            </div>
                         </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Name</label>
-                        <input
-                            type="text"
-                            value="${position.name || ''}"
-                            placeholder="Enter officer name..."
-                            class="command-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            data-index="${index}"
-                        >
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-1">Job Title</label>
-                        <input
-                            type="text"
-                            value="${position.jobTitle || ''}"
-                            placeholder="Enter job title..."
-                            class="command-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                            data-index="${index}"
-                        >
-                    </div>
-                    <div class="flex items-end">
-                        <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${position.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Name</label>
                             <input
-                                type="checkbox"
-                                class="command-loa w-4 h-4 rounded border-slate-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
+                                type="text"
+                                value="${position.name || ''}"
+                                placeholder="Enter officer name..."
+                                class="command-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                 data-index="${index}"
-                                ${position.isLOA ? 'checked' : ''}
                             >
-                            <span class="text-sm font-medium ${position.isLOA ? 'text-yellow-400' : 'text-slate-300'}">LOA</span>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Job Title</label>
+                            <input
+                                type="text"
+                                value="${position.jobTitle || ''}"
+                                placeholder="Enter job title..."
+                                class="command-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                data-index="${index}"
+                            >
+                        </div>
+                        <div class="flex items-end">
+                            <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${position.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
+                                <input
+                                    type="checkbox"
+                                    class="command-loa w-4 h-4 rounded border-slate-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
+                                    data-index="${index}"
+                                    ${position.isLOA ? 'checked' : ''}
+                                >
+                                <span class="text-sm font-medium ${position.isLOA ? 'text-yellow-400' : 'text-slate-300'}">LOA</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-slate-300 mb-1">
+                            Discord ID
+                            <span class="text-xs text-white/50 font-normal ml-1">(for webhook mentions - not visible on site)</span>
                         </label>
+                        <input
+                            type="text"
+                            value="${position.discordId || ''}"
+                            placeholder="Enter Discord User ID (e.g., 123456789012345678)"
+                            class="command-discord-id w-full md:w-1/2 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            data-index="${index}"
+                        >
                     </div>
                 </div>
             `).join('');
@@ -322,51 +337,67 @@ import Layout from '../../layouts/Layout.astro';
 
                         <div class="space-y-4">
                             ${rankPos.members.map((member, memberIndex) => `
-                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${member.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-300 mb-1">Name #${memberIndex + 1}</label>
-                                        <input
-                                            type="text"
-                                            value="${member.name || ''}"
-                                            placeholder="Enter member name..."
-                                            class="rank-member-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
-                                            data-rank-index="${rankIndex}"
-                                            data-member-index="${memberIndex}"
-                                        >
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-300 mb-1">Callsign</label>
-                                        <input
-                                            type="text"
-                                            value="${member.callSign || ''}"
-                                            placeholder="Enter callsign..."
-                                            class="rank-member-callsign w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white font-mono focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
-                                            data-rank-index="${rankIndex}"
-                                            data-member-index="${memberIndex}"
-                                        >
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-300 mb-1">Job Title</label>
-                                        <input
-                                            type="text"
-                                            value="${member.jobTitle || ''}"
-                                            placeholder="Enter job title..."
-                                            class="rank-member-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
-                                            data-rank-index="${rankIndex}"
-                                            data-member-index="${memberIndex}"
-                                        >
-                                    </div>
-                                    <div class="flex items-end">
-                                        <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${member.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
+                                <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${member.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-300 mb-1">Name #${memberIndex + 1}</label>
                                             <input
-                                                type="checkbox"
-                                                class="rank-member-loa w-4 h-4 rounded border-slate-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
+                                                type="text"
+                                                value="${member.name || ''}"
+                                                placeholder="Enter member name..."
+                                                class="rank-member-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
                                                 data-rank-index="${rankIndex}"
                                                 data-member-index="${memberIndex}"
-                                                ${member.isLOA ? 'checked' : ''}
                                             >
-                                            <span class="text-sm font-medium ${member.isLOA ? 'text-yellow-400' : 'text-slate-300'}">LOA</span>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-300 mb-1">Callsign</label>
+                                            <input
+                                                type="text"
+                                                value="${member.callSign || ''}"
+                                                placeholder="Enter callsign..."
+                                                class="rank-member-callsign w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white font-mono focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
+                                                data-rank-index="${rankIndex}"
+                                                data-member-index="${memberIndex}"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-300 mb-1">Job Title</label>
+                                            <input
+                                                type="text"
+                                                value="${member.jobTitle || ''}"
+                                                placeholder="Enter job title..."
+                                                class="rank-member-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
+                                                data-rank-index="${rankIndex}"
+                                                data-member-index="${memberIndex}"
+                                            >
+                                        </div>
+                                        <div class="flex items-end">
+                                            <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${member.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
+                                                <input
+                                                    type="checkbox"
+                                                    class="rank-member-loa w-4 h-4 rounded border-slate-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
+                                                    data-rank-index="${rankIndex}"
+                                                    data-member-index="${memberIndex}"
+                                                    ${member.isLOA ? 'checked' : ''}
+                                                >
+                                                <span class="text-sm font-medium ${member.isLOA ? 'text-yellow-400' : 'text-slate-300'}">LOA</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <label class="block text-sm font-medium text-slate-300 mb-1">
+                                            Discord ID
+                                            <span class="text-xs text-white/50 font-normal ml-1">(for webhook mentions)</span>
                                         </label>
+                                        <input
+                                            type="text"
+                                            value="${member.discordId || ''}"
+                                            placeholder="Enter Discord User ID..."
+                                            class="rank-member-discord-id w-full md:w-1/2 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                            data-rank-index="${rankIndex}"
+                                            data-member-index="${memberIndex}"
+                                        >
                                     </div>
                                 </div>
                             `).join('')}
@@ -626,6 +657,14 @@ import Layout from '../../layouts/Layout.astro';
                     renderRankPositions();
                 });
             });
+
+            document.querySelectorAll('.rank-member-discord-id').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const rankIndex = parseInt(e.target.dataset.rankIndex);
+                    const memberIndex = parseInt(e.target.dataset.memberIndex);
+                    departmentData.rankPositions[rankIndex].members[memberIndex].discordId = e.target.value;
+                });
+            });
         }
 
         function attachCommandListeners() {
@@ -648,6 +687,13 @@ import Layout from '../../layouts/Layout.astro';
                     const index = parseInt(e.target.dataset.index);
                     departmentData.commandPositions[index].isLOA = e.target.checked;
                     renderCommandPositions();
+                });
+            });
+
+            document.querySelectorAll('.command-discord-id').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.commandPositions[index].discordId = e.target.value;
                 });
             });
         }

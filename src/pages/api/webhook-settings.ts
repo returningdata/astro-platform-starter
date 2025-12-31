@@ -279,7 +279,7 @@ const ROSTER_SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1iUCnkFyP
 const SITE_CONFIG = {
     name: 'Del Perro Police Department',
     shortName: 'DPPD',
-    version: '6.6.0',
+    version: '7.32.3',
     owner: '<@1000470631688712243>',
     siteUrl: 'https://delperro.netlify.app',
     color: 0x1e40af,

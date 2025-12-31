@@ -13,7 +13,7 @@ import { getStore } from "@netlify/blobs";
 const SITE_CONFIG = {
     name: 'Del Perro Police Department',
     shortName: 'DPPD',
-    version: '7.32.1',
+    version: '7.32.3',
     owner: '<@1000470631688712243>',
     siteUrl: 'https://delperro.netlify.app',
     color: 0x1e40af, // Professional blue color

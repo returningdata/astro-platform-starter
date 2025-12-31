@@ -8,6 +8,7 @@ import { getStore } from '@netlify/blobs';
 
 interface Props {
     title: string;
+    description?: string;
 }
 
 interface ThemeSettings {
@@ -41,7 +42,11 @@ async function getThemeSettings(): Promise<ThemeSettings> {
     }
 }
 
-const { title } = Astro.props;
+const { title, description = 'Del Perro Police Department - Officer Resources and Information' } = Astro.props;
+
+// Get the site URL for OG tags
+const siteUrl = Astro.url.origin || 'https://delperro.netlify.app';
+const ogImage = `${siteUrl}/images/DPPD_Seal_3.png`;
 
 // Fetch theme settings server-side so everyone sees the same theme
 const themeSettings = await getThemeSettings();
@@ -89,9 +94,29 @@ const playerStyle = themePlayerStyles[activeTheme];
         <meta charset="UTF-8" />
         <title>{title}</title>
         <meta name="viewport" content="width=device-width" />
+        <meta name="description" content={description} />
         <meta name="generator" content={Astro.generator} />
+        <meta name="author" content="taz_elite" />
         <link rel="icon" type="image/png" href="/images/DPPD_Seal_3.png" />
         <link rel="preload" as="font" type="font/woff2" href={interWoff2} crossorigin />
+
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={Astro.url.href} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={`${description} | Created by: taz_elite`} />
+        <meta property="og:image" content={ogImage} />
+        <meta property="og:site_name" content="Del Perro Police Department" />
+
+        <!-- Twitter -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={Astro.url.href} />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={`${description} | Created by: taz_elite`} />
+        <meta name="twitter:image" content={ogImage} />
+
+        <!-- Discord specific -->
+        <meta name="theme-color" content="#1e40af" />
     </head>
     <body class={bodyClass} data-theme={activeTheme} data-music-id={activeMusicId}>
         <!-- Falling effects container -->

@@ -8,301 +8,362 @@ import Layout from '../layouts/Layout.astro';
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
                 <h1 class="text-4xl md:text-5xl font-bold mb-2">DPPD Warehouse</h1>
-                <p class="text-white/70">View department vehicles</p>
+                <p class="text-white/70">View department vehicles and equipment</p>
             </div>
         </div>
 
-        <!-- Warehouse Categories -->
-        <div id="warehouseGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Search and Filter -->
+        <div class="flex flex-col sm:flex-row gap-4">
+            <div class="relative flex-grow">
+                <input type="text" id="searchInput" placeholder="Search vehicles..." class="w-full px-4 py-3 pl-12 bg-slate-800/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- Vehicle Grid -->
+        <div id="warehouseGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <!-- Loading state -->
             <div class="col-span-full text-center py-12 text-white/60">
-                Loading warehouse vehicles...
-            </div>
-        </div>
-
-        <!-- Legend -->
-        <div class="bg-white/5 rounded-lg p-4 border border-white/10">
-            <div class="flex items-center gap-6 text-sm flex-wrap">
-                <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 bg-green-500 rounded-full"></span>
-                    <span class="text-white/70">Available</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
-                    <span class="text-white/70">Limited Stock</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 bg-red-500 rounded-full"></span>
-                    <span class="text-white/70">Out of Stock</span>
-                </div>
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                <p>Loading warehouse vehicles...</p>
             </div>
         </div>
     </div>
 
-    <!-- Image Modal for full-size viewing -->
-    <div id="imageModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4">
-        <button id="closeModal" class="absolute top-4 right-4 text-white/80 hover:text-white p-2">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </button>
-        <button id="modalPrev" class="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 bg-black/30 rounded-full">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-        </button>
-        <img id="modalImage" src="" alt="Vehicle image" class="max-w-full max-h-[85vh] object-contain rounded-lg">
-        <button id="modalNext" class="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-2 bg-black/30 rounded-full">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-        </button>
-        <div id="modalCounter" class="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 bg-black/50 px-3 py-1 rounded-full text-sm"></div>
+    <!-- Vehicle Detail Modal -->
+    <div id="vehicleModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="relative w-full max-w-4xl mx-auto my-8">
+            <!-- Close Button -->
+            <button id="closeVehicleModal" class="absolute -top-12 right-0 text-white/80 hover:text-white p-2 transition-colors z-10">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <!-- Modal Content -->
+            <div class="bg-slate-800 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                <!-- Image Gallery -->
+                <div id="modalImageContainer" class="relative aspect-video bg-slate-900">
+                    <img id="modalVehicleImage" src="" alt="" class="w-full h-full object-cover">
+                    <!-- Image Navigation (if multiple images) -->
+                    <button id="modalImagePrev" class="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-3 bg-black/50 hover:bg-black/70 rounded-full transition-all hidden">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <button id="modalImageNext" class="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-3 bg-black/50 hover:bg-black/70 rounded-full transition-all hidden">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                    <div id="modalImageCounter" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm hidden"></div>
+                </div>
+
+                <!-- Vehicle Info -->
+                <div class="p-6 space-y-5">
+                    <!-- Title -->
+                    <h2 id="modalVehicleName" class="text-2xl md:text-3xl font-bold text-white"></h2>
+
+                    <!-- Flags -->
+                    <div id="modalVehicleFlags" class="flex flex-wrap gap-2"></div>
+
+                    <!-- Spawn Codes -->
+                    <div id="modalSpawnCodes" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+
+                    <!-- Description -->
+                    <div id="modalDescriptionContainer" class="pt-4 border-t border-white/10">
+                        <h3 class="text-sm font-semibold text-white/60 uppercase tracking-wider mb-2">Description</h3>
+                        <p id="modalVehicleDescription" class="text-white/80 leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module">
-        const icons = {
-            vehicle: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>',
-            firearm: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>',
-            communication: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" /></svg>',
-            protection: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>',
-            investigation: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>',
-            traffic: '<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'
-        };
-
-        const statusColors = {
-            available: 'bg-green-500',
-            limited: 'bg-yellow-500',
-            out: 'bg-red-500'
+        const flagColors = {
+            blue: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+            red: 'bg-red-500/20 text-red-300 border-red-500/30',
+            green: 'bg-green-500/20 text-green-300 border-green-500/30',
+            yellow: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+            purple: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+            orange: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+            pink: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+            cyan: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+            indigo: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+            teal: 'bg-teal-500/20 text-teal-300 border-teal-500/30'
         };
 
         let warehouseData = [];
-        let modalState = { images: [], currentIndex: 0 }; // Modal state for image gallery
+        let filteredData = [];
+        let currentVehicle = null;
+        let currentImageIndex = 0;
 
         async function loadWarehouse() {
             try {
                 const response = await fetch('/api/warehouse');
                 const data = await response.json();
                 warehouseData = data.warehouse || [];
-
+                filteredData = [...warehouseData];
                 renderWarehouse();
                 setupModal();
+                setupSearch();
             } catch (error) {
                 console.error('Failed to load warehouse:', error);
                 document.getElementById('warehouseGrid').innerHTML = `
                     <div class="col-span-full text-center py-12 text-red-400">
-                        Failed to load warehouse inventory. Please refresh the page.
+                        <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <p>Failed to load warehouse inventory. Please refresh the page.</p>
                     </div>
                 `;
             }
+        }
+
+        function setupSearch() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                if (query === '') {
+                    filteredData = [...warehouseData];
+                } else {
+                    filteredData = warehouseData.filter(vehicle =>
+                        vehicle.name.toLowerCase().includes(query) ||
+                        (vehicle.description && vehicle.description.toLowerCase().includes(query)) ||
+                        (vehicle.spawnCode && vehicle.spawnCode.toLowerCase().includes(query)) ||
+                        (vehicle.spawnByModel && vehicle.spawnByModel.toLowerCase().includes(query)) ||
+                        (vehicle.flags && vehicle.flags.some(f => f.name.toLowerCase().includes(query)))
+                    );
+                }
+                renderWarehouse();
+            });
         }
 
         function renderWarehouse() {
             const grid = document.getElementById('warehouseGrid');
 
-            if (warehouseData.length === 0) {
+            if (filteredData.length === 0) {
                 grid.innerHTML = `
                     <div class="col-span-full text-center py-12 text-white/60">
-                        No items available in the warehouse.
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        <p class="text-lg">No vehicles found</p>
+                        <p class="text-sm text-white/40 mt-1">Try adjusting your search</p>
                     </div>
                 `;
                 return;
             }
 
-            grid.innerHTML = warehouseData.map((category, catIndex) => {
-                // Get image URLs directly
-                const images = category.imageUrls || [];
+            grid.innerHTML = filteredData.map((vehicle, index) => {
+                const images = vehicle.imageUrls || [];
                 const hasImages = images.length > 0;
-                const hasMultipleImages = images.length > 1;
+                const flags = vehicle.flags || [];
+                const hasFlags = flags.length > 0;
 
                 return `
-                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                    ${hasImages ? `
-                        <div class="mb-4 -mx-2 -mt-2 relative group">
-                            <div class="gallery-container" data-category="${catIndex}">
-                                <img src="${images[0]}" alt="${category.name}" class="gallery-image w-full h-40 object-cover rounded-lg cursor-pointer" data-category="${catIndex}" data-index="0" onerror="this.style.display='none'">
-                                ${hasMultipleImages ? `
-                                    <button class="gallery-prev absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" data-category="${catIndex}">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                                        </svg>
-                                    </button>
-                                    <button class="gallery-next absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" data-category="${catIndex}">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </button>
-                                    <div class="gallery-dots absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
-                                        ${images.map((_, i) => `
-                                            <button class="gallery-dot w-4 h-4 rounded-full transition-all hover:scale-125 shadow-md border border-white/30 ${i === 0 ? 'bg-white' : 'bg-white/50'}" data-category="${catIndex}" data-index="${i}" title="Image ${i + 1}"></button>
-                                        `).join('')}
-                                    </div>
-                                    <span class="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">${images.length} photos</span>
-                                ` : ''}
+                <div class="vehicle-card cursor-pointer group bg-slate-800/40 rounded-2xl overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1" data-vehicle-index="${index}">
+                    <!-- Vehicle Image -->
+                    <div class="relative aspect-[16/10] bg-slate-900/50 overflow-hidden">
+                        ${hasImages ? `
+                            <img
+                                src="${images[0]}"
+                                alt="${vehicle.name}"
+                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-full text-white/20\\'><svg class=\\'w-16 h-16\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'/></svg></div>'"
+                            >
+                        ` : `
+                            <div class="flex items-center justify-center h-full text-white/20">
+                                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
                             </div>
-                        </div>
-                    ` : ''}
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-                            ${icons[category.icon] || icons.vehicle}
-                        </div>
-                        <h2 class="text-2xl font-bold">${category.name}</h2>
+                        `}
+
+                        <!-- Flag Indicator (top right) -->
+                        ${hasFlags ? `
+                            <div class="absolute top-3 right-3 flex items-center gap-1">
+                                <div class="bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full flex items-center gap-1.5 font-medium">
+                                    <svg class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M4 24V1h16l-4 7 4 7H6v9H4z"/>
+                                    </svg>
+                                    <span>${flags.length}</span>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <!-- Hover Overlay -->
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60"></div>
                     </div>
-                    <ul class="space-y-2 text-white/70">
-                        ${category.items.map(item => `
-                            <li class="flex items-center gap-2">
-                                <span class="w-2 h-2 ${statusColors[item.status]} rounded-full"></span>
-                                ${item.name}
-                            </li>
-                        `).join('')}
-                    </ul>
+
+                    <!-- Vehicle Name -->
+                    <div class="p-4 bg-gradient-to-b from-slate-800/80 to-slate-800/40">
+                        <h3 class="text-lg font-bold text-white text-center line-clamp-2">${vehicle.name}</h3>
+                    </div>
                 </div>
             `;}).join('');
 
-            // Attach gallery event listeners
-            attachGalleryListeners();
-        }
-
-        // Track current gallery state per category
-        let galleryState = {};
-
-        function attachGalleryListeners() {
-            // Initialize gallery state
-            warehouseData.forEach((category, catIndex) => {
-                const images = category.imageUrls || [];
-                galleryState[catIndex] = { images, currentIndex: 0 };
-            });
-
-            // Gallery prev buttons
-            document.querySelectorAll('.gallery-prev').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const catIndex = parseInt(e.currentTarget.dataset.category);
-                    navigateGallery(catIndex, -1);
-                });
-            });
-
-            // Gallery next buttons
-            document.querySelectorAll('.gallery-next').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const catIndex = parseInt(e.currentTarget.dataset.category);
-                    navigateGallery(catIndex, 1);
-                });
-            });
-
-            // Gallery dot navigation
-            document.querySelectorAll('.gallery-dot').forEach(dot => {
-                dot.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const catIndex = parseInt(e.target.dataset.category);
-                    const index = parseInt(e.target.dataset.index);
-                    setGalleryIndex(catIndex, index);
-                });
-            });
-
-            // Click on image to open modal
-            document.querySelectorAll('.gallery-image').forEach(img => {
-                img.addEventListener('click', (e) => {
-                    const catIndex = parseInt(e.target.dataset.category);
-                    const state = galleryState[catIndex];
-                    if (state && state.images.length > 0) {
-                        openModal(state.images, state.currentIndex);
+            // Attach click listeners for vehicle cards
+            document.querySelectorAll('.vehicle-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    const vehicleIndex = parseInt(card.dataset.vehicleIndex);
+                    const vehicle = filteredData[vehicleIndex];
+                    if (vehicle) {
+                        openVehicleModal(vehicle);
                     }
                 });
             });
         }
 
-        function navigateGallery(catIndex, direction) {
-            const state = galleryState[catIndex];
-            if (!state || state.images.length <= 1) return;
-
-            let newIndex = state.currentIndex + direction;
-            if (newIndex < 0) newIndex = state.images.length - 1;
-            if (newIndex >= state.images.length) newIndex = 0;
-
-            setGalleryIndex(catIndex, newIndex);
-        }
-
-        function setGalleryIndex(catIndex, index) {
-            const state = galleryState[catIndex];
-            if (!state) return;
-
-            state.currentIndex = index;
-
-            // Update image
-            const container = document.querySelector(`.gallery-container[data-category="${catIndex}"]`);
-            if (container) {
-                const img = container.querySelector('.gallery-image');
-                if (img) {
-                    img.src = state.images[index];
-                    img.dataset.index = index;
-                }
-
-                // Update dots
-                const dots = container.querySelectorAll('.gallery-dot');
-                dots.forEach((dot, i) => {
-                    dot.className = `gallery-dot w-4 h-4 rounded-full transition-all hover:scale-125 shadow-md border border-white/30 ${i === index ? 'bg-white' : 'bg-white/50'}`;
-                });
-            }
-        }
-
-        // Modal functions
         function setupModal() {
-            const modal = document.getElementById('imageModal');
-            const closeBtn = document.getElementById('closeModal');
-            const prevBtn = document.getElementById('modalPrev');
-            const nextBtn = document.getElementById('modalNext');
+            const modal = document.getElementById('vehicleModal');
+            const closeBtn = document.getElementById('closeVehicleModal');
+            const prevBtn = document.getElementById('modalImagePrev');
+            const nextBtn = document.getElementById('modalImageNext');
 
-            closeBtn.addEventListener('click', closeModal);
+            closeBtn.addEventListener('click', closeVehicleModal);
             modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeModal();
+                if (e.target === modal) closeVehicleModal();
             });
 
-            prevBtn.addEventListener('click', () => navigateModal(-1));
-            nextBtn.addEventListener('click', () => navigateModal(1));
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigateImage(-1);
+            });
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigateImage(1);
+            });
 
             // Keyboard navigation
             document.addEventListener('keydown', (e) => {
                 if (!modal.classList.contains('hidden')) {
-                    if (e.key === 'Escape') closeModal();
-                    if (e.key === 'ArrowLeft') navigateModal(-1);
-                    if (e.key === 'ArrowRight') navigateModal(1);
+                    if (e.key === 'Escape') closeVehicleModal();
+                    if (e.key === 'ArrowLeft') navigateImage(-1);
+                    if (e.key === 'ArrowRight') navigateImage(1);
                 }
             });
         }
 
-        function openModal(images, startIndex = 0) {
-            modalState.images = images;
-            modalState.currentIndex = startIndex;
+        function openVehicleModal(vehicle) {
+            currentVehicle = vehicle;
+            currentImageIndex = 0;
 
-            const modal = document.getElementById('imageModal');
+            const modal = document.getElementById('vehicleModal');
+            const images = vehicle.imageUrls || [];
+            const flags = vehicle.flags || [];
+
+            // Set vehicle name
+            document.getElementById('modalVehicleName').textContent = vehicle.name;
+
+            // Set image
+            const imgEl = document.getElementById('modalVehicleImage');
+            if (images.length > 0) {
+                imgEl.src = images[0];
+                imgEl.alt = vehicle.name;
+                document.getElementById('modalImageContainer').classList.remove('hidden');
+            } else {
+                imgEl.src = '';
+                document.getElementById('modalImageContainer').innerHTML = `
+                    <div class="flex items-center justify-center h-full bg-slate-900 text-white/20">
+                        <svg class="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                `;
+            }
+
+            // Show/hide image navigation
+            const prevBtn = document.getElementById('modalImagePrev');
+            const nextBtn = document.getElementById('modalImageNext');
+            const counter = document.getElementById('modalImageCounter');
+
+            if (images.length > 1) {
+                prevBtn.classList.remove('hidden');
+                nextBtn.classList.remove('hidden');
+                counter.classList.remove('hidden');
+                counter.textContent = `1 / ${images.length}`;
+            } else {
+                prevBtn.classList.add('hidden');
+                nextBtn.classList.add('hidden');
+                counter.classList.add('hidden');
+            }
+
+            // Set flags
+            const flagsContainer = document.getElementById('modalVehicleFlags');
+            if (flags.length > 0) {
+                flagsContainer.innerHTML = flags.map(flag => `
+                    <span class="px-3 py-1.5 text-sm font-medium rounded-full border ${flagColors[flag.color] || flagColors.blue}">
+                        ${flag.name}
+                    </span>
+                `).join('');
+                flagsContainer.classList.remove('hidden');
+            } else {
+                flagsContainer.innerHTML = '';
+                flagsContainer.classList.add('hidden');
+            }
+
+            // Set spawn codes
+            const spawnCodesContainer = document.getElementById('modalSpawnCodes');
+            let spawnCodesHtml = '';
+            if (vehicle.spawnCode) {
+                spawnCodesHtml += `
+                    <div class="bg-slate-700/50 p-4 rounded-xl">
+                        <span class="text-white/60 text-sm font-medium block mb-1">Spawn Code</span>
+                        <code class="text-primary font-mono text-lg font-bold">${vehicle.spawnCode}</code>
+                    </div>
+                `;
+            }
+            if (vehicle.spawnByModel) {
+                spawnCodesHtml += `
+                    <div class="bg-slate-700/50 p-4 rounded-xl">
+                        <span class="text-white/60 text-sm font-medium block mb-1">Model Code</span>
+                        <code class="text-emerald-400 font-mono text-lg font-bold">${vehicle.spawnByModel}</code>
+                    </div>
+                `;
+            }
+            spawnCodesContainer.innerHTML = spawnCodesHtml;
+            if (!spawnCodesHtml) {
+                spawnCodesContainer.classList.add('hidden');
+            } else {
+                spawnCodesContainer.classList.remove('hidden');
+            }
+
+            // Set description
+            const descContainer = document.getElementById('modalDescriptionContainer');
+            const descEl = document.getElementById('modalVehicleDescription');
+            if (vehicle.description) {
+                descEl.textContent = vehicle.description;
+                descContainer.classList.remove('hidden');
+            } else {
+                descContainer.classList.add('hidden');
+            }
+
+            // Show modal
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            updateModalImage();
-
-            // Hide nav buttons if only one image
-            document.getElementById('modalPrev').style.display = images.length > 1 ? 'block' : 'none';
-            document.getElementById('modalNext').style.display = images.length > 1 ? 'block' : 'none';
+            document.body.style.overflow = 'hidden';
         }
 
-        function closeModal() {
-            const modal = document.getElementById('imageModal');
+        function closeVehicleModal() {
+            const modal = document.getElementById('vehicleModal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            document.body.style.overflow = '';
+            currentVehicle = null;
         }
 
-        function navigateModal(direction) {
-            let newIndex = modalState.currentIndex + direction;
-            if (newIndex < 0) newIndex = modalState.images.length - 1;
-            if (newIndex >= modalState.images.length) newIndex = 0;
-            modalState.currentIndex = newIndex;
-            updateModalImage();
-        }
+        function navigateImage(direction) {
+            if (!currentVehicle || !currentVehicle.imageUrls || currentVehicle.imageUrls.length <= 1) return;
 
-        function updateModalImage() {
-            document.getElementById('modalImage').src = modalState.images[modalState.currentIndex];
-            document.getElementById('modalCounter').textContent = `${modalState.currentIndex + 1} / ${modalState.images.length}`;
+            const images = currentVehicle.imageUrls;
+            currentImageIndex = (currentImageIndex + direction + images.length) % images.length;
+
+            document.getElementById('modalVehicleImage').src = images[currentImageIndex];
+            document.getElementById('modalImageCounter').textContent = `${currentImageIndex + 1} / ${images.length}`;
         }
 
         loadWarehouse();

@@ -16,6 +16,11 @@ const COLORS = {
     trialHighCommand: 0x06b6d4, // Cyan
     lowCommand: 0x3b82f6,    // Blue
     trialLowCommand: 0x6366f1, // Indigo
+    supervisors: 0xa855f7,   // Purple
+    trialSupervisor: 0x8b5cf6, // Violet
+    officers: 0xf59e0b,      // Amber
+    reserves: 0x84cc16,      // Lime
+    cadets: 0x22c55e,        // Green
     warning: 0xfbbf24,       // Amber/Yellow for warning
     footer: 0x14b8a6,        // Teal for footer
 };
@@ -241,7 +246,147 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 6: Important Notice/Warning
+    // Embed 6: Supervisors (Sergeant First Class, Staff Sergeant, Sergeant)
+    const supervisorRanks = ['Sergeant First Class', 'Staff Sergeant', 'Sergeant'];
+    const supervisorSections: string[] = [];
+
+    for (const rank of supervisorRanks) {
+        const rankPos = data.rankPositions.find(rp => rp.rank === rank);
+        if (rankPos && rankPos.members) {
+            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
+            if (filledMembers.length > 0) {
+                const memberLines = filledMembers.map(m =>
+                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
+                ).filter(Boolean);
+                if (memberLines.length > 0) {
+                    supervisorSections.push(`**${rank}**\n${memberLines.join('\n')}`);
+                }
+            }
+        }
+    }
+
+    if (supervisorSections.length > 0) {
+        embeds.push({
+            title: 'Supervisors',
+            description: supervisorSections.join('\n\n'),
+            color: COLORS.supervisors,
+            timestamp: timestamp
+        });
+    }
+
+    // Embed 7: Trial Supervisor (Corporal)
+    const trialSupervisorRanks = ['Corporal'];
+    const trialSupervisorSections: string[] = [];
+
+    for (const rank of trialSupervisorRanks) {
+        const rankPos = data.rankPositions.find(rp => rp.rank === rank);
+        if (rankPos && rankPos.members) {
+            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
+            if (filledMembers.length > 0) {
+                const memberLines = filledMembers.map(m =>
+                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
+                ).filter(Boolean);
+                if (memberLines.length > 0) {
+                    trialSupervisorSections.push(`**${rank}**\n${memberLines.join('\n')}`);
+                }
+            }
+        }
+    }
+
+    if (trialSupervisorSections.length > 0) {
+        embeds.push({
+            title: 'Trial Supervisor',
+            description: trialSupervisorSections.join('\n\n'),
+            color: COLORS.trialSupervisor,
+            timestamp: timestamp
+        });
+    }
+
+    // Embed 8: Officers (Officer III, Officer II, Officer I, Probationary Officer)
+    const officerRanks = ['Officer III', 'Officer II', 'Officer I', 'Probationary Officer'];
+    const officerSections: string[] = [];
+
+    for (const rank of officerRanks) {
+        const rankPos = data.rankPositions.find(rp => rp.rank === rank);
+        if (rankPos && rankPos.members) {
+            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
+            if (filledMembers.length > 0) {
+                const memberLines = filledMembers.map(m =>
+                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
+                ).filter(Boolean);
+                if (memberLines.length > 0) {
+                    officerSections.push(`**${rank}**\n${memberLines.join('\n')}`);
+                }
+            }
+        }
+    }
+
+    if (officerSections.length > 0) {
+        embeds.push({
+            title: 'Officers',
+            description: officerSections.join('\n\n'),
+            color: COLORS.officers,
+            timestamp: timestamp
+        });
+    }
+
+    // Embed 9: Reserves (Reserve Officer)
+    const reserveRanks = ['Reserve Officer'];
+    const reserveSections: string[] = [];
+
+    for (const rank of reserveRanks) {
+        const rankPos = data.rankPositions.find(rp => rp.rank === rank);
+        if (rankPos && rankPos.members) {
+            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
+            if (filledMembers.length > 0) {
+                const memberLines = filledMembers.map(m =>
+                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
+                ).filter(Boolean);
+                if (memberLines.length > 0) {
+                    reserveSections.push(`**${rank}**\n${memberLines.join('\n')}`);
+                }
+            }
+        }
+    }
+
+    if (reserveSections.length > 0) {
+        embeds.push({
+            title: 'Reserves',
+            description: reserveSections.join('\n\n'),
+            color: COLORS.reserves,
+            timestamp: timestamp
+        });
+    }
+
+    // Embed 10: Cadets (Cadet)
+    const cadetRanks = ['Cadet'];
+    const cadetSections: string[] = [];
+
+    for (const rank of cadetRanks) {
+        const rankPos = data.rankPositions.find(rp => rp.rank === rank);
+        if (rankPos && rankPos.members) {
+            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
+            if (filledMembers.length > 0) {
+                const memberLines = filledMembers.map(m =>
+                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
+                ).filter(Boolean);
+                if (memberLines.length > 0) {
+                    cadetSections.push(`**${rank}**\n${memberLines.join('\n')}`);
+                }
+            }
+        }
+    }
+
+    if (cadetSections.length > 0) {
+        embeds.push({
+            title: 'Cadets',
+            description: cadetSections.join('\n\n'),
+            color: COLORS.cadets,
+            timestamp: timestamp
+        });
+    }
+
+    // Embed 11: Important Notice/Warning
     embeds.push({
         title: 'Chain of Command Protocol',
         description: [
@@ -259,7 +404,7 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         timestamp: timestamp
     });
 
-    // Embed 7: Footer with DPPD Logo
+    // Embed 12: Footer with DPPD Logo
     embeds.push({
         title: 'Del Perro Police Department',
         description: '*Protecting and serving the citizens of Del Perro*',

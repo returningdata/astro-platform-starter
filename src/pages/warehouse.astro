@@ -96,6 +96,10 @@ import Layout from '../layouts/Layout.astro';
             teal: 'bg-teal-500/20 text-teal-300 border-teal-500/30'
         };
 
+        // Vehicle groups in display order (loaded from API)
+        const DEFAULT_VEHICLE_GROUPS = ['Training', 'Patrol', 'Heat', 'Air-1/Air-Tac', 'Transport', 'Supervisor/Command', 'S.W.A.T.', 'Other'];
+        let VEHICLE_GROUPS = [...DEFAULT_VEHICLE_GROUPS];
+
         let warehouseData = [];
         let filteredData = [];
         let currentVehicle = null;
@@ -106,6 +110,7 @@ import Layout from '../layouts/Layout.astro';
                 const response = await fetch('/api/warehouse');
                 const data = await response.json();
                 warehouseData = data.warehouse || [];
+                VEHICLE_GROUPS = data.groupOrder || [...DEFAULT_VEHICLE_GROUPS];
                 filteredData = [...warehouseData];
                 renderWarehouse();
                 setupModal();
@@ -158,53 +163,121 @@ import Layout from '../layouts/Layout.astro';
                 return;
             }
 
-            grid.innerHTML = filteredData.map((vehicle, index) => {
-                const images = vehicle.imageUrls || [];
-                const hasImages = images.length > 0;
-                const flags = vehicle.flags || [];
-                const hasFlags = flags.length > 0;
+            // Group vehicles by their group property
+            const groupedVehicles = {};
+            VEHICLE_GROUPS.forEach(group => {
+                groupedVehicles[group] = [];
+            });
+            // Also ensure 'Ungrouped' exists for vehicles without a group
+            groupedVehicles['Ungrouped'] = [];
 
-                return `
-                <div class="vehicle-card cursor-pointer group bg-slate-800/40 rounded-2xl overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1" data-vehicle-index="${index}">
-                    <!-- Vehicle Image -->
-                    <div class="relative aspect-[16/10] bg-slate-900/50 overflow-hidden">
-                        ${hasImages ? `
-                            <img
-                                src="${images[0]}"
-                                alt="${vehicle.name}"
-                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-full text-white/20\\'><svg class=\\'w-16 h-16\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'/></svg></div>'"
-                            >
-                        ` : `
-                            <div class="flex items-center justify-center h-full text-white/20">
-                                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                            </div>
-                        `}
+            filteredData.forEach((vehicle, index) => {
+                const group = vehicle.group || 'Ungrouped';
+                if (!groupedVehicles[group]) {
+                    // Vehicle has a group that's not in VEHICLE_GROUPS (custom group)
+                    groupedVehicles[group] = [];
+                }
+                groupedVehicles[group].push({ vehicle, originalIndex: index });
+            });
 
-                        <!-- Flag Indicator (top right) -->
-                        ${hasFlags ? `
-                            <div class="absolute top-3 right-3 flex items-center gap-1">
-                                <div class="bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full flex items-center gap-1.5 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M4 24V1h16l-4 7 4 7H6v9H4z"/>
+            // Build HTML with group sections
+            // First show groups in VEHICLE_GROUPS order, then any extra groups, then Ungrouped
+            let html = '';
+            const displayOrder = [...VEHICLE_GROUPS];
+
+            // Add any extra groups that exist in data but not in VEHICLE_GROUPS
+            Object.keys(groupedVehicles).forEach(group => {
+                if (!displayOrder.includes(group) && group !== 'Ungrouped') {
+                    displayOrder.push(group);
+                }
+            });
+
+            // Add Ungrouped at the end if it has vehicles
+            if (groupedVehicles['Ungrouped'] && groupedVehicles['Ungrouped'].length > 0) {
+                displayOrder.push('Ungrouped');
+            }
+
+            displayOrder.forEach(group => {
+                const vehicles = groupedVehicles[group];
+                if (vehicles.length === 0) return;
+
+                html += `
+                    <div class="col-span-full mt-6 first:mt-0">
+                        <h2 class="text-2xl font-bold text-white mb-4 pb-2 border-b border-white/10">${group}</h2>
+                    </div>
+                `;
+
+                vehicles.forEach(({ vehicle, originalIndex }) => {
+                    const images = vehicle.imageUrls || [];
+                    const hasImages = images.length > 0;
+                    const flags = vehicle.flags || [];
+                    const hasFlags = flags.length > 0;
+                    // Only check the flags array for Bulletproof (not items array to avoid false positives)
+                    const hasBulletproof = flags.some(f => f.name.toLowerCase().includes('bulletproof'));
+                    const otherFlagsCount = hasFlags ? flags.filter(f => !f.name.toLowerCase().includes('bulletproof')).length : 0;
+
+                    html += `
+                    <div class="vehicle-card cursor-pointer group bg-slate-800/40 rounded-2xl overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1" data-vehicle-index="${originalIndex}">
+                        <!-- Vehicle Image -->
+                        <div class="relative aspect-[16/10] bg-slate-900/50 overflow-hidden">
+                            ${hasImages ? `
+                                <img
+                                    src="${images[0]}"
+                                    alt="${vehicle.name}"
+                                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    onerror="this.parentElement.innerHTML='<div class=\\'flex items-center justify-center h-full text-white/20\\'><svg class=\\'w-16 h-16\\' fill=\\'none\\' stroke=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path stroke-linecap=\\'round\\' stroke-linejoin=\\'round\\' stroke-width=\\'1\\' d=\\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\\'/></svg></div>'"
+                                >
+                            ` : `
+                                <div class="flex items-center justify-center h-full text-white/20">
+                                    <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    <span>${flags.length}</span>
                                 </div>
-                            </div>
-                        ` : ''}
+                            `}
 
-                        <!-- Hover Overlay -->
-                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60"></div>
-                    </div>
+                            <!-- Flag Indicator (top right) -->
+                            ${hasBulletproof ? `
+                                <div class="absolute top-3 right-3 flex items-center gap-2">
+                                    <div class="bg-red-600/90 backdrop-blur-sm text-white text-xs px-2.5 py-1.5 rounded-full flex items-center gap-1.5 font-bold shadow-lg shadow-red-500/30 border border-red-400/50">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1 6h2v4h-2V8zm0 6h2v2h-2v-2z"/>
+                                        </svg>
+                                        <span>Bulletproof</span>
+                                    </div>
+                                    ${otherFlagsCount > 0 ? `
+                                        <div class="bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full flex items-center gap-1.5 font-medium">
+                                            <svg class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M4 24V1h16l-4 7 4 7H6v9H4z"/>
+                                            </svg>
+                                            <span>+${otherFlagsCount}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : hasFlags ? `
+                                <div class="absolute top-3 right-3 flex items-center gap-1">
+                                    <div class="bg-black/70 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full flex items-center gap-1.5 font-medium">
+                                        <svg class="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M4 24V1h16l-4 7 4 7H6v9H4z"/>
+                                        </svg>
+                                        <span>${flags.length}</span>
+                                    </div>
+                                </div>
+                            ` : ''}
 
-                    <!-- Vehicle Name -->
-                    <div class="p-4 bg-gradient-to-b from-slate-800/80 to-slate-800/40">
-                        <h3 class="text-lg font-bold text-white text-center line-clamp-2">${vehicle.name}</h3>
+                            <!-- Hover Overlay -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60"></div>
+                        </div>
+
+                        <!-- Vehicle Name -->
+                        <div class="p-4 bg-gradient-to-b from-slate-800/80 to-slate-800/40">
+                            <h3 class="text-lg font-bold text-white text-center line-clamp-2">${vehicle.name}</h3>
+                        </div>
                     </div>
-                </div>
-            `;}).join('');
+                `;
+                });
+            });
+
+            grid.innerHTML = html;
 
             // Attach click listeners for vehicle cards
             document.querySelectorAll('.vehicle-card').forEach(card => {

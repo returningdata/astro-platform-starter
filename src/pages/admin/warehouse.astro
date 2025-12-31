@@ -29,6 +29,22 @@ import Layout from '../../layouts/Layout.astro';
             + Add New Vehicle
         </button>
 
+        <!-- Group Order Section -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-xl font-bold">Group Management</h2>
+                    <p class="text-white/60 text-sm">Create, rename, reorder, or delete vehicle groups</p>
+                </div>
+                <button id="addGroupBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors text-sm font-semibold">
+                    + Add Group
+                </button>
+            </div>
+            <div id="groupOrderList" class="space-y-2">
+                <!-- Groups will be rendered here -->
+            </div>
+        </div>
+
         <!-- Vehicles List -->
         <div id="categoriesList" class="space-y-6">
             <div class="text-center py-12 text-white/60">
@@ -65,10 +81,13 @@ import Layout from '../../layouts/Layout.astro';
 
         const icons = ['vehicle', 'firearm', 'communication', 'protection', 'investigation', 'traffic'];
         const flagColors = ['blue', 'red', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan', 'indigo', 'teal'];
+        const defaultVehicleGroups = ['Training', 'Patrol', 'Heat', 'Air-1/Air-Tac', 'Transport', 'Supervisor/Command', 'S.W.A.T.', 'Other'];
         const MAX_FLAGS = 10;
         const MAX_IMAGES = 10;
 
         let warehouseData = [];
+        let groupOrder = [...defaultVehicleGroups];
+        let draggedGroupIndex = null;
 
         // Load warehouse data
         async function loadWarehouse() {
@@ -76,11 +95,15 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/warehouse');
                 const data = await response.json();
                 warehouseData = data.warehouse || [];
+                groupOrder = data.groupOrder || [...defaultVehicleGroups];
+                renderGroupOrder();
                 renderCategories();
             } catch (error) {
                 console.error('Failed to load warehouse:', error);
                 showStatus('Failed to load warehouse data', 'error');
                 warehouseData = [];
+                groupOrder = [...defaultVehicleGroups];
+                renderGroupOrder();
                 renderCategories();
             }
         }
@@ -102,6 +125,131 @@ import Layout from '../../layouts/Layout.astro';
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function renderGroupOrder() {
+            const container = document.getElementById('groupOrderList');
+            container.innerHTML = groupOrder.map((group, index) => `
+                <div class="group-item flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600 hover:bg-slate-700 transition-colors"
+                     data-group-index="${index}">
+                    <div class="flex-shrink-0 text-white/40 cursor-move drag-handle">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+                        </svg>
+                    </div>
+                    <input type="text" value="${escapeHtml(group)}" class="group-name-input flex-grow px-3 py-1 bg-slate-700/50 border border-slate-600 rounded text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-group-index="${index}">
+                    <span class="text-white/40 text-sm">#${index + 1}</span>
+                    <button class="delete-group p-2 text-red-400 hover:text-red-300 transition-colors" data-group-index="${index}" title="Delete group">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+
+            attachGroupDragListeners();
+            attachGroupEditListeners();
+        }
+
+        function attachGroupEditListeners() {
+            // Group name changes
+            document.querySelectorAll('.group-name-input').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.groupIndex);
+                    const oldName = groupOrder[index];
+                    const newName = e.target.value.trim();
+                    if (newName && newName !== oldName) {
+                        groupOrder[index] = newName;
+                        // Update any vehicles that had the old group name
+                        warehouseData.forEach(vehicle => {
+                            if (vehicle.group === oldName) {
+                                vehicle.group = newName;
+                            }
+                        });
+                        renderCategories(); // Re-render to update dropdowns
+                    } else if (!newName) {
+                        // Restore old name if empty
+                        e.target.value = oldName;
+                    }
+                });
+            });
+
+            // Delete group buttons
+            document.querySelectorAll('.delete-group').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.closest('[data-group-index]').dataset.groupIndex);
+                    const groupName = groupOrder[index];
+
+                    // Count vehicles in this group
+                    const vehiclesInGroup = warehouseData.filter(v => v.group === groupName).length;
+
+                    let confirmMsg = `Are you sure you want to delete the "${groupName}" group?`;
+                    if (vehiclesInGroup > 0) {
+                        confirmMsg += `\n\n${vehiclesInGroup} vehicle(s) are assigned to this group. They will be unassigned.`;
+                    }
+
+                    if (confirm(confirmMsg)) {
+                        // Remove from group order
+                        groupOrder.splice(index, 1);
+                        // Clear group from vehicles
+                        warehouseData.forEach(vehicle => {
+                            if (vehicle.group === groupName) {
+                                vehicle.group = undefined;
+                            }
+                        });
+                        renderGroupOrder();
+                        renderCategories();
+                    }
+                });
+            });
+        }
+
+        function attachGroupDragListeners() {
+            const container = document.getElementById('groupOrderList');
+            const items = container.querySelectorAll('.group-item');
+
+            items.forEach(item => {
+                // Make the item draggable
+                item.setAttribute('draggable', 'true');
+
+                item.addEventListener('dragstart', (e) => {
+                    draggedGroupIndex = parseInt(e.target.closest('.group-item').dataset.groupIndex);
+                    e.target.closest('.group-item').classList.add('opacity-50');
+                });
+
+                item.addEventListener('dragend', (e) => {
+                    e.target.closest('.group-item').classList.remove('opacity-50');
+                    draggedGroupIndex = null;
+                    // Remove all drag-over styles
+                    items.forEach(i => i.classList.remove('border-primary', 'border-t-2'));
+                });
+
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    const targetIndex = parseInt(e.target.closest('.group-item')?.dataset.groupIndex);
+                    if (targetIndex !== undefined && targetIndex !== draggedGroupIndex) {
+                        e.target.closest('.group-item')?.classList.add('border-primary', 'border-t-2');
+                    }
+                });
+
+                item.addEventListener('dragleave', (e) => {
+                    e.target.closest('.group-item')?.classList.remove('border-primary', 'border-t-2');
+                });
+
+                item.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const targetIndex = parseInt(e.target.closest('.group-item')?.dataset.groupIndex);
+                    if (targetIndex !== undefined && draggedGroupIndex !== null && targetIndex !== draggedGroupIndex) {
+                        // Reorder the groups
+                        const draggedGroup = groupOrder[draggedGroupIndex];
+                        groupOrder.splice(draggedGroupIndex, 1);
+                        groupOrder.splice(targetIndex, 0, draggedGroup);
+                        renderGroupOrder();
+                        // Re-render categories to update group dropdowns
+                        renderCategories();
+                    }
+                });
+            });
         }
 
         function renderCategories() {
@@ -134,10 +282,17 @@ import Layout from '../../layouts/Layout.astro';
 
                         <div class="flex-grow space-y-4">
                             <!-- Row 1: Name and Icon -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-slate-300 mb-1">Vehicle Name</label>
                                     <input type="text" value="${escapeHtml(vehicle.name)}" class="category-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-300 mb-1">Group</label>
+                                    <select class="vehicle-group w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}">
+                                        <option value="">Select Group...</option>
+                                        ${groupOrder.map(group => `<option value="${group}" ${vehicle.group === group ? 'selected' : ''}>${group}</option>`).join('')}
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-slate-300 mb-1">Icon</label>
@@ -255,6 +410,14 @@ import Layout from '../../layouts/Layout.astro';
                 select.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
                     warehouseData[index].icon = e.target.value;
+                });
+            });
+
+            // Group changes
+            document.querySelectorAll('.vehicle-group').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.categoryIndex);
+                    warehouseData[index].group = e.target.value || undefined;
                 });
             });
 
@@ -394,6 +557,23 @@ import Layout from '../../layouts/Layout.astro';
             renderCategories();
         });
 
+        // Add new group
+        document.getElementById('addGroupBtn').addEventListener('click', () => {
+            const newGroupName = prompt('Enter new group name:');
+            if (newGroupName && newGroupName.trim()) {
+                const trimmedName = newGroupName.trim();
+                // Check if group already exists
+                if (groupOrder.includes(trimmedName)) {
+                    showStatus(`Group "${trimmedName}" already exists`, 'error');
+                    return;
+                }
+                groupOrder.push(trimmedName);
+                renderGroupOrder();
+                renderCategories(); // Update dropdowns
+                showStatus(`Group "${trimmedName}" added`, 'success');
+            }
+        });
+
         // Save changes
         document.getElementById('saveBtn').addEventListener('click', async () => {
             const saveBtn = document.getElementById('saveBtn');
@@ -407,7 +587,7 @@ import Layout from '../../layouts/Layout.astro';
                         'Content-Type': 'application/json',
                         'X-Admin-User': JSON.stringify(adminUser)
                     },
-                    body: JSON.stringify({ warehouse: warehouseData })
+                    body: JSON.stringify({ warehouse: warehouseData, groupOrder: groupOrder })
                 });
 
                 const result = await response.json();

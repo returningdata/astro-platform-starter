@@ -16,6 +16,7 @@ export interface CommandPosition {
     callSign: string;
     jobTitle: string;
     isLOA?: boolean;
+    discordId?: string;
 }
 
 export interface RankMember {
@@ -23,6 +24,7 @@ export interface RankMember {
     callSign: string;
     jobTitle: string;
     isLOA?: boolean;
+    discordId?: string;
 }
 
 export interface RankPositions {
@@ -47,6 +49,7 @@ export interface SubdivisionLeader {
     jobTitle: string;
     subdivisionId?: string;  // Links to subdivision ID for reliable matching
     isLOA?: boolean;
+    discordId?: string;
 }
 
 export interface DepartmentData {

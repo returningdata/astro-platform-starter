@@ -8,7 +8,7 @@ import Layout from '../../layouts/Layout.astro';
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
                 <h1 class="text-4xl md:text-5xl font-bold mb-2">Warehouse Management</h1>
-                <p class="text-white/70">Edit warehouse categories and items</p>
+                <p class="text-white/70">Edit warehouse vehicles and equipment</p>
             </div>
             <div class="flex gap-4">
                 <a href="/warehouse" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
@@ -24,12 +24,12 @@ import Layout from '../../layouts/Layout.astro';
         <div id="statusMessage" class="hidden rounded-lg p-4 border">
         </div>
 
-        <!-- Add New Category Button -->
+        <!-- Add New Vehicle Button -->
         <button id="addCategoryBtn" class="w-full py-4 border-2 border-dashed border-white/30 rounded-lg hover:border-primary hover:bg-white/5 transition-colors text-white/70 hover:text-white">
-            + Add New Category
+            + Add New Vehicle
         </button>
 
-        <!-- Categories List -->
+        <!-- Vehicles List -->
         <div id="categoriesList" class="space-y-6">
             <div class="text-center py-12 text-white/60">
                 Loading warehouse data...
@@ -64,10 +64,11 @@ import Layout from '../../layouts/Layout.astro';
         }
 
         const icons = ['vehicle', 'firearm', 'communication', 'protection', 'investigation', 'traffic'];
-        const statusOptions = ['available', 'limited', 'out'];
+        const flagColors = ['blue', 'red', 'green', 'yellow', 'purple', 'orange', 'pink', 'cyan', 'indigo', 'teal'];
+        const MAX_FLAGS = 10;
+        const MAX_IMAGES = 10;
 
         let warehouseData = [];
-        const MAX_IMAGES_PER_VEHICLE = 10;
 
         // Load warehouse data
         async function loadWarehouse() {
@@ -96,27 +97,34 @@ import Layout from '../../layouts/Layout.astro';
             return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         function renderCategories() {
             const container = document.getElementById('categoriesList');
 
             if (warehouseData.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-12 text-white/60">
-                        No categories found. Add your first category above.
+                        No vehicles found. Add your first vehicle above.
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = warehouseData.map((category, catIndex) => {
-                // Get image URLs
-                const imageUrls = category.imageUrls || [];
-                const hasImages = imageUrls.length > 0;
-                const canAddMore = imageUrls.length < MAX_IMAGES_PER_VEHICLE;
+            container.innerHTML = warehouseData.map((vehicle, catIndex) => {
+                const imageUrls = vehicle.imageUrls || [];
+                const flags = vehicle.flags || [];
+                const canAddMoreFlags = flags.length < MAX_FLAGS;
+                const canAddMoreImages = imageUrls.length < MAX_IMAGES;
 
                 return `
-                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20" data-category-index="${catIndex}">
-                    <!-- Category Header -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20" data-category-index="${catIndex}">
+                    <!-- Vehicle Header -->
                     <div class="flex items-start gap-4 mb-6">
                         <div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
                             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,36 +132,85 @@ import Layout from '../../layouts/Layout.astro';
                             </svg>
                         </div>
 
-                        <!-- Category Info -->
                         <div class="flex-grow space-y-4">
-                            <div class="flex gap-4 flex-wrap">
-                                <div class="flex-grow">
-                                    <label class="block text-sm font-medium text-slate-300 mb-1">Category Name</label>
-                                    <input type="text" value="${category.name}" class="category-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}">
+                            <!-- Row 1: Name and Icon -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-300 mb-1">Vehicle Name</label>
+                                    <input type="text" value="${escapeHtml(vehicle.name)}" class="category-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}">
                                 </div>
-                                <div class="w-40">
+                                <div>
                                     <label class="block text-sm font-medium text-slate-300 mb-1">Icon</label>
                                     <select class="category-icon w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}">
-                                        ${icons.map(icon => `<option value="${icon}" ${category.icon === icon ? 'selected' : ''}>${icon}</option>`).join('')}
+                                        ${icons.map(icon => `<option value="${icon}" ${vehicle.icon === icon ? 'selected' : ''}>${icon}</option>`).join('')}
                                     </select>
                                 </div>
+                            </div>
+
+                            <!-- Row 2: Description -->
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-1">Description</label>
+                                <textarea class="vehicle-description w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none" rows="2" data-category-index="${catIndex}" placeholder="Short description of the vehicle...">${escapeHtml(vehicle.description || '')}</textarea>
+                            </div>
+
+                            <!-- Row 3: Spawn Codes -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-300 mb-1">Spawn Code</label>
+                                    <input type="text" value="${escapeHtml(vehicle.spawnCode || '')}" class="spawn-code w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono" data-category-index="${catIndex}" placeholder="e.g., 6653">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-300 mb-1">Spawn By Model</label>
+                                    <input type="text" value="${escapeHtml(vehicle.spawnByModel || '')}" class="spawn-by-model w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono" data-category-index="${catIndex}" placeholder="e.g., 11cvpitrain">
+                                </div>
+                            </div>
+
+                            <!-- Flags Section -->
+                            <div class="border border-slate-600 rounded-lg p-4 bg-slate-700/30">
+                                <div class="flex items-center justify-between mb-3">
+                                    <label class="block text-sm font-medium text-slate-300">Special Permission Flags (${flags.length}/${MAX_FLAGS})</label>
+                                </div>
+                                <p class="text-xs text-white/50 mb-3">Add flags for special permissions like Bulletproof, Nitrous, etc.</p>
+
+                                <div class="space-y-2 mb-3">
+                                    ${flags.map((flag, flagIndex) => `
+                                        <div class="flex gap-2 items-center">
+                                            <input type="text" value="${escapeHtml(flag.name)}" class="flag-name flex-grow px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}" data-flag-index="${flagIndex}" placeholder="Flag name (e.g., Bulletproof)">
+                                            <select class="flag-color w-28 px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}" data-flag-index="${flagIndex}">
+                                                ${flagColors.map(color => `<option value="${color}" ${flag.color === color ? 'selected' : ''}>${color}</option>`).join('')}
+                                            </select>
+                                            <button class="remove-flag p-2 text-red-400 hover:text-red-300 transition-colors" data-category-index="${catIndex}" data-flag-index="${flagIndex}" title="Remove flag">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+
+                                ${canAddMoreFlags ? `
+                                    <button class="add-flag w-full py-2 border-2 border-dashed border-slate-600 rounded-lg hover:border-primary hover:bg-white/5 transition-colors text-white/70 hover:text-white text-sm" data-category-index="${catIndex}">
+                                        + Add Flag
+                                    </button>
+                                ` : `
+                                    <span class="text-sm text-yellow-400">Max flags reached (10)</span>
+                                `}
                             </div>
 
                             <!-- Image URLs Section -->
                             <div class="border border-slate-600 rounded-lg p-4 bg-slate-700/30">
                                 <div class="flex items-center justify-between mb-3">
-                                    <label class="block text-sm font-medium text-slate-300">Vehicle Images (${imageUrls.length}/${MAX_IMAGES_PER_VEHICLE})</label>
+                                    <label class="block text-sm font-medium text-slate-300">Vehicle Images (${imageUrls.length}/${MAX_IMAGES})</label>
                                 </div>
                                 <p class="text-xs text-white/50 mb-3">Paste Discord CDN or Imgur image URLs below</p>
 
-                                <!-- Existing Image URLs -->
                                 <div class="space-y-2 mb-3">
                                     ${imageUrls.map((url, imgIndex) => `
                                         <div class="flex gap-2 items-center">
                                             <div class="w-16 h-16 flex-shrink-0 bg-slate-800 rounded-lg overflow-hidden">
-                                                <img src="${url}" alt="Preview ${imgIndex + 1}" class="w-full h-full object-cover" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23666%22><path d=%22M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z%22/></svg>'">
+                                                <img src="${escapeHtml(url)}" alt="Preview ${imgIndex + 1}" class="w-full h-full object-cover" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23666%22><path d=%22M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z%22/></svg>'">
                                             </div>
-                                            <input type="text" value="${url}" class="image-url flex-grow px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}" data-url-index="${imgIndex}" placeholder="https://cdn.discordapp.com/... or https://i.imgur.com/...">
+                                            <input type="text" value="${escapeHtml(url)}" class="image-url flex-grow px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}" data-url-index="${imgIndex}" placeholder="https://cdn.discordapp.com/... or https://i.imgur.com/...">
                                             <button class="remove-image-url p-2 text-red-400 hover:text-red-300 transition-colors" data-category-index="${catIndex}" data-url-index="${imgIndex}" title="Remove image">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -163,42 +220,19 @@ import Layout from '../../layouts/Layout.astro';
                                     `).join('')}
                                 </div>
 
-                                ${canAddMore ? `
+                                ${canAddMoreImages ? `
                                     <button class="add-image-url w-full py-2 border-2 border-dashed border-slate-600 rounded-lg hover:border-primary hover:bg-white/5 transition-colors text-white/70 hover:text-white text-sm" data-category-index="${catIndex}">
                                         + Add Image URL
                                     </button>
                                 ` : `
-                                    <span class="text-sm text-yellow-400">Max images reached</span>
+                                    <span class="text-sm text-yellow-400">Max images reached (10)</span>
                                 `}
                             </div>
 
                             <button class="delete-category text-red-400 hover:text-red-300 text-sm" data-category-index="${catIndex}">
-                                Delete Category
+                                Delete Vehicle
                             </button>
                         </div>
-                    </div>
-
-                    <!-- Items Section -->
-                    <div class="border-t border-white/10 pt-4">
-                        <h3 class="font-semibold text-lg mb-3">Items</h3>
-                        <div class="space-y-2 items-list" data-category-index="${catIndex}">
-                            ${category.items.map((item, itemIndex) => `
-                                <div class="flex gap-3 items-center">
-                                    <input type="text" value="${item.name}" class="item-name flex-grow px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}" data-item-index="${itemIndex}">
-                                    <select class="item-status w-32 px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" data-category-index="${catIndex}" data-item-index="${itemIndex}">
-                                        ${statusOptions.map(status => `<option value="${status}" ${item.status === status ? 'selected' : ''}>${status}</option>`).join('')}
-                                    </select>
-                                    <button class="delete-item text-red-400 hover:text-red-300 p-2" data-category-index="${catIndex}" data-item-index="${itemIndex}">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            `).join('')}
-                        </div>
-                        <button class="add-item mt-3 text-primary hover:text-primary/80 text-sm font-medium" data-category-index="${catIndex}">
-                            + Add Item
-                        </button>
                     </div>
                 </div>
             `;}).join('');
@@ -207,7 +241,7 @@ import Layout from '../../layouts/Layout.astro';
         }
 
         function attachEventListeners() {
-            // Category name changes
+            // Vehicle name changes
             document.querySelectorAll('.category-name').forEach(input => {
                 input.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
@@ -216,7 +250,7 @@ import Layout from '../../layouts/Layout.astro';
                 });
             });
 
-            // Category icon changes
+            // Icon changes
             document.querySelectorAll('.category-icon').forEach(select => {
                 select.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
@@ -224,51 +258,82 @@ import Layout from '../../layouts/Layout.astro';
                 });
             });
 
-            // Delete category
-            document.querySelectorAll('.delete-category').forEach(btn => {
-                btn.addEventListener('click', (e) => {
+            // Description changes
+            document.querySelectorAll('.vehicle-description').forEach(textarea => {
+                textarea.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
-                    if (confirm('Are you sure you want to delete this category?')) {
-                        warehouseData.splice(index, 1);
+                    warehouseData[index].description = e.target.value;
+                });
+            });
+
+            // Spawn code changes
+            document.querySelectorAll('.spawn-code').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.categoryIndex);
+                    warehouseData[index].spawnCode = e.target.value;
+                });
+            });
+
+            // Spawn by model changes
+            document.querySelectorAll('.spawn-by-model').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.categoryIndex);
+                    warehouseData[index].spawnByModel = e.target.value;
+                });
+            });
+
+            // Flag name changes
+            document.querySelectorAll('.flag-name').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const catIndex = parseInt(e.target.dataset.categoryIndex);
+                    const flagIndex = parseInt(e.target.dataset.flagIndex);
+                    if (!warehouseData[catIndex].flags) warehouseData[catIndex].flags = [];
+                    warehouseData[catIndex].flags[flagIndex].name = e.target.value;
+                });
+            });
+
+            // Flag color changes
+            document.querySelectorAll('.flag-color').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const catIndex = parseInt(e.target.dataset.categoryIndex);
+                    const flagIndex = parseInt(e.target.dataset.flagIndex);
+                    if (!warehouseData[catIndex].flags) warehouseData[catIndex].flags = [];
+                    warehouseData[catIndex].flags[flagIndex].color = e.target.value;
+                });
+            });
+
+            // Add flag
+            document.querySelectorAll('.add-flag').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const catIndex = parseInt(e.target.dataset.categoryIndex);
+                    if (!warehouseData[catIndex].flags) warehouseData[catIndex].flags = [];
+                    if (warehouseData[catIndex].flags.length < MAX_FLAGS) {
+                        warehouseData[catIndex].flags.push({ name: '', color: 'blue' });
                         renderCategories();
                     }
                 });
             });
 
-            // Item name changes
-            document.querySelectorAll('.item-name').forEach(input => {
-                input.addEventListener('change', (e) => {
-                    const catIndex = parseInt(e.target.dataset.categoryIndex);
-                    const itemIndex = parseInt(e.target.dataset.itemIndex);
-                    warehouseData[catIndex].items[itemIndex].name = e.target.value;
-                });
-            });
-
-            // Item status changes
-            document.querySelectorAll('.item-status').forEach(select => {
-                select.addEventListener('change', (e) => {
-                    const catIndex = parseInt(e.target.dataset.categoryIndex);
-                    const itemIndex = parseInt(e.target.dataset.itemIndex);
-                    warehouseData[catIndex].items[itemIndex].status = e.target.value;
-                });
-            });
-
-            // Delete item
-            document.querySelectorAll('.delete-item').forEach(btn => {
+            // Remove flag
+            document.querySelectorAll('.remove-flag').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const catIndex = parseInt(e.target.closest('[data-category-index]').dataset.categoryIndex);
-                    const itemIndex = parseInt(e.target.closest('[data-item-index]').dataset.itemIndex);
-                    warehouseData[catIndex].items.splice(itemIndex, 1);
-                    renderCategories();
+                    const flagIndex = parseInt(e.target.closest('[data-flag-index]').dataset.flagIndex);
+                    if (warehouseData[catIndex].flags) {
+                        warehouseData[catIndex].flags.splice(flagIndex, 1);
+                        renderCategories();
+                    }
                 });
             });
 
-            // Add item
-            document.querySelectorAll('.add-item').forEach(btn => {
+            // Delete vehicle
+            document.querySelectorAll('.delete-category').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const catIndex = parseInt(e.target.dataset.categoryIndex);
-                    warehouseData[catIndex].items.push({ name: 'New Item', status: 'available' });
-                    renderCategories();
+                    const index = parseInt(e.target.dataset.categoryIndex);
+                    if (confirm('Are you sure you want to delete this vehicle?')) {
+                        warehouseData.splice(index, 1);
+                        renderCategories();
+                    }
                 });
             });
 
@@ -281,7 +346,6 @@ import Layout from '../../layouts/Layout.astro';
                         warehouseData[catIndex].imageUrls = [];
                     }
                     warehouseData[catIndex].imageUrls[urlIndex] = e.target.value.trim();
-                    // Re-render to update the preview
                     renderCategories();
                 });
             });
@@ -293,7 +357,7 @@ import Layout from '../../layouts/Layout.astro';
                     if (!warehouseData[catIndex].imageUrls) {
                         warehouseData[catIndex].imageUrls = [];
                     }
-                    if (warehouseData[catIndex].imageUrls.length < MAX_IMAGES_PER_VEHICLE) {
+                    if (warehouseData[catIndex].imageUrls.length < MAX_IMAGES) {
                         warehouseData[catIndex].imageUrls.push('');
                         renderCategories();
                     }
@@ -313,15 +377,20 @@ import Layout from '../../layouts/Layout.astro';
             });
         }
 
-        // Add new category
+        // Add new vehicle
         document.getElementById('addCategoryBtn').addEventListener('click', () => {
-            const newCategory = {
-                id: 'new-category-' + Date.now(),
-                name: 'New Category',
+            const newVehicle = {
+                id: 'new-vehicle-' + Date.now(),
+                name: 'New Vehicle',
                 icon: 'vehicle',
-                items: [{ name: 'New Item', status: 'available' }]
+                description: '',
+                spawnCode: '',
+                spawnByModel: '',
+                flags: [],
+                items: [],
+                imageUrls: []
             };
-            warehouseData.push(newCategory);
+            warehouseData.push(newVehicle);
             renderCategories();
         });
 

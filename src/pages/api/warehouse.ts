@@ -9,10 +9,19 @@ export interface WarehouseItem {
     status: 'available' | 'limited' | 'out';
 }
 
+export interface VehicleFlag {
+    name: string;
+    color: string; // Tailwind color class like 'blue', 'red', 'green', etc.
+}
+
 export interface WarehouseCategory {
     id: string;
     name: string;
     icon: string;
+    description?: string; // Short description of the vehicle
+    spawnCode?: string; // Spawn code for the vehicle
+    spawnByModel?: string; // Spawn by model code
+    flags?: VehicleFlag[]; // Special permission flags (up to 10)
     items: WarehouseItem[];
     imageUrls?: string[]; // Array of image URLs (Discord CDN or Imgur links)
 }
@@ -205,6 +214,33 @@ export const POST: APIRoute = async ({ request }) => {
                 icon: category.icon,
                 items: category.items
             };
+
+            // Handle optional description
+            if (category.description && typeof category.description === 'string') {
+                categoryToSave.description = category.description.trim();
+            }
+
+            // Handle spawn codes
+            if (category.spawnCode && typeof category.spawnCode === 'string') {
+                categoryToSave.spawnCode = category.spawnCode.trim();
+            }
+            if (category.spawnByModel && typeof category.spawnByModel === 'string') {
+                categoryToSave.spawnByModel = category.spawnByModel.trim();
+            }
+
+            // Handle flags (up to 10)
+            if (category.flags && Array.isArray(category.flags)) {
+                const validFlags = category.flags
+                    .filter((flag: any) => flag && flag.name && typeof flag.name === 'string')
+                    .slice(0, 10) // Max 10 flags
+                    .map((flag: any) => ({
+                        name: flag.name.trim(),
+                        color: flag.color || 'blue'
+                    }));
+                if (validFlags.length > 0) {
+                    categoryToSave.flags = validFlags;
+                }
+            }
 
             // Handle image URLs (Discord CDN or Imgur links)
             if (category.imageUrls && Array.isArray(category.imageUrls)) {

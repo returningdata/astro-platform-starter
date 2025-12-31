@@ -246,7 +246,7 @@ import Layout from '../../layouts/Layout.astro';
             }
 
             container.innerHTML = departmentData.commandPositions.map((position, index) => `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${position.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-1">Rank</label>
                         <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-teal-300 font-semibold">
@@ -278,6 +278,17 @@ import Layout from '../../layouts/Layout.astro';
                             class="command-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                             data-index="${index}"
                         >
+                    </div>
+                    <div class="flex items-end">
+                        <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${position.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
+                            <input
+                                type="checkbox"
+                                class="command-loa w-4 h-4 rounded border-slate-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
+                                data-index="${index}"
+                                ${position.isLOA ? 'checked' : ''}
+                            >
+                            <span class="text-sm font-medium ${position.isLOA ? 'text-yellow-400' : 'text-slate-300'}">LOA</span>
+                        </label>
                     </div>
                 </div>
             `).join('');
@@ -311,7 +322,7 @@ import Layout from '../../layouts/Layout.astro';
 
                         <div class="space-y-4">
                             ${rankPos.members.map((member, memberIndex) => `
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${member.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
                                     <div>
                                         <label class="block text-sm font-medium text-slate-300 mb-1">Name #${memberIndex + 1}</label>
                                         <input
@@ -344,6 +355,18 @@ import Layout from '../../layouts/Layout.astro';
                                             data-rank-index="${rankIndex}"
                                             data-member-index="${memberIndex}"
                                         >
+                                    </div>
+                                    <div class="flex items-end">
+                                        <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${member.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
+                                            <input
+                                                type="checkbox"
+                                                class="rank-member-loa w-4 h-4 rounded border-slate-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
+                                                data-rank-index="${rankIndex}"
+                                                data-member-index="${memberIndex}"
+                                                ${member.isLOA ? 'checked' : ''}
+                                            >
+                                            <span class="text-sm font-medium ${member.isLOA ? 'text-yellow-400' : 'text-slate-300'}">LOA</span>
+                                        </label>
                                     </div>
                                 </div>
                             `).join('')}
@@ -378,8 +401,8 @@ import Layout from '../../layouts/Layout.astro';
                 const linkedName = getLinkedSubdivisionName(subdivision.subdivisionId);
 
                 return `
-                <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50">
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${subdivision.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-1">Division Name</label>
                             <input
@@ -419,6 +442,17 @@ import Layout from '../../layouts/Layout.astro';
                                 class="subdivision-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                 data-index="${index}"
                             >
+                        </div>
+                        <div class="flex items-end">
+                            <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${subdivision.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
+                                <input
+                                    type="checkbox"
+                                    class="subdivision-loa w-4 h-4 rounded border-slate-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
+                                    data-index="${index}"
+                                    ${subdivision.isLOA ? 'checked' : ''}
+                                >
+                                <span class="text-sm font-medium ${subdivision.isLOA ? 'text-yellow-400' : 'text-slate-300'}">LOA</span>
+                            </label>
                         </div>
                         <div class="flex items-end">
                             <button
@@ -583,6 +617,15 @@ import Layout from '../../layouts/Layout.astro';
                     departmentData.rankPositions[rankIndex].members[memberIndex].jobTitle = e.target.value;
                 });
             });
+
+            document.querySelectorAll('.rank-member-loa').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const rankIndex = parseInt(e.target.dataset.rankIndex);
+                    const memberIndex = parseInt(e.target.dataset.memberIndex);
+                    departmentData.rankPositions[rankIndex].members[memberIndex].isLOA = e.target.checked;
+                    renderRankPositions();
+                });
+            });
         }
 
         function attachCommandListeners() {
@@ -597,6 +640,14 @@ import Layout from '../../layouts/Layout.astro';
                 input.addEventListener('input', (e) => {
                     const index = parseInt(e.target.dataset.index);
                     departmentData.commandPositions[index].jobTitle = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.command-loa').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.commandPositions[index].isLOA = e.target.checked;
+                    renderCommandPositions();
                 });
             });
         }
@@ -686,6 +737,14 @@ import Layout from '../../layouts/Layout.astro';
                         departmentData.subdivisionLeadership.splice(index, 1);
                         renderSubdivisionLeadership();
                     }
+                });
+            });
+
+            document.querySelectorAll('.subdivision-loa').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.subdivisionLeadership[index].isLOA = e.target.checked;
+                    renderSubdivisionLeadership();
                 });
             });
         }

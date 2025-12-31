@@ -434,38 +434,71 @@ async function deleteMessages(messageIds: string[]): Promise<void> {
 
 /**
  * Send embeds to Discord and return message IDs
+ * Uses strict sequential execution with retry logic to ensure correct order
  */
 async function sendEmbeds(embeds: any[]): Promise<string[]> {
     const messageIds: string[] = [];
 
-    // Discord allows max 10 embeds per message, but for better display,
-    // we'll send them individually or in small batches
-    for (const embed of embeds) {
-        try {
-            const response = await fetch(`${WEBHOOK_URL}?wait=true`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ embeds: [embed] })
-            });
+    // Send embeds one at a time in strict order
+    // Each embed must be confirmed sent before the next one starts
+    for (let i = 0; i < embeds.length; i++) {
+        const embed = embeds[i];
+        let success = false;
+        let retries = 0;
+        const maxRetries = 3;
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Discord webhook error:', response.status, errorText);
-                continue;
+        while (!success && retries < maxRetries) {
+            try {
+                // Wait before sending (longer delay to ensure Discord processes in order)
+                // Skip delay for first message
+                if (i > 0 || retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+
+                const response = await fetch(`${WEBHOOK_URL}?wait=true`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ embeds: [embed] })
+                });
+
+                // Handle rate limiting
+                if (response.status === 429) {
+                    const rateLimitData = await response.json();
+                    const retryAfter = (rateLimitData.retry_after || 1) * 1000;
+                    console.log(`Rate limited, waiting ${retryAfter}ms before retry`);
+                    await new Promise(resolve => setTimeout(resolve, retryAfter));
+                    retries++;
+                    continue;
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Discord webhook error:', response.status, errorText);
+                    retries++;
+                    continue;
+                }
+
+                const message = await response.json();
+                if (message.id) {
+                    messageIds.push(message.id);
+                    console.log(`Sent embed ${i + 1}/${embeds.length} with message ID:`, message.id);
+                    success = true;
+                } else {
+                    console.error('No message ID returned from Discord');
+                    retries++;
+                }
+            } catch (error) {
+                console.error(`Failed to send embed ${i + 1}:`, error);
+                retries++;
             }
+        }
 
-            const message = await response.json();
-            if (message.id) {
-                messageIds.push(message.id);
-                console.log('Sent embed with message ID:', message.id);
-            }
-
-            // Small delay between messages to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (error) {
-            console.error('Failed to send embed:', error);
+        // If we couldn't send this embed after retries, log but continue
+        // to maintain as much of the chain of command as possible
+        if (!success) {
+            console.error(`Failed to send embed ${i + 1} after ${maxRetries} retries`);
         }
     }
 

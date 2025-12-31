@@ -162,6 +162,116 @@ const defaultDepartmentData: DepartmentData = {
                 { name: '', callSign: '', jobTitle: '' },
                 { name: '', callSign: '', jobTitle: '' }
             ]
+        },
+        {
+            rank: 'Sergeant First Class',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Staff Sergeant',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Sergeant',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Corporal',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Officer III',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Officer II',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Officer I',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Probationary Officer',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Reserve Officer',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
+        },
+        {
+            rank: 'Cadet',
+            members: [
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' },
+                { name: '', callSign: '', jobTitle: '' }
+            ]
         }
     ],
     subdivisionLeadership: [
@@ -193,6 +303,23 @@ async function getDepartmentData(): Promise<DepartmentData> {
                 }
             } else {
                 result.subdivisionLeadership = defaultDepartmentData.subdivisionLeadership;
+            }
+
+            // Ensure all default rank positions exist in stored data
+            if (result.rankPositions) {
+                const existingRanks = new Set(result.rankPositions.map(rp => rp.rank));
+                for (const defaultRank of defaultDepartmentData.rankPositions) {
+                    if (!existingRanks.has(defaultRank.rank)) {
+                        // Find the correct position to insert the missing rank
+                        const defaultIndex = defaultDepartmentData.rankPositions.findIndex(rp => rp.rank === defaultRank.rank);
+                        result.rankPositions.splice(defaultIndex, 0, {
+                            rank: defaultRank.rank,
+                            members: defaultRank.members.map(m => ({ ...m }))
+                        });
+                    }
+                }
+            } else {
+                result.rankPositions = defaultDepartmentData.rankPositions;
             }
 
             return result;

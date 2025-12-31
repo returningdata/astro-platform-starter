@@ -55,6 +55,7 @@ interface RankMember {
 interface RankPositions {
     rank: string;
     members: RankMember[];
+    discordRoleId?: string;  // Discord role ID for role mentions in webhook
 }
 
 interface DepartmentData {
@@ -142,24 +143,34 @@ function formatMember(name: string, callSign: string, jobTitle: string, discordI
 }
 
 /**
+ * Format rank header with optional role mention
+ */
+function formatRankHeader(rank: string, discordRoleId?: string): string {
+    if (discordRoleId) {
+        return `**${rank}** <@&${discordRoleId}>`;
+    }
+    return `**${rank}**`;
+}
+
+/**
+ * Format rank with role mention only (no individual names)
+ * Used for lower ranks (Cadet through Sergeant First Class)
+ */
+function formatRankRoleOnly(rank: string, discordRoleId?: string): string {
+    if (discordRoleId) {
+        return `**${rank}** <@&${discordRoleId}>`;
+    }
+    return `**${rank}**`;
+}
+
+/**
  * Build embeds for chain of command
  */
 function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
     const embeds: any[] = [];
     const timestamp = new Date().toISOString();
 
-    // Embed 1: Header/Introduction
-    embeds.push({
-        title: '**DEL PERRO POLICE DEPARTMENT**',
-        description: '**CHAIN OF COMMAND**\n\nThe official command structure of the Del Perro Police Department. All personnel are expected to follow this hierarchy.',
-        color: COLORS.primary,
-        thumbnail: {
-            url: DPPD_LOGO_URL
-        },
-        timestamp: timestamp
-    });
-
-    // Embed 2: High Command (Chief of Police through Lieutenant Colonel)
+    // High Command (Chief of Police through Lieutenant Colonel)
     const highCommandRanks = ['Chief of Police', 'Deputy Chief of Police', 'Assistant Chief of Police', 'Colonel', 'Lieutenant Colonel'];
     const highCommandMembers = data.commandPositions
         .filter(p => highCommandRanks.includes(p.rank))
@@ -177,7 +188,7 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 3: Trial High Command (Commander)
+    // Trial High Command (Commander)
     const trialHighCommandRanks = ['Commander'];
     const trialHighCommandMembers = data.commandPositions
         .filter(p => trialHighCommandRanks.includes(p.rank))
@@ -195,7 +206,7 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 4: Low Command (Major, Captain, 1st Lieutenant, 2nd Lieutenant)
+    // Low Command (Major, Captain, 1st Lieutenant, 2nd Lieutenant)
     const lowCommandRanks = ['Major', 'Captain', '1st Lieutenant', '2nd Lieutenant'];
     const lowCommandSections: string[] = [];
 
@@ -208,7 +219,7 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
                     formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
                 ).filter(Boolean);
                 if (memberLines.length > 0) {
-                    lowCommandSections.push(`**${rank}**\n${memberLines.join('\n')}`);
+                    lowCommandSections.push(`${formatRankHeader(rank, rankPos.discordRoleId)}\n${memberLines.join('\n')}`);
                 }
             }
         }
@@ -223,7 +234,7 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 5: Trial Low Command (Master Sergeant)
+    // Trial Low Command (Master Sergeant)
     const trialLowCommandRanks = ['Master Sergeant'];
     const trialLowCommandSections: string[] = [];
 
@@ -236,7 +247,7 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
                     formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
                 ).filter(Boolean);
                 if (memberLines.length > 0) {
-                    trialLowCommandSections.push(`**${rank}**\n${memberLines.join('\n')}`);
+                    trialLowCommandSections.push(`${formatRankHeader(rank, rankPos.discordRoleId)}\n${memberLines.join('\n')}`);
                 }
             }
         }
@@ -251,22 +262,16 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 6: Supervisors (Sergeant First Class, Staff Sergeant, Sergeant)
+    // Supervisors (Sergeant First Class, Staff Sergeant, Sergeant)
+    // These ranks show only the role mention, not individual member names
     const supervisorRanks = ['Sergeant First Class', 'Staff Sergeant', 'Sergeant'];
     const supervisorSections: string[] = [];
 
     for (const rank of supervisorRanks) {
         const rankPos = data.rankPositions.find(rp => rp.rank === rank);
-        if (rankPos && rankPos.members) {
-            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
-            if (filledMembers.length > 0) {
-                const memberLines = filledMembers.map(m =>
-                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
-                ).filter(Boolean);
-                if (memberLines.length > 0) {
-                    supervisorSections.push(`**${rank}**\n${memberLines.join('\n')}`);
-                }
-            }
+        if (rankPos) {
+            // Only show rank name and role mention (no individual names)
+            supervisorSections.push(formatRankRoleOnly(rank, rankPos.discordRoleId));
         }
     }
 
@@ -279,22 +284,16 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 7: Trial Supervisor (Corporal)
+    // Trial Supervisor (Corporal)
+    // These ranks show only the role mention, not individual member names
     const trialSupervisorRanks = ['Corporal'];
     const trialSupervisorSections: string[] = [];
 
     for (const rank of trialSupervisorRanks) {
         const rankPos = data.rankPositions.find(rp => rp.rank === rank);
-        if (rankPos && rankPos.members) {
-            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
-            if (filledMembers.length > 0) {
-                const memberLines = filledMembers.map(m =>
-                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
-                ).filter(Boolean);
-                if (memberLines.length > 0) {
-                    trialSupervisorSections.push(`**${rank}**\n${memberLines.join('\n')}`);
-                }
-            }
+        if (rankPos) {
+            // Only show rank name and role mention (no individual names)
+            trialSupervisorSections.push(formatRankRoleOnly(rank, rankPos.discordRoleId));
         }
     }
 
@@ -307,22 +306,16 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 8: Officers (Officer III, Officer II, Officer I, Probationary Officer)
+    // Officers (Officer III, Officer II, Officer I, Probationary Officer)
+    // These ranks show only the role mention, not individual member names
     const officerRanks = ['Officer III', 'Officer II', 'Officer I', 'Probationary Officer'];
     const officerSections: string[] = [];
 
     for (const rank of officerRanks) {
         const rankPos = data.rankPositions.find(rp => rp.rank === rank);
-        if (rankPos && rankPos.members) {
-            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
-            if (filledMembers.length > 0) {
-                const memberLines = filledMembers.map(m =>
-                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
-                ).filter(Boolean);
-                if (memberLines.length > 0) {
-                    officerSections.push(`**${rank}**\n${memberLines.join('\n')}`);
-                }
-            }
+        if (rankPos) {
+            // Only show rank name and role mention (no individual names)
+            officerSections.push(formatRankRoleOnly(rank, rankPos.discordRoleId));
         }
     }
 
@@ -335,22 +328,16 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 9: Reserves (Reserve Officer)
+    // Reserves (Reserve Officer)
+    // These ranks show only the role mention, not individual member names
     const reserveRanks = ['Reserve Officer'];
     const reserveSections: string[] = [];
 
     for (const rank of reserveRanks) {
         const rankPos = data.rankPositions.find(rp => rp.rank === rank);
-        if (rankPos && rankPos.members) {
-            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
-            if (filledMembers.length > 0) {
-                const memberLines = filledMembers.map(m =>
-                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
-                ).filter(Boolean);
-                if (memberLines.length > 0) {
-                    reserveSections.push(`**${rank}**\n${memberLines.join('\n')}`);
-                }
-            }
+        if (rankPos) {
+            // Only show rank name and role mention (no individual names)
+            reserveSections.push(formatRankRoleOnly(rank, rankPos.discordRoleId));
         }
     }
 
@@ -363,22 +350,16 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 10: Cadets (Cadet)
+    // Cadets (Cadet)
+    // These ranks show only the role mention, not individual member names
     const cadetRanks = ['Cadet'];
     const cadetSections: string[] = [];
 
     for (const rank of cadetRanks) {
         const rankPos = data.rankPositions.find(rp => rp.rank === rank);
-        if (rankPos && rankPos.members) {
-            const filledMembers = rankPos.members.filter(m => m.name || m.callSign);
-            if (filledMembers.length > 0) {
-                const memberLines = filledMembers.map(m =>
-                    formatMember(m.name, m.callSign, m.jobTitle, m.discordId, m.isLOA)
-                ).filter(Boolean);
-                if (memberLines.length > 0) {
-                    cadetSections.push(`**${rank}**\n${memberLines.join('\n')}`);
-                }
-            }
+        if (rankPos) {
+            // Only show rank name and role mention (no individual names)
+            cadetSections.push(formatRankRoleOnly(rank, rankPos.discordRoleId));
         }
     }
 
@@ -391,7 +372,7 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Embed 11: Important Notice/Warning
+    // Important Notice/Warning about skipping chain of command
     embeds.push({
         title: 'Chain of Command Protocol',
         description: [
@@ -409,7 +390,7 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         timestamp: timestamp
     });
 
-    // Embed 12: Footer with DPPD Logo
+    // Footer with DPPD Logo
     embeds.push({
         title: 'Del Perro Police Department',
         description: '*Protecting and serving the citizens of Del Perro*',

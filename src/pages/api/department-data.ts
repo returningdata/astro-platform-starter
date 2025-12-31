@@ -30,6 +30,7 @@ export interface RankMember {
 export interface RankPositions {
     rank: string;
     members: RankMember[];
+    discordRoleId?: string;  // Discord role ID for role mentions in webhook
 }
 
 export interface TierMember {

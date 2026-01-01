@@ -8,7 +8,7 @@ import Layout from '../../layouts/Layout.astro';
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
                 <h1 class="text-4xl md:text-5xl font-bold mb-2">Chain of Command Webhook</h1>
-                <p class="text-white/70">Manage the Discord chain of command webhook that posts automatically every 6 hours</p>
+                <p class="text-white/70">Manually update the chain of command on Discord</p>
             </div>
             <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
                 Back to Dashboard
@@ -62,7 +62,7 @@ import Layout from '../../layouts/Layout.astro';
                     <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                         <span class="text-teal-400 text-sm font-bold">1</span>
                     </div>
-                    <p>The webhook automatically posts the chain of command to Discord <strong>every 6 hours</strong> (at 00:00, 06:00, 12:00, and 18:00 UTC).</p>
+                    <p>The webhook posts the chain of command to Discord <strong>manually</strong> when you click the update button.</p>
                 </div>
                 <div class="flex items-start gap-3">
                     <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -75,12 +75,6 @@ import Layout from '../../layouts/Layout.astro';
                         <span class="text-teal-400 text-sm font-bold">3</span>
                     </div>
                     <p>The chain of command data is pulled from the <strong>Department Data</strong> page. Make sure to add <strong>Discord IDs</strong> there for mentions to work.</p>
-                </div>
-                <div class="flex items-start gap-3">
-                    <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span class="text-teal-400 text-sm font-bold">4</span>
-                    </div>
-                    <p>Use the <strong>"Force Update Now"</strong> button below to immediately update the Discord messages without waiting for the scheduled time.</p>
                 </div>
             </div>
         </div>
@@ -146,7 +140,7 @@ import Layout from '../../layouts/Layout.astro';
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Force Update Now
+                Update Now
             </button>
         </div>
     </div>
@@ -200,21 +194,6 @@ import Layout from '../../layouts/Layout.astro';
             });
         }
 
-        function getTimeUntilNextUpdate() {
-            const now = new Date();
-            const currentHour = now.getUTCHours();
-            const nextUpdateHour = Math.ceil((currentHour + 1) / 6) * 6;
-            const nextUpdate = new Date(now);
-            nextUpdate.setUTCHours(nextUpdateHour, 0, 0, 0);
-            if (nextUpdate <= now) {
-                nextUpdate.setUTCHours(nextUpdateHour + 6);
-            }
-            const diff = nextUpdate - now;
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            return `${hours}h ${minutes}m`;
-        }
-
         async function loadWebhookStatus() {
             const container = document.getElementById('webhookStatus');
             try {
@@ -223,7 +202,7 @@ import Layout from '../../layouts/Layout.astro';
 
                 if (data.success) {
                     container.innerHTML = `
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-600/50">
                                 <div class="text-sm text-white/60 mb-1">Last Updated</div>
                                 <div class="text-lg font-semibold text-green-400">${formatDate(data.lastSentAt)}</div>
@@ -232,22 +211,18 @@ import Layout from '../../layouts/Layout.astro';
                                 <div class="text-sm text-white/60 mb-1">Messages Sent</div>
                                 <div class="text-lg font-semibold text-blue-400">${data.lastMessageIds?.length || 0} embeds</div>
                             </div>
-                            <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-600/50">
-                                <div class="text-sm text-white/60 mb-1">Next Auto Update</div>
-                                <div class="text-lg font-semibold text-amber-400">${getTimeUntilNextUpdate()}</div>
-                            </div>
                         </div>
-                        <div class="mt-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg flex items-center gap-2">
-                            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        <div class="mt-4 p-3 bg-blue-500/20 border border-blue-500/50 rounded-lg flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span class="text-green-200">Webhook is configured and active</span>
+                            <span class="text-blue-200">Manual updates only - use the button below to update Discord</span>
                         </div>
                     `;
                 } else {
                     container.innerHTML = `
                         <div class="p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
-                            <p class="text-yellow-200">No webhook data found. The webhook will be initialized on the first scheduled run or when you force an update.</p>
+                            <p class="text-yellow-200">No webhook data found. Use the update button below to send the chain of command to Discord.</p>
                         </div>
                     `;
                 }

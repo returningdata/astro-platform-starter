@@ -52,9 +52,18 @@ interface TokenResponse {
  * Get environment variable using Netlify or process.env
  */
 function getEnv(name: string): string | undefined {
-    return typeof Netlify !== 'undefined'
-        ? Netlify.env.get(name)
-        : process.env[name];
+    // Try Netlify.env first if available
+    if (typeof Netlify !== 'undefined' && Netlify.env) {
+        const value = Netlify.env.get(name);
+        if (value) return value;
+    }
+
+    // Fall back to process.env
+    if (typeof process !== 'undefined' && process.env) {
+        return process.env[name];
+    }
+
+    return undefined;
 }
 
 /**

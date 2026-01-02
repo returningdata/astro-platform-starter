@@ -46,19 +46,33 @@ export class SessionSecretMissingError extends Error {
  * Check if session secret is available (for pre-flight checks)
  */
 export function isSessionSecretConfigured(): boolean {
-    const secret = typeof Netlify !== 'undefined'
-        ? Netlify.env.get('SESSION_SECRET')
-        : process.env.SESSION_SECRET;
+    // Try multiple ways to get the secret
+    let secret: string | undefined;
+
+    // Try Netlify.env first if available
+    if (typeof Netlify !== 'undefined' && Netlify.env) {
+        secret = Netlify.env.get('SESSION_SECRET');
+    }
+
+    // Fall back to process.env
+    if (!secret && typeof process !== 'undefined' && process.env) {
+        secret = process.env.SESSION_SECRET;
+    }
 
     if (secret) {
         return true;
     }
 
     // In development or preview, we use a fallback
-    const context = typeof Netlify !== 'undefined'
-        ? Netlify.env.get('CONTEXT')
-        : process.env.CONTEXT;
-    const isDev = process.env.NODE_ENV === 'development' ||
+    let context: string | undefined;
+    if (typeof Netlify !== 'undefined' && Netlify.env) {
+        context = Netlify.env.get('CONTEXT');
+    }
+    if (!context && typeof process !== 'undefined' && process.env) {
+        context = process.env.CONTEXT;
+    }
+
+    const isDev = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') ||
         context === 'dev' ||
         context === 'dev-server' ||
         context === 'deploy-preview' ||
@@ -72,16 +86,30 @@ export function isSessionSecretConfigured(): boolean {
  * SECURITY: SESSION_SECRET must be set in production
  */
 function getSessionSecret(): string {
-    const secret = typeof Netlify !== 'undefined'
-        ? Netlify.env.get('SESSION_SECRET')
-        : process.env.SESSION_SECRET;
+    // Try multiple ways to get the secret
+    let secret: string | undefined;
+
+    // Try Netlify.env first if available
+    if (typeof Netlify !== 'undefined' && Netlify.env) {
+        secret = Netlify.env.get('SESSION_SECRET');
+    }
+
+    // Fall back to process.env
+    if (!secret && typeof process !== 'undefined' && process.env) {
+        secret = process.env.SESSION_SECRET;
+    }
 
     if (!secret) {
         // In development or preview, we can use a fallback but log a warning
-        const context = typeof Netlify !== 'undefined'
-            ? Netlify.env.get('CONTEXT')
-            : process.env.CONTEXT;
-        const isDev = process.env.NODE_ENV === 'development' ||
+        let context: string | undefined;
+        if (typeof Netlify !== 'undefined' && Netlify.env) {
+            context = Netlify.env.get('CONTEXT');
+        }
+        if (!context && typeof process !== 'undefined' && process.env) {
+            context = process.env.CONTEXT;
+        }
+
+        const isDev = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') ||
             context === 'dev' ||
             context === 'dev-server' ||
             context === 'deploy-preview' ||
@@ -90,7 +118,8 @@ function getSessionSecret(): string {
         if (isDev) {
             console.warn('SESSION_SECRET not set. Using development-only fallback. DO NOT use in production!');
             // Use a development-only fallback that includes a timestamp to make sessions ephemeral
-            return `dev-session-secret-${process.env.BUILD_ID || 'local'}-not-for-production`;
+            const buildId = (typeof process !== 'undefined' && process.env?.BUILD_ID) || 'local';
+            return `dev-session-secret-${buildId}-not-for-production`;
         }
 
         // In production, this is a critical error

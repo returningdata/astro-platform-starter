@@ -29,8 +29,47 @@ export interface Session {
 }
 
 /**
+ * Custom error class for missing session secret
+ */
+export class SessionSecretMissingError extends Error {
+    constructor() {
+        super(
+            'SESSION_SECRET environment variable is not set. ' +
+            'This is required for secure session management. ' +
+            'Please set SESSION_SECRET to a random string of at least 32 characters.'
+        );
+        this.name = 'SessionSecretMissingError';
+    }
+}
+
+/**
+ * Check if session secret is available (for pre-flight checks)
+ */
+export function isSessionSecretConfigured(): boolean {
+    const secret = typeof Netlify !== 'undefined'
+        ? Netlify.env.get('SESSION_SECRET')
+        : process.env.SESSION_SECRET;
+
+    if (secret) {
+        return true;
+    }
+
+    // In development or preview, we use a fallback
+    const context = typeof Netlify !== 'undefined'
+        ? Netlify.env.get('CONTEXT')
+        : process.env.CONTEXT;
+    const isDev = process.env.NODE_ENV === 'development' ||
+        context === 'dev' ||
+        context === 'dev-server' ||
+        context === 'deploy-preview' ||
+        context === 'branch-deploy';
+
+    return isDev;
+}
+
+/**
  * Get the session secret from environment variables
- * Falls back to a generated secret if not set (will warn in logs)
+ * SECURITY: SESSION_SECRET must be set in production
  */
 function getSessionSecret(): string {
     const secret = typeof Netlify !== 'undefined'
@@ -38,11 +77,31 @@ function getSessionSecret(): string {
         : process.env.SESSION_SECRET;
 
     if (!secret) {
-        console.warn('SESSION_SECRET environment variable not set. Using fallback secret. Please set SESSION_SECRET for production.');
-        // Generate a deterministic fallback based on site context
-        // In production, SESSION_SECRET should always be set
-        return 'DPPD_FALLBACK_SECRET_CHANGE_ME_IN_PRODUCTION';
+        // In development or preview, we can use a fallback but log a warning
+        const context = typeof Netlify !== 'undefined'
+            ? Netlify.env.get('CONTEXT')
+            : process.env.CONTEXT;
+        const isDev = process.env.NODE_ENV === 'development' ||
+            context === 'dev' ||
+            context === 'dev-server' ||
+            context === 'deploy-preview' ||
+            context === 'branch-deploy';
+
+        if (isDev) {
+            console.warn('SESSION_SECRET not set. Using development-only fallback. DO NOT use in production!');
+            // Use a development-only fallback that includes a timestamp to make sessions ephemeral
+            return `dev-session-secret-${process.env.BUILD_ID || 'local'}-not-for-production`;
+        }
+
+        // In production, this is a critical error
+        throw new SessionSecretMissingError();
     }
+
+    // Validate secret strength
+    if (secret.length < 32) {
+        console.warn('SESSION_SECRET is less than 32 characters. Consider using a longer secret for better security.');
+    }
+
     return secret;
 }
 

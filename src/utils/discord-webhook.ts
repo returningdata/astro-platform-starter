@@ -5,7 +5,33 @@
  * Logs include: user info, timestamps, action types, and detailed change tracking.
  */
 
-const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1345927814699941969/OHLt_xVWzpKTGFGlNqelstJOLAtcftC9BE--2OHLXtJsR22t1TyUsKzJZk3dKigfWiC3';
+/**
+ * Get Discord webhook URL from environment variable
+ * SECURITY: Never hardcode webhook URLs in source code
+ */
+function getDiscordWebhookUrl(): string | null {
+    const url = typeof Netlify !== 'undefined'
+        ? Netlify.env.get('DISCORD_WEBHOOK_URL')
+        : process.env.DISCORD_WEBHOOK_URL;
+
+    if (!url) {
+        console.warn('DISCORD_WEBHOOK_URL environment variable not set. Audit logging to Discord is disabled.');
+        return null;
+    }
+
+    // Validate URL format
+    try {
+        const parsed = new URL(url);
+        if (!parsed.hostname.includes('discord.com')) {
+            console.warn('DISCORD_WEBHOOK_URL does not appear to be a valid Discord webhook URL.');
+        }
+    } catch {
+        console.error('DISCORD_WEBHOOK_URL is not a valid URL.');
+        return null;
+    }
+
+    return url;
+}
 
 export type ActionType = 'LOGIN' | 'LOGOUT' | 'CREATE' | 'UPDATE' | 'DELETE' | 'SAVE';
 
@@ -299,7 +325,13 @@ export async function sendAuditLog(options: AuditLogOptions): Promise<void> {
 
     // Send to Discord
     try {
-        const response = await fetch(DISCORD_WEBHOOK_URL, {
+        const webhookUrl = getDiscordWebhookUrl();
+        if (!webhookUrl) {
+            // Webhook not configured, skip sending
+            return;
+        }
+
+        const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

@@ -1,0 +1,39 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+[functions]
+  directory = "netlify/functions"
+
+# Environment variables for Discord OAuth2 Authentication
+# IMPORTANT: Sensitive values (CLIENT_ID, CLIENT_SECRET, BOT_TOKEN, GUILD_ID)
+# should be set in the Netlify UI: Site configuration > Environment variables
+# See the README section on Discord OAuth2 setup for instructions.
+
+# Role IDs can be stored here as they are not sensitive
+[context.production.environment]
+  DISCORD_SUPERADMIN_ROLE_ID = "1456532452943200348"
+  DISCORD_SUBDIV_ROLE_ID = "1456532179436699839"
+  DISCORD_ALLOTHERS_ROLE_ID = "1456532705847148574"
+
+[context.deploy-preview.environment]
+  DISCORD_SUPERADMIN_ROLE_ID = "1456532452943200348"
+  DISCORD_SUBDIV_ROLE_ID = "1456532179436699839"
+  DISCORD_ALLOTHERS_ROLE_ID = "1456532705847148574"
+
+[context.branch-deploy.environment]
+  DISCORD_SUPERADMIN_ROLE_ID = "1456532452943200348"
+  DISCORD_SUBDIV_ROLE_ID = "1456532179436699839"
+  DISCORD_ALLOTHERS_ROLE_ID = "1456532705847148574"
+
+[context.dev.environment]
+  DISCORD_SUPERADMIN_ROLE_ID = "1456532452943200348"
+  DISCORD_SUBDIV_ROLE_ID = "1456532179436699839"
+  DISCORD_ALLOTHERS_ROLE_ID = "1456532705847148574"
+
+# Required environment variables to set in Netlify UI:
+#
+# DISCORD_CLIENT_ID       - Your Discord application's Client ID (from OAuth2 page)
+# DISCORD_CLIENT_SECRET   - Your Discord application's Client Secret (from OAuth2 page)
+# DISCORD_BOT_TOKEN       - Your Discord bot token (from Bot page)
+# DISCORD_GUILD_ID        - Your Discord server ID (right-click server > Copy ID)

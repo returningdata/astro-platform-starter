@@ -176,19 +176,35 @@ import Layout from '../../layouts/Layout.astro';
             }
         ];
 
-        // Check if user is logged in
-        const adminUserData = sessionStorage.getItem('adminUser');
-        if (!adminUserData) {
-            window.location.href = '/admin/login';
-        }
+        // Check if user is logged in via server-side session
+        let adminUser = null;
 
-        const adminUser = adminUserData ? JSON.parse(adminUserData) : null;
+        async function validateSession() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
 
-        // Update welcome message
-        if (adminUser) {
-            document.getElementById('welcomeText').textContent = `Welcome, ${adminUser.displayName}`;
-            document.getElementById('roleText').textContent = adminUser.role === 'super_admin' ? 'Super Admin' :
-                adminUser.role === 'subdivision_overseer' ? 'Subdivision Overseer' : 'Custom Role';
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return;
+                }
+
+                adminUser = data.user;
+
+                // Update welcome message
+                document.getElementById('welcomeText').textContent = `Welcome, ${adminUser.displayName}`;
+                document.getElementById('roleText').textContent = adminUser.role === 'super_admin' ? 'Super Admin' :
+                    adminUser.role === 'subdivision_overseer' ? 'Subdivision Overseer' : 'Custom Role';
+
+                // Render menu items now that we have user data
+                renderMenuItems();
+            } catch (error) {
+                console.error('Session validation error:', error);
+                window.location.href = '/admin/login';
+            }
         }
 
         // Function to check if user has permission
@@ -244,11 +260,20 @@ import Layout from '../../layouts/Layout.astro';
         }
 
         // Logout handler
-        document.getElementById('logoutBtn').addEventListener('click', (e) => {
-            sessionStorage.removeItem('adminUser');
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            window.location.href = '/admin/login';
         });
 
-        // Initialize
-        renderMenuItems();
+        // Initialize - validate session first
+        validateSession();
     </script>
 </Layout>

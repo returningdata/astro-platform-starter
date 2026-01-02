@@ -79,12 +79,57 @@ import Layout from '../../layouts/Layout.astro';
     </div>
 
     <script type="module">
-        // Check permissions
-        const adminUserData = sessionStorage.getItem('adminUser');
-        if (!adminUserData) {
-            window.location.href = '/admin/login';
+        let adminUser = null;
+
+        async function validateSessionAndPermissions() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+
+                adminUser = data.user;
+
+                // Check if user has permission for department data
+                if (!hasFullPermission() && !hasSubdivisionOnlyPermission()) {
+                    document.body.innerHTML = `
+                        <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                            <div class="text-center p-8">
+                                <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                                <p class="text-white/70 mb-4">You don't have permission to access this page.</p>
+                                <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                            </div>
+                        </div>
+                    `;
+                    return false;
+                }
+
+                // Hide sections that subdivision overseer shouldn't see
+                const isSubdivisionOnly = !hasFullPermission() && hasSubdivisionOnlyPermission();
+                if (isSubdivisionOnly) {
+                    // Hide chain of command, rank positions, and awards sections
+                    const commandSection = document.getElementById('commandSection');
+                    const rankSection = document.getElementById('rankPositionsSections');
+                    const awardsSection = document.getElementById('awardsSection');
+
+                    if (commandSection) commandSection.style.display = 'none';
+                    if (rankSection) rankSection.style.display = 'none';
+                    if (awardsSection) awardsSection.style.display = 'none';
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Session validation error:', error);
+                window.location.href = '/admin/login';
+                return false;
+            }
         }
-        const adminUser = adminUserData ? JSON.parse(adminUserData) : null;
 
         // Check if user has permission for department data
         function hasFullPermission() {
@@ -97,31 +142,6 @@ import Layout from '../../layouts/Layout.astro';
             if (!adminUser) return false;
             if (adminUser.role === 'subdivision_overseer') return true;
             return adminUser.permissions && adminUser.permissions.includes('department-data-subdivisions');
-        }
-
-        if (!hasFullPermission() && !hasSubdivisionOnlyPermission()) {
-            document.body.innerHTML = `
-                <div class="min-h-screen flex items-center justify-center bg-slate-900">
-                    <div class="text-center p-8">
-                        <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
-                        <p class="text-white/70 mb-4">You don't have permission to access this page.</p>
-                        <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Hide sections that subdivision overseer shouldn't see
-        const isSubdivisionOnly = !hasFullPermission() && hasSubdivisionOnlyPermission();
-        if (isSubdivisionOnly) {
-            // Hide chain of command, rank positions, and awards sections
-            const commandSection = document.getElementById('commandSection');
-            const rankSection = document.getElementById('rankPositionsSections');
-            const awardsSection = document.getElementById('awardsSection');
-
-            if (commandSection) commandSection.style.display = 'none';
-            if (rankSection) rankSection.style.display = 'none';
-            if (awardsSection) awardsSection.style.display = 'none';
         }
 
         let departmentData = {
@@ -915,9 +935,9 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/department-data', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-User': JSON.stringify(adminUser)
+                        'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify(departmentData)
                 });
 
@@ -949,6 +969,10 @@ import Layout from '../../layouts/Layout.astro';
         });
 
         // Initialize
-        loadDepartmentData();
+        validateSessionAndPermissions().then(valid => {
+            if (valid) {
+                loadDepartmentData();
+            }
+        });
     </script>
 </Layout>

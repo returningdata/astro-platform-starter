@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
-import { logUserManagement, extractUserFromHeaders } from '../../utils/discord-webhook';
+import { logUserManagement, extractUserFromSession, checkPermission } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -102,7 +102,23 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
-    const performedBy = extractUserFromHeaders(request);
+    // Validate session server-side
+    const performedBy = await extractUserFromSession(request);
+
+    if (!performedBy) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
+    // Check if user has user-management permission
+    if (!checkPermission(performedBy, 'user-management')) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
 
     try {
         const body = await request.json();

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
-import { extractUserFromHeaders, sendAuditLog } from '../../utils/discord-webhook';
+import { extractUserFromSession, sendAuditLog, checkPermission } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -330,7 +330,8 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
     try {
         const data = await request.json();
-        const user = extractUserFromHeaders(request);
+        // Get user info if available (optional for public form submissions)
+        const user = await extractUserFromSession(request);
 
         // Get existing reports to generate unique ID based on officer's case count
         const existingReports = await getArrestReports();
@@ -417,9 +418,26 @@ export const POST: APIRoute = async ({ request }) => {
  * PUT - Update arrest report (for approve/deny actions)
  */
 export const PUT: APIRoute = async ({ request }) => {
+    // Validate session server-side for admin actions
+    const user = await extractUserFromSession(request);
+
+    if (!user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
+    // Check if user has arrest-reports permission
+    if (!checkPermission(user, 'arrest-reports')) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
     try {
         const data = await request.json();
-        const user = extractUserFromHeaders(request);
 
         if (!data.id) {
             return new Response(JSON.stringify({

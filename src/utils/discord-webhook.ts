@@ -315,8 +315,11 @@ export async function sendAuditLog(options: AuditLogOptions): Promise<void> {
     }
 }
 
+import { validateSession, hasPermission, type AdminUser } from './session';
+
 /**
  * Helper function to extract user info from request headers
+ * @deprecated Use extractUserFromSession for secure authentication
  */
 export function extractUserFromHeaders(request: Request): UserInfo {
     const userHeader = request.headers.get('X-Admin-User');
@@ -338,6 +341,21 @@ export function extractUserFromHeaders(request: Request): UserInfo {
     }
 
     return user;
+}
+
+/**
+ * Securely extract and validate user from session cookie
+ * Returns null if not authenticated
+ */
+export async function extractUserFromSession(request: Request): Promise<AdminUser | null> {
+    return await validateSession(request);
+}
+
+/**
+ * Check if a user has the required permission
+ */
+export function checkPermission(user: AdminUser | null, permission: string): boolean {
+    return hasPermission(user, permission);
 }
 
 /**

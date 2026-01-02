@@ -160,21 +160,38 @@ import Layout from '../../layouts/Layout.astro';
     </div>
 
     <script type="module">
-        // Check permissions
-        const adminUserData = sessionStorage.getItem('adminUser');
-        if (!adminUserData) {
-            window.location.href = '/admin/login';
-        }
+        let currentUser = null;
 
-        const currentUser = adminUserData ? JSON.parse(adminUserData) : null;
+        async function validateSessionAndPermissions() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
 
-        // Only super_admin can access user management
-        if (!currentUser || currentUser.role !== 'super_admin') {
-            document.getElementById('usersContainer').classList.add('hidden');
-            document.getElementById('accessDenied').classList.remove('hidden');
-            document.querySelector('.flex.gap-4').classList.add('hidden');
-        } else {
-            loadUsers();
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+
+                currentUser = data.user;
+
+                // Only super_admin can access user management
+                if (!currentUser || currentUser.role !== 'super_admin') {
+                    document.getElementById('usersContainer').classList.add('hidden');
+                    document.getElementById('accessDenied').classList.remove('hidden');
+                    document.querySelector('.flex.gap-4').classList.add('hidden');
+                    return false;
+                } else {
+                    loadUsers();
+                    return true;
+                }
+            } catch (error) {
+                console.error('Session validation error:', error);
+                window.location.href = '/admin/login';
+                return false;
+            }
         }
 
         let usersData = [];
@@ -308,9 +325,9 @@ import Layout from '../../layouts/Layout.astro';
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentUser.id}`,
-                        'X-Admin-User': JSON.stringify(currentUser)
+                        'Authorization': `Bearer ${currentUser.id}`
                     },
+                    credentials: 'include',
                     body: JSON.stringify({
                         action: 'delete',
                         userId
@@ -427,9 +444,9 @@ import Layout from '../../layouts/Layout.astro';
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentUser.id}`,
-                        'X-Admin-User': JSON.stringify(currentUser)
+                        'Authorization': `Bearer ${currentUser.id}`
                     },
+                    credentials: 'include',
                     body: JSON.stringify({
                         action: userId ? 'update' : 'create',
                         user: userData,
@@ -450,5 +467,8 @@ import Layout from '../../layouts/Layout.astro';
                 showStatus('Failed to save user', 'error');
             }
         });
+
+        // Initialize
+        validateSessionAndPermissions();
     </script>
 </Layout>

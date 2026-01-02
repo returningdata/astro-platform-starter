@@ -71,8 +71,22 @@ import Layout from '../../layouts/Layout.astro';
         const errorMessage = document.getElementById('errorMessage');
         const submitBtn = document.getElementById('submitBtn');
 
-        // Clear any existing session on login page load
-        sessionStorage.removeItem('adminUser');
+        // Check if already logged in via server-side session
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.authenticated) {
+                    window.location.href = '/admin';
+                }
+            } catch (error) {
+                // Not authenticated, stay on login page
+            }
+        }
+        checkSession();
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -90,14 +104,15 @@ import Layout from '../../layouts/Layout.astro';
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include'
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    // Store user data in session storage
-                    sessionStorage.setItem('adminUser', JSON.stringify(data.user));
+                    // Session is stored server-side via HTTP-only cookie
+                    // Redirect to admin dashboard
                     window.location.href = '/admin';
                 } else {
                     errorMessage.textContent = data.error || 'Login failed';

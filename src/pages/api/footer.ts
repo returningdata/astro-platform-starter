@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
-import { logDataSave, extractUserFromHeaders, type EntityType } from '../../utils/discord-webhook';
+import { logDataSave, extractUserFromSession, checkPermission, type EntityType } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -59,7 +59,23 @@ export const GET: APIRoute = async () => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
-    const user = extractUserFromHeaders(request);
+    // Validate session server-side
+    const user = await extractUserFromSession(request);
+
+    if (!user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+
+    // Check if user has footer permission (super_admin only)
+    if (!checkPermission(user, 'footer')) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
 
     try {
         // Get current data for comparison

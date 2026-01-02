@@ -1,10 +1,11 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
 import { logLogin } from '../../../utils/discord-webhook';
+import { createSession, type AdminUser } from '../../../utils/session';
 
 export const prerender = false;
 
-interface AdminUser {
+interface StoredAdminUser {
     id: string;
     username: string;
     password: string;
@@ -28,7 +29,7 @@ const ALL_PERMISSIONS = [
 ];
 
 // Default users if no users exist in storage
-const defaultUsers: AdminUser[] = [
+const defaultUsers: StoredAdminUser[] = [
     {
         id: 'admin-default',
         username: 'DPPD_ADMIN',
@@ -51,7 +52,7 @@ const defaultUsers: AdminUser[] = [
     }
 ];
 
-async function getUsersData(): Promise<AdminUser[]> {
+async function getUsersData(): Promise<StoredAdminUser[]> {
     try {
         const store = getStore({ name: 'admin-users', consistency: 'strong' });
         const data = await store.get('users', { type: 'json' });
@@ -110,20 +111,27 @@ export const POST: APIRoute = async ({ request }) => {
                 true
             );
 
-            // Return user info (without password) for client-side storage
+            // Create secure server-side session with HTTP-only cookie
+            const sessionUser: AdminUser = {
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                role: user.role,
+                permissions: user.permissions
+            };
+            const { cookie } = await createSession(sessionUser);
+
+            // Return success response with secure session cookie
             return new Response(JSON.stringify({
                 success: true,
                 message: 'Login successful',
-                user: {
-                    id: user.id,
-                    username: user.username,
-                    displayName: user.displayName,
-                    role: user.role,
-                    permissions: user.permissions
-                }
+                user: sessionUser
             }), {
                 status: 200,
-                headers: { 'Content-Type': 'application/json' }
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Set-Cookie': cookie
+                }
             });
         }
 

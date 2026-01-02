@@ -41,20 +41,37 @@ import Layout from '../../layouts/Layout.astro';
     </div>
 
     <script type="module">
-        // Check permissions
-        const adminUserData = sessionStorage.getItem('adminUser');
-        if (!adminUserData) {
-            window.location.href = '/admin/login';
-        }
+        let currentUser = null;
 
-        const currentUser = adminUserData ? JSON.parse(adminUserData) : null;
+        async function validateSessionAndPermissions() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
 
-        // Only super_admin can access webhook settings
-        if (!currentUser || currentUser.role !== 'super_admin') {
-            document.getElementById('settingsContainer').classList.add('hidden');
-            document.getElementById('accessDenied').classList.remove('hidden');
-        } else {
-            loadSettings();
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+
+                currentUser = data.user;
+
+                // Only super_admin can access webhook settings
+                if (!currentUser || currentUser.role !== 'super_admin') {
+                    document.getElementById('settingsContainer').classList.add('hidden');
+                    document.getElementById('accessDenied').classList.remove('hidden');
+                    return false;
+                } else {
+                    loadSettings();
+                    return true;
+                }
+            } catch (error) {
+                console.error('Session validation error:', error);
+                window.location.href = '/admin/login';
+                return false;
+            }
         }
 
         let webhookSettings = {
@@ -76,9 +93,7 @@ import Layout from '../../layouts/Layout.astro';
         async function loadSettings() {
             try {
                 const response = await fetch('/api/webhook-settings', {
-                    headers: {
-                        'X-Admin-User': JSON.stringify(currentUser)
-                    }
+                    credentials: 'include'
                 });
                 const data = await response.json();
                 if (data.settings) {
@@ -267,9 +282,9 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/webhook-settings', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-User': JSON.stringify(currentUser)
+                        'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify({ action: 'send_now' })
                 });
 
@@ -300,9 +315,9 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/webhook-settings', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-User': JSON.stringify(currentUser)
+                        'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify({ action: 'clear_message' })
                 });
 
@@ -336,9 +351,9 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/webhook-settings', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-User': JSON.stringify(currentUser)
+                        'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify({
                         action: 'update_url',
                         discordWebhookUrl: url
@@ -367,9 +382,9 @@ import Layout from '../../layouts/Layout.astro';
                 const response = await fetch('/api/webhook-settings', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-User': JSON.stringify(currentUser)
+                        'Content-Type': 'application/json'
                     },
+                    credentials: 'include',
                     body: JSON.stringify({
                         action: 'update_url',
                         discordWebhookUrl: ''
@@ -387,5 +402,8 @@ import Layout from '../../layouts/Layout.astro';
                 showStatus('Failed to clear URL', 'error');
             }
         }
+
+        // Initialize
+        validateSessionAndPermissions();
     </script>
 </Layout>

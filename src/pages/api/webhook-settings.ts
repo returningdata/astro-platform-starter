@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { extractUserFromSession } from '../../utils/discord-webhook';
 
 export const prerender = false;
 
@@ -47,24 +48,23 @@ async function saveWebhookSettings(settings: WebhookSettings): Promise<void> {
 }
 
 // Verify super admin authorization
-function verifySuperAdmin(request: Request): { valid: boolean; error?: string } {
+async function verifySuperAdmin(request: Request): Promise<{ valid: boolean; error?: string }> {
     try {
-        const adminUserHeader = request.headers.get('X-Admin-User');
-        if (!adminUserHeader) {
-            return { valid: false, error: 'No admin user header' };
+        const user = await extractUserFromSession(request);
+        if (!user) {
+            return { valid: false, error: 'Not authenticated' };
         }
-        const adminUser = JSON.parse(adminUserHeader);
-        if (adminUser.role !== 'super_admin') {
+        if (user.role !== 'super_admin') {
             return { valid: false, error: 'Super admin access required' };
         }
         return { valid: true };
     } catch {
-        return { valid: false, error: 'Invalid admin user header' };
+        return { valid: false, error: 'Session validation failed' };
     }
 }
 
 export const GET: APIRoute = async ({ request }) => {
-    const auth = verifySuperAdmin(request);
+    const auth = await verifySuperAdmin(request);
     if (!auth.valid) {
         return new Response(JSON.stringify({ success: false, error: auth.error }), {
             status: 403,
@@ -92,7 +92,7 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
-    const auth = verifySuperAdmin(request);
+    const auth = await verifySuperAdmin(request);
     if (!auth.valid) {
         return new Response(JSON.stringify({ success: false, error: auth.error }), {
             status: 403,

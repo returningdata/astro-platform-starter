@@ -8,7 +8,7 @@ import Layout from '../../layouts/Layout.astro';
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
                 <h1 class="text-4xl md:text-5xl font-bold mb-2">Webhook Settings</h1>
-                <p class="text-white/70">Configure Discord webhook for site status updates</p>
+                <p class="text-white/70">Configure Discord webhooks for site status and audit logging</p>
             </div>
             <div class="flex gap-4">
                 <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
@@ -36,6 +36,13 @@ import Layout from '../../layouts/Layout.astro';
         <div id="settingsContainer" class="space-y-6">
             <div class="text-center py-12 text-white/60">
                 Loading settings...
+            </div>
+        </div>
+
+        <!-- Audit Log Settings Container -->
+        <div id="auditLogContainer" class="space-y-6 hidden">
+            <div class="text-center py-12 text-white/60">
+                Loading audit log settings...
             </div>
         </div>
     </div>
@@ -82,6 +89,12 @@ import Layout from '../../layouts/Layout.astro';
             discordWebhookUrlMasked: ''
         };
 
+        let auditLogSettings = {
+            discordWebhookUrl: '',
+            enabled: true,
+            discordWebhookUrlMasked: ''
+        };
+
         function showStatus(message, type = 'success') {
             const statusEl = document.getElementById('statusMessage');
             statusEl.textContent = message;
@@ -92,6 +105,7 @@ import Layout from '../../layouts/Layout.astro';
 
         async function loadSettings() {
             try {
+                // Load site status webhook settings
                 const response = await fetch('/api/webhook-settings', {
                     credentials: 'include'
                 });
@@ -100,6 +114,16 @@ import Layout from '../../layouts/Layout.astro';
                     webhookSettings = data.settings;
                 }
                 renderSettings();
+
+                // Load audit log webhook settings
+                const auditResponse = await fetch('/api/audit-log-settings', {
+                    credentials: 'include'
+                });
+                const auditData = await auditResponse.json();
+                if (auditData.settings) {
+                    auditLogSettings = auditData.settings;
+                }
+                renderAuditLogSettings();
             } catch (error) {
                 console.error('Failed to load settings:', error);
                 showStatus('Failed to load webhook settings', 'error');
@@ -394,6 +418,201 @@ import Layout from '../../layouts/Layout.astro';
                 const result = await response.json();
                 if (result.success) {
                     showStatus('Webhook URL cleared');
+                    loadSettings();
+                } else {
+                    showStatus(result.error || 'Failed to clear URL', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to clear URL', 'error');
+            }
+        }
+
+        // ========== AUDIT LOG WEBHOOK FUNCTIONS ==========
+
+        function renderAuditLogSettings() {
+            const container = document.getElementById('auditLogContainer');
+            container.classList.remove('hidden');
+            const isConfigured = auditLogSettings.discordWebhookUrl && auditLogSettings.discordWebhookUrl !== '';
+
+            container.innerHTML = `
+                <!-- Section Header -->
+                <div class="border-t border-white/20 pt-8 mt-8">
+                    <h2 class="text-3xl font-bold mb-2 flex items-center gap-3">
+                        <span class="text-3xl">📝</span>
+                        Audit Log Webhook
+                    </h2>
+                    <p class="text-white/60 mb-6">Configure Discord webhook for logging admin actions (logins, data changes, user management, etc.)</p>
+                </div>
+
+                <!-- Audit Log Webhook URL Configuration -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-3">
+                        <span class="text-xl">🔗</span>
+                        Audit Log Discord Webhook URL
+                    </h3>
+                    <p class="text-white/60 mb-4">Enter the Discord webhook URL where audit logs (login attempts, data changes, user management) will be posted.</p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Webhook URL</label>
+                            <input
+                                type="url"
+                                id="auditLogWebhookUrl"
+                                placeholder="https://discord.com/api/webhooks/..."
+                                class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
+                            >
+                            <p class="text-xs text-white/50 mt-2">
+                                ${isConfigured ? `Current: ${auditLogSettings.discordWebhookUrlMasked}` : 'No webhook URL configured'}
+                            </p>
+                        </div>
+
+                        <div class="flex gap-4">
+                            <button id="saveAuditLogUrlBtn" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                                Save URL
+                            </button>
+                            <button id="testAuditLogBtn" class="px-6 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors font-semibold ${!isConfigured ? 'opacity-50 cursor-not-allowed' : ''}">
+                                Test Webhook
+                            </button>
+                            <button id="clearAuditLogUrlBtn" class="px-6 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors ${!isConfigured ? 'opacity-50 cursor-not-allowed' : ''}">
+                                Clear URL
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Log Status -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-3">
+                        <span class="text-xl">📊</span>
+                        Audit Log Status
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-slate-700/30 rounded-lg p-4">
+                            <p class="text-sm text-white/60 mb-1">Status</p>
+                            <p class="text-xl font-bold ${isConfigured ? 'text-green-400' : 'text-yellow-400'}">
+                                ${isConfigured ? '✅ Configured' : '⚠️ Not Configured'}
+                            </p>
+                        </div>
+                        <div class="bg-slate-700/30 rounded-lg p-4">
+                            <p class="text-sm text-white/60 mb-1">Logging</p>
+                            <p class="text-xl font-bold ${auditLogSettings.enabled && isConfigured ? 'text-green-400' : 'text-gray-400'}">
+                                ${auditLogSettings.enabled && isConfigured ? '🟢 Active' : '⚪ Inactive'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Box -->
+                <div class="bg-orange-500/10 border border-orange-500/30 rounded-lg p-6">
+                    <h3 class="text-lg font-bold mb-3 text-orange-300 flex items-center gap-2">
+                        <span class="text-lg">📋</span>
+                        What Gets Logged
+                    </h3>
+                    <ul class="space-y-2 text-white/70 text-sm">
+                        <li>🔐 <strong>Login Attempts:</strong> Successful and failed login attempts with username and status.</li>
+                        <li>👥 <strong>User Management:</strong> Creating, updating, and deleting admin accounts.</li>
+                        <li>💾 <strong>Data Changes:</strong> Modifications to warehouse, events, uniforms, resources, department data, subdivisions, and more.</li>
+                        <li>📊 <strong>Detailed Tracking:</strong> Each log includes tracking ID, timestamp, user info, and specific changes made.</li>
+                    </ul>
+                </div>
+            `;
+
+            // Attach event listeners
+            document.getElementById('saveAuditLogUrlBtn').addEventListener('click', saveAuditLogUrl);
+            document.getElementById('testAuditLogBtn').addEventListener('click', testAuditLogWebhook);
+            document.getElementById('clearAuditLogUrlBtn').addEventListener('click', clearAuditLogUrl);
+        }
+
+        async function saveAuditLogUrl() {
+            const urlInput = document.getElementById('auditLogWebhookUrl');
+            const url = urlInput.value.trim();
+
+            if (!url) {
+                showStatus('Please enter a webhook URL', 'error');
+                return;
+            }
+
+            if (!url.startsWith('https://discord.com/api/webhooks/')) {
+                showStatus('Invalid Discord webhook URL format', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/audit-log-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        action: 'update_url',
+                        discordWebhookUrl: url
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Audit log webhook URL saved successfully');
+                    urlInput.value = '';
+                    loadSettings();
+                } else {
+                    showStatus(result.error || 'Failed to save URL', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to save URL', 'error');
+            }
+        }
+
+        async function testAuditLogWebhook() {
+            if (!auditLogSettings.discordWebhookUrl) {
+                showStatus('No webhook URL configured', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Sending test message...');
+                const response = await fetch('/api/audit-log-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ action: 'test' })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Test message sent successfully!');
+                } else {
+                    showStatus(result.error || 'Failed to send test message', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to send test message', 'error');
+            }
+        }
+
+        async function clearAuditLogUrl() {
+            if (!confirm('Are you sure you want to clear the audit log webhook URL? This will disable audit logging to Discord.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/audit-log-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        action: 'update_url',
+                        discordWebhookUrl: ''
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Audit log webhook URL cleared');
                     loadSettings();
                 } else {
                     showStatus(result.error || 'Failed to clear URL', 'error');

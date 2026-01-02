@@ -5,17 +5,97 @@
  * Logs include: user info, timestamps, action types, and detailed change tracking.
  */
 
+import { getStore } from '@netlify/blobs';
+
+// Blob store name for audit log settings
+const AUDIT_LOG_STORE_NAME = 'audit-log-settings';
+
+// Interface for audit log settings stored in blob
+interface AuditLogSettings {
+    discordWebhookUrl: string;
+    enabled: boolean;
+}
+
+// Cache for webhook URL to avoid repeated blob reads
+let cachedWebhookUrl: string | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL = 60000; // 1 minute cache
+
 /**
- * Get Discord webhook URL from environment variable
+ * Get audit log settings from blob store
+ */
+async function getAuditLogSettings(): Promise<AuditLogSettings> {
+    try {
+        const store = getStore({ name: AUDIT_LOG_STORE_NAME, consistency: 'strong' });
+        const data = await store.get('settings', { type: 'json' }) as AuditLogSettings | null;
+        if (data) {
+            return data;
+        }
+        return {
+            discordWebhookUrl: '',
+            enabled: true
+        };
+    } catch (error) {
+        console.error('Error fetching audit log settings:', error);
+        return {
+            discordWebhookUrl: '',
+            enabled: true
+        };
+    }
+}
+
+/**
+ * Save audit log settings to blob store
+ */
+export async function saveAuditLogSettings(settings: AuditLogSettings): Promise<void> {
+    try {
+        const store = getStore({ name: AUDIT_LOG_STORE_NAME, consistency: 'strong' });
+        await store.setJSON('settings', settings);
+        // Clear cache so next request gets fresh data
+        cachedWebhookUrl = null;
+        cacheTimestamp = 0;
+    } catch (error) {
+        console.error('Error saving audit log settings:', error);
+    }
+}
+
+/**
+ * Get Discord webhook URL from blob store (with caching) or fall back to environment variable
  * SECURITY: Never hardcode webhook URLs in source code
  */
-function getDiscordWebhookUrl(): string | null {
+async function getDiscordWebhookUrlAsync(): Promise<string | null> {
+    // Check cache first
+    if (cachedWebhookUrl && (Date.now() - cacheTimestamp) < CACHE_TTL) {
+        return cachedWebhookUrl;
+    }
+
+    // Try to get from blob store first
+    try {
+        const settings = await getAuditLogSettings();
+        if (settings.discordWebhookUrl && settings.enabled) {
+            // Validate URL format
+            try {
+                const parsed = new URL(settings.discordWebhookUrl);
+                if (parsed.hostname.includes('discord.com')) {
+                    cachedWebhookUrl = settings.discordWebhookUrl;
+                    cacheTimestamp = Date.now();
+                    return settings.discordWebhookUrl;
+                }
+            } catch {
+                console.error('Audit log webhook URL in blob store is not a valid URL.');
+            }
+        }
+    } catch (error) {
+        console.error('Error reading audit log settings from blob:', error);
+    }
+
+    // Fall back to environment variable
     const url = typeof Netlify !== 'undefined'
         ? Netlify.env.get('DISCORD_WEBHOOK_URL')
         : process.env.DISCORD_WEBHOOK_URL;
 
     if (!url) {
-        console.warn('DISCORD_WEBHOOK_URL environment variable not set. Audit logging to Discord is disabled.');
+        console.warn('DISCORD_WEBHOOK_URL not configured. Audit logging to Discord is disabled.');
         return null;
     }
 
@@ -30,7 +110,48 @@ function getDiscordWebhookUrl(): string | null {
         return null;
     }
 
+    cachedWebhookUrl = url;
+    cacheTimestamp = Date.now();
     return url;
+}
+
+/**
+ * Synchronous getter for backward compatibility - checks cache only
+ * @deprecated Use getDiscordWebhookUrlAsync for new code
+ */
+function getDiscordWebhookUrl(): string | null {
+    // Return cached value if available
+    if (cachedWebhookUrl && (Date.now() - cacheTimestamp) < CACHE_TTL) {
+        return cachedWebhookUrl;
+    }
+
+    // Fall back to environment variable for synchronous access
+    const url = typeof Netlify !== 'undefined'
+        ? Netlify.env.get('DISCORD_WEBHOOK_URL')
+        : process.env.DISCORD_WEBHOOK_URL;
+
+    if (!url) {
+        return null;
+    }
+
+    // Validate URL format
+    try {
+        const parsed = new URL(url);
+        if (!parsed.hostname.includes('discord.com')) {
+            return null;
+        }
+    } catch {
+        return null;
+    }
+
+    return url;
+}
+
+/**
+ * Get current audit log settings (for API use)
+ */
+export async function getAuditLogSettingsForApi(): Promise<AuditLogSettings> {
+    return await getAuditLogSettings();
 }
 
 export type ActionType = 'LOGIN' | 'LOGOUT' | 'CREATE' | 'UPDATE' | 'DELETE' | 'SAVE';
@@ -325,7 +446,8 @@ export async function sendAuditLog(options: AuditLogOptions): Promise<void> {
 
     // Send to Discord
     try {
-        const webhookUrl = getDiscordWebhookUrl();
+        // Use async getter to fetch from blob store or env var
+        const webhookUrl = await getDiscordWebhookUrlAsync();
         if (!webhookUrl) {
             // Webhook not configured, skip sending
             return;

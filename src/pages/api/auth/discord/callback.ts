@@ -148,12 +148,15 @@ export const GET: APIRoute = async ({ request }) => {
         const clearStateCookie = `${STATE_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
 
         // Redirect to admin dashboard with session cookie
+        // Use Headers object to properly set multiple Set-Cookie headers
+        const headers = new Headers();
+        headers.set('Location', '/admin');
+        headers.append('Set-Cookie', clearStateCookie);
+        headers.append('Set-Cookie', sessionCookie);
+
         return new Response(null, {
             status: 302,
-            headers: {
-                'Location': '/admin',
-                'Set-Cookie': [clearStateCookie, sessionCookie].join(', ')
-            }
+            headers
         });
     } catch (error) {
         console.error('Discord OAuth callback error:', error);

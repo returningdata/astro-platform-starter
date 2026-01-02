@@ -33,7 +33,12 @@
 
 # Required environment variables to set in Netlify UI:
 #
+# SESSION_SECRET          - A random string of at least 32 characters for secure session management (REQUIRED)
 # DISCORD_CLIENT_ID       - Your Discord application's Client ID (from OAuth2 page)
 # DISCORD_CLIENT_SECRET   - Your Discord application's Client Secret (from OAuth2 page)
 # DISCORD_BOT_TOKEN       - Your Discord bot token (from Bot page)
 # DISCORD_GUILD_ID        - Your Discord server ID (right-click server > Copy ID)
+#
+# To generate a secure SESSION_SECRET, you can use:
+#   openssl rand -base64 32
+# or any password generator that produces at least 32 random characters.

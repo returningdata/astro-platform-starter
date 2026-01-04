@@ -1,11 +1,9 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
 import { extractUserFromSession, sendAuditLog, checkPermission } from '../../utils/discord-webhook';
+import { getArrestReportsWebhookSettings } from './arrest-reports-webhook-settings';
 
 export const prerender = false;
-
-// Discord webhook URL for arrest reports
-const ARREST_REPORTS_WEBHOOK_URL = 'https://discord.com/api/webhooks/1363111869274919052/B6yYvryNHl9pCRBqX5JkHe0YHxMfU2fNkeeRWtuThNJBxtig0VJUTaJpQBF3BCQAYK-e';
 
 export interface ArrestReport {
     id: string;
@@ -106,6 +104,15 @@ function generateId(officerName: string, existingReports: ArrestReport[]): strin
  */
 async function removeApprovalEmbed(messageId: string, report: ArrestReport): Promise<boolean> {
     try {
+        // Get the webhook URL from settings
+        const webhookSettings = await getArrestReportsWebhookSettings();
+        const webhookUrl = webhookSettings.discordWebhookUrl;
+
+        if (!webhookUrl) {
+            console.error('No webhook URL configured for arrest reports');
+            return false;
+        }
+
         // Build the embeds without the approval embed
         const embeds = buildArrestReportEmbeds(report);
 
@@ -114,7 +121,7 @@ async function removeApprovalEmbed(messageId: string, report: ArrestReport): Pro
             embeds
         };
 
-        const response = await fetch(`${ARREST_REPORTS_WEBHOOK_URL}/messages/${messageId}`, {
+        const response = await fetch(`${webhookUrl}/messages/${messageId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -244,6 +251,15 @@ function getSiteUrl(): string {
  */
 async function sendToDiscordWithApproveButton(report: ArrestReport): Promise<string | null> {
     try {
+        // Get the webhook URL from settings
+        const webhookSettings = await getArrestReportsWebhookSettings();
+        const webhookUrl = webhookSettings.discordWebhookUrl;
+
+        if (!webhookUrl) {
+            console.log('No webhook URL configured for arrest reports, skipping Discord notification');
+            return null;
+        }
+
         const embeds = buildArrestReportEmbeds(report);
         const siteUrl = getSiteUrl();
         const approveUrl = `${siteUrl}/api/arrest-approve?id=${encodeURIComponent(report.id)}`;
@@ -270,7 +286,7 @@ async function sendToDiscordWithApproveButton(report: ArrestReport): Promise<str
             embeds
         };
 
-        const response = await fetch(`${ARREST_REPORTS_WEBHOOK_URL}?wait=true`, {
+        const response = await fetch(`${webhookUrl}?wait=true`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

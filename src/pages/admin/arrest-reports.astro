@@ -24,6 +24,40 @@ import Layout from '../../layouts/Layout.astro';
         <div id="statusMessage" class="hidden rounded-lg p-4 border">
         </div>
 
+        <!-- Webhook Configuration Section -->
+        <div id="webhookSection" class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-3">
+                <span class="text-xl">🔗</span>
+                Discord Webhook Configuration
+            </h2>
+            <p class="text-white/60 mb-4">Configure the Discord webhook URL where new arrest reports will be posted.</p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Webhook URL</label>
+                    <input
+                        type="url"
+                        id="webhookUrl"
+                        placeholder="https://discord.com/api/webhooks/..."
+                        class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm"
+                    >
+                    <p id="currentWebhookUrl" class="text-xs text-white/50 mt-2">Loading current configuration...</p>
+                </div>
+
+                <div class="flex flex-wrap gap-4">
+                    <button id="saveWebhookBtn" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                        Save URL
+                    </button>
+                    <button id="testWebhookBtn" class="px-6 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors font-semibold">
+                        Test Webhook
+                    </button>
+                    <button id="clearWebhookBtn" class="px-6 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                        Clear URL
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Statistics -->
         <div id="statsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
@@ -81,6 +115,11 @@ import Layout from '../../layouts/Layout.astro';
 
     <script type="module">
         let adminUser = null;
+        let webhookSettings = {
+            discordWebhookUrl: '',
+            discordWebhookUrlMasked: '',
+            enabled: true
+        };
 
         async function validateSessionAndPermissions() {
             try {
@@ -123,6 +162,138 @@ import Layout from '../../layouts/Layout.astro';
             if (adminUser.role === 'super_admin') return true;
             return adminUser.permissions && adminUser.permissions.includes('arrest-reports');
         }
+
+        // ========== WEBHOOK CONFIGURATION FUNCTIONS ==========
+
+        async function loadWebhookSettings() {
+            try {
+                const response = await fetch('/api/arrest-reports-webhook-settings', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.settings) {
+                    webhookSettings = data.settings;
+                }
+                updateWebhookDisplay();
+            } catch (error) {
+                console.error('Failed to load webhook settings:', error);
+            }
+        }
+
+        function updateWebhookDisplay() {
+            const currentUrlEl = document.getElementById('currentWebhookUrl');
+            if (currentUrlEl) {
+                if (webhookSettings.discordWebhookUrl && webhookSettings.discordWebhookUrl !== '') {
+                    currentUrlEl.textContent = `Current: ${webhookSettings.discordWebhookUrlMasked}`;
+                } else {
+                    currentUrlEl.textContent = 'No webhook URL configured';
+                }
+            }
+        }
+
+        async function saveWebhookUrl() {
+            const urlInput = document.getElementById('webhookUrl');
+            const url = urlInput.value.trim();
+
+            if (!url) {
+                showStatus('Please enter a webhook URL', 'error');
+                return;
+            }
+
+            if (!url.startsWith('https://discord.com/api/webhooks/')) {
+                showStatus('Invalid Discord webhook URL format', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/arrest-reports-webhook-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        action: 'update_url',
+                        discordWebhookUrl: url
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Webhook URL saved successfully');
+                    urlInput.value = '';
+                    loadWebhookSettings();
+                } else {
+                    showStatus(result.error || 'Failed to save URL', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to save URL', 'error');
+            }
+        }
+
+        async function testWebhook() {
+            if (!webhookSettings.discordWebhookUrl || webhookSettings.discordWebhookUrl === '') {
+                showStatus('No webhook URL configured', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Sending test message...');
+                const response = await fetch('/api/arrest-reports-webhook-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ action: 'test' })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Test message sent successfully!');
+                } else {
+                    showStatus(result.error || 'Failed to send test message', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to send test message', 'error');
+            }
+        }
+
+        async function clearWebhookUrl() {
+            if (!confirm('Are you sure you want to clear the webhook URL? New arrest reports will no longer be posted to Discord.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/arrest-reports-webhook-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        action: 'update_url',
+                        discordWebhookUrl: ''
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showStatus('Webhook URL cleared');
+                    loadWebhookSettings();
+                } else {
+                    showStatus(result.error || 'Failed to clear URL', 'error');
+                }
+            } catch (error) {
+                showStatus('Failed to clear URL', 'error');
+            }
+        }
+
+        function initWebhookListeners() {
+            const saveBtn = document.getElementById('saveWebhookBtn');
+            const testBtn = document.getElementById('testWebhookBtn');
+            const clearBtn = document.getElementById('clearWebhookBtn');
+
+            if (saveBtn) saveBtn.addEventListener('click', saveWebhookUrl);
+            if (testBtn) testBtn.addEventListener('click', testWebhook);
+            if (clearBtn) clearBtn.addEventListener('click', clearWebhookUrl);
+        }
+
+        // ========== END WEBHOOK CONFIGURATION FUNCTIONS ==========
 
         const statusColors = {
             open: { bg: 'bg-orange-500/20', border: 'border-orange-500/30', text: 'text-orange-400' },
@@ -473,6 +644,8 @@ import Layout from '../../layouts/Layout.astro';
         validateSessionAndPermissions().then(valid => {
             if (valid) {
                 loadReports();
+                loadWebhookSettings();
+                initWebhookListeners();
             }
         });
     </script>

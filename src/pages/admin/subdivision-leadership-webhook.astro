@@ -43,6 +43,92 @@ import Layout from '../../layouts/Layout.astro';
             </div>
         </div>
 
+        <!-- Webhook Configuration Card (Super Admin Only) -->
+        <div id="configSection" class="hidden bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-green-400">Webhook Configuration</h2>
+                    <p class="text-white/60">Customize the webhook message content</p>
+                </div>
+            </div>
+
+            <form id="configForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-1">Discord Webhook URL</label>
+                    <input type="text" id="webhookUrl"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-green-500"
+                        placeholder="https://discord.com/api/webhooks/...">
+                    <p class="text-xs text-white/50 mt-1">The Discord webhook URL to send messages to</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-1">Logo URL</label>
+                    <input type="text" id="logoUrl"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-green-500"
+                        placeholder="https://delperro.netlify.app/images/DPPD_Seal_3.png">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">Overseer Title</label>
+                        <input type="text" id="overseerTitle"
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-green-500"
+                            placeholder="Subdivision Overseer">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">Assistant Head Title</label>
+                        <input type="text" id="assistantHeadTitle"
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-green-500"
+                            placeholder="Assistant Head of Subdivisions">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">Leadership Title</label>
+                        <input type="text" id="leadershipTitle"
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-green-500"
+                            placeholder="Subdivision Leadership">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">Footer Title</label>
+                        <input type="text" id="footerTitle"
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-green-500"
+                            placeholder="Del Perro Police Department">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">Footer Text</label>
+                        <input type="text" id="footerText"
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-green-500"
+                            placeholder="DPPD Subdivision Leadership | Manual Updates">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-1">Footer Description</label>
+                    <input type="text" id="footerDescription"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-green-500"
+                        placeholder="*Subdivision Leadership*">
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" id="saveConfigBtn"
+                        class="px-6 py-2 bg-green-500 hover:bg-green-600 rounded-lg transition-colors font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Save Configuration
+                    </button>
+                </div>
+            </form>
+        </div>
+
         <!-- Information Card -->
         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
             <div class="flex items-center gap-4 mb-6">
@@ -153,6 +239,7 @@ import Layout from '../../layouts/Layout.astro';
 
     <script type="module">
         let adminUser = null;
+        let webhookConfig = null;
 
         async function validateSessionAndPermissions() {
             try {
@@ -181,6 +268,12 @@ import Layout from '../../layouts/Layout.astro';
                         </div>
                     `;
                     return false;
+                }
+
+                // Show config section for super admins
+                if (adminUser.role === 'super_admin') {
+                    document.getElementById('configSection').classList.remove('hidden');
+                    await loadWebhookConfig();
                 }
 
                 return true;
@@ -224,6 +317,33 @@ import Layout from '../../layouts/Layout.astro';
             });
         }
 
+        async function loadWebhookConfig() {
+            try {
+                const response = await fetch('/api/webhook-config');
+                const data = await response.json();
+
+                if (data.success) {
+                    webhookConfig = data.config.subdivisionLeadership;
+                    populateConfigForm();
+                }
+            } catch (error) {
+                console.error('Error loading webhook config:', error);
+            }
+        }
+
+        function populateConfigForm() {
+            if (!webhookConfig) return;
+
+            document.getElementById('webhookUrl').value = webhookConfig.webhookUrl || '';
+            document.getElementById('logoUrl').value = webhookConfig.logoUrl || '';
+            document.getElementById('overseerTitle').value = webhookConfig.overseerTitle || '';
+            document.getElementById('assistantHeadTitle').value = webhookConfig.assistantHeadTitle || '';
+            document.getElementById('leadershipTitle').value = webhookConfig.leadershipTitle || '';
+            document.getElementById('footerTitle').value = webhookConfig.footerTitle || '';
+            document.getElementById('footerText').value = webhookConfig.footerText || '';
+            document.getElementById('footerDescription').value = webhookConfig.footerDescription || '';
+        }
+
         async function loadWebhookStatus() {
             const container = document.getElementById('webhookStatus');
             try {
@@ -265,6 +385,44 @@ import Layout from '../../layouts/Layout.astro';
                 `;
             }
         }
+
+        // Config form submit handler
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const config = {
+                webhookUrl: document.getElementById('webhookUrl').value.trim(),
+                logoUrl: document.getElementById('logoUrl').value.trim(),
+                overseerTitle: document.getElementById('overseerTitle').value.trim(),
+                assistantHeadTitle: document.getElementById('assistantHeadTitle').value.trim(),
+                leadershipTitle: document.getElementById('leadershipTitle').value.trim(),
+                footerTitle: document.getElementById('footerTitle').value.trim(),
+                footerText: document.getElementById('footerText').value.trim(),
+                footerDescription: document.getElementById('footerDescription').value.trim()
+            };
+
+            try {
+                const response = await fetch('/api/webhook-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'subdivisionLeadership',
+                        config
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('Configuration saved successfully');
+                } else {
+                    showStatus(data.error || 'Failed to save configuration', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving config:', error);
+                showStatus('Failed to save configuration', 'error');
+            }
+        });
 
         // Force update button handler
         document.getElementById('forceUpdateBtn').addEventListener('click', async () => {

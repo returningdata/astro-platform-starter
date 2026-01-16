@@ -1,0 +1,517 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Admin - Roles & Permissions Management">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Roles & Permissions</h1>
+                <p class="text-white/70">Manage Discord role mappings and permissions</p>
+            </div>
+            <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Discord Role Mappings Section -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <div class="flex items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-indigo-400">Discord Role Mappings</h2>
+                        <p class="text-white/60">Map Discord roles to admin permissions</p>
+                    </div>
+                </div>
+                <button id="addRoleMappingBtn" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors font-semibold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Role Mapping
+                </button>
+            </div>
+
+            <div id="roleMappingsList" class="space-y-4">
+                <div class="text-center py-8 text-white/60">
+                    <svg class="w-8 h-8 mx-auto mb-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Loading role mappings...
+                </div>
+            </div>
+        </div>
+
+        <!-- Information Card -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-blue-400">How It Works</h2>
+                    <p class="text-white/60">Understanding Discord role mappings</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-white/80">
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-teal-400 text-sm font-bold">1</span>
+                    </div>
+                    <p>When a user logs in via Discord, the system checks their Discord roles against the mappings you configure here.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-teal-400 text-sm font-bold">2</span>
+                    </div>
+                    <p><strong>Priority</strong> determines the order roles are checked. Higher priority roles are checked first.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-teal-400 text-sm font-bold">3</span>
+                    </div>
+                    <p>The <strong>Internal Role</strong> determines the base behavior: Super Admin has all access, Subdivision Overseer has limited access, Custom uses only assigned permissions.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span class="text-teal-400 text-sm font-bold">4</span>
+                    </div>
+                    <p>If no mappings are configured, the system falls back to environment variable-based roles (DISCORD_SUPERADMIN_ROLE_ID, etc.)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discord ID Help Card -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-purple-400">How to Find Discord Role IDs</h2>
+                    <p class="text-white/60">Steps to get a Discord role ID</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-white/80">
+                <ol class="list-decimal list-inside space-y-2">
+                    <li>Enable <strong>Developer Mode</strong> in Discord (User Settings > App Settings > Advanced > Developer Mode)</li>
+                    <li>Go to your Discord server's <strong>Server Settings > Roles</strong></li>
+                    <li>Right-click on the role you want to use</li>
+                    <li>Click <strong>"Copy Role ID"</strong></li>
+                    <li>Paste the ID (a long number like <code class="bg-slate-700 px-2 py-0.5 rounded text-cyan-300">123456789012345678</code>) into the Discord Role ID field</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Available Permissions Section -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold text-green-400">Available Permissions</h2>
+                    <p class="text-white/60">List of all permissions that can be assigned</p>
+                </div>
+            </div>
+
+            <div id="permissionsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="text-center py-8 text-white/60 col-span-full">
+                    Loading permissions...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Role Mapping Modal -->
+    <div id="roleMappingModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-600">
+            <div class="flex items-center justify-between mb-6">
+                <h3 id="modalTitle" class="text-2xl font-bold">Add Role Mapping</h3>
+                <button id="closeModalBtn" class="text-white/60 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form id="roleMappingForm" class="space-y-4">
+                <input type="hidden" id="roleMappingId" value="">
+
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-1">Discord Role ID *</label>
+                    <input type="text" id="discordRoleId" required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
+                        placeholder="123456789012345678">
+                    <p class="text-xs text-white/50 mt-1">The 17-19 digit Discord role ID</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-1">Role Name *</label>
+                    <input type="text" id="roleName" required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
+                        placeholder="High Command">
+                    <p class="text-xs text-white/50 mt-1">A friendly name for this role</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-1">Description</label>
+                    <input type="text" id="roleDescription"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
+                        placeholder="Full administrative access">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-1">Internal Role Type *</label>
+                    <select id="internalRole" required
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500">
+                        <option value="super_admin">Super Admin (Full Access)</option>
+                        <option value="subdivision_overseer">Subdivision Overseer (Limited)</option>
+                        <option value="custom">Custom (Use Assigned Permissions Only)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-1">Priority</label>
+                    <input type="number" id="rolePriority" min="0" max="100"
+                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
+                        placeholder="10" value="10">
+                    <p class="text-xs text-white/50 mt-1">Higher priority roles are checked first (0-100)</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-white/80 mb-2">Permissions</label>
+                    <p class="text-xs text-white/50 mb-2">Super Admin automatically has all permissions. Select permissions for Custom roles.</p>
+                    <div id="permissionsCheckboxes" class="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-900/50 rounded-lg p-3">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" id="saveRoleMappingBtn"
+                        class="flex-1 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors font-semibold">
+                        Save Role Mapping
+                    </button>
+                    <button type="button" id="cancelModalBtn"
+                        class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        let adminUser = null;
+        let rolesConfig = null;
+
+        async function validateSessionAndPermissions() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+
+                adminUser = data.user;
+
+                // Only super admins can access this page
+                if (adminUser.role !== 'super_admin') {
+                    document.body.innerHTML = `
+                        <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                            <div class="text-center p-8">
+                                <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                                <p class="text-white/70 mb-4">Only Super Admins can access this page.</p>
+                                <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                            </div>
+                        </div>
+                    `;
+                    return false;
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Session validation error:', error);
+                window.location.href = '/admin/login';
+                return false;
+            }
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        async function loadRolesConfig() {
+            try {
+                const response = await fetch('/api/roles-config');
+                const data = await response.json();
+
+                if (data.success) {
+                    rolesConfig = data.config;
+                    renderRoleMappings();
+                    renderPermissions();
+                } else {
+                    showStatus(data.error || 'Failed to load roles configuration', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading roles config:', error);
+                showStatus('Failed to load roles configuration', 'error');
+            }
+        }
+
+        function renderRoleMappings() {
+            const container = document.getElementById('roleMappingsList');
+
+            if (!rolesConfig.discordRoleMappings || rolesConfig.discordRoleMappings.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-white/60">
+                        <p>No Discord role mappings configured.</p>
+                        <p class="text-sm mt-2">The system is using environment variable-based roles as a fallback.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = rolesConfig.discordRoleMappings.map(mapping => `
+                <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-600/50" data-id="${mapping.id}">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h3 class="text-lg font-bold text-white">${mapping.roleName}</h3>
+                                <span class="px-2 py-0.5 text-xs rounded-full ${
+                                    mapping.internalRole === 'super_admin' ? 'bg-red-500/20 text-red-300' :
+                                    mapping.internalRole === 'subdivision_overseer' ? 'bg-yellow-500/20 text-yellow-300' :
+                                    'bg-blue-500/20 text-blue-300'
+                                }">
+                                    ${mapping.internalRole === 'super_admin' ? 'Super Admin' :
+                                      mapping.internalRole === 'subdivision_overseer' ? 'Subdivision Overseer' : 'Custom'}
+                                </span>
+                                <span class="px-2 py-0.5 text-xs bg-slate-600 rounded-full">Priority: ${mapping.priority}</span>
+                            </div>
+                            <p class="text-sm text-white/60 mb-2">${mapping.description || 'No description'}</p>
+                            <div class="flex flex-wrap gap-2 text-xs">
+                                <span class="text-white/50">Discord Role ID:</span>
+                                <code class="bg-slate-700 px-2 py-0.5 rounded text-cyan-300">${mapping.discordRoleIdMasked || mapping.discordRoleId}</code>
+                            </div>
+                            ${mapping.internalRole === 'custom' ? `
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    ${mapping.permissions.map(p => `<span class="px-2 py-0.5 text-xs bg-green-500/20 text-green-300 rounded">${p}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editRoleMapping('${mapping.id}')" class="p-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors" title="Edit">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button onclick="deleteRoleMapping('${mapping.id}')" class="p-2 bg-red-500/30 hover:bg-red-500/50 rounded-lg transition-colors" title="Delete">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderPermissions() {
+            const container = document.getElementById('permissionsList');
+            const checkboxContainer = document.getElementById('permissionsCheckboxes');
+
+            // Group permissions by category
+            const categories = {
+                content: { name: 'Content Management', items: [] },
+                webhook: { name: 'Webhooks', items: [] },
+                admin: { name: 'Administration', items: [] },
+                other: { name: 'Other', items: [] }
+            };
+
+            rolesConfig.availablePermissions.forEach(perm => {
+                const cat = categories[perm.category] || categories.other;
+                cat.items.push(perm);
+            });
+
+            // Render permissions list
+            container.innerHTML = Object.entries(categories)
+                .filter(([_, cat]) => cat.items.length > 0)
+                .map(([key, cat]) => `
+                    <div class="col-span-full">
+                        <h4 class="text-sm font-semibold text-white/60 uppercase tracking-wide mb-2">${cat.name}</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mb-4">
+                            ${cat.items.map(perm => `
+                                <div class="bg-slate-800/50 rounded-lg p-3 border border-slate-600/50">
+                                    <div class="font-medium text-white">${perm.name}</div>
+                                    <div class="text-xs text-white/50">${perm.description}</div>
+                                    <code class="text-xs text-cyan-300">${perm.id}</code>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+
+            // Render checkboxes for modal
+            checkboxContainer.innerHTML = rolesConfig.availablePermissions.map(perm => `
+                <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-800 p-1 rounded">
+                    <input type="checkbox" name="permissions" value="${perm.id}" class="rounded bg-slate-600 border-slate-500">
+                    <span class="text-sm">${perm.name}</span>
+                </label>
+            `).join('');
+        }
+
+        function openModal(isEdit = false, mapping = null) {
+            const modal = document.getElementById('roleMappingModal');
+            const title = document.getElementById('modalTitle');
+            const form = document.getElementById('roleMappingForm');
+
+            title.textContent = isEdit ? 'Edit Role Mapping' : 'Add Role Mapping';
+
+            if (isEdit && mapping) {
+                document.getElementById('roleMappingId').value = mapping.id;
+                document.getElementById('discordRoleId').value = mapping.discordRoleId;
+                document.getElementById('roleName').value = mapping.roleName;
+                document.getElementById('roleDescription').value = mapping.description || '';
+                document.getElementById('internalRole').value = mapping.internalRole;
+                document.getElementById('rolePriority').value = mapping.priority;
+
+                // Set permissions checkboxes
+                const checkboxes = form.querySelectorAll('input[name="permissions"]');
+                checkboxes.forEach(cb => {
+                    cb.checked = mapping.permissions.includes(cb.value);
+                });
+            } else {
+                form.reset();
+                document.getElementById('roleMappingId').value = '';
+                document.getElementById('rolePriority').value = '10';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('roleMappingModal').classList.add('hidden');
+        }
+
+        window.editRoleMapping = function(id) {
+            const mapping = rolesConfig.discordRoleMappings.find(m => m.id === id);
+            if (mapping) {
+                openModal(true, mapping);
+            }
+        };
+
+        window.deleteRoleMapping = async function(id) {
+            if (!confirm('Are you sure you want to delete this role mapping?')) return;
+
+            try {
+                const response = await fetch('/api/roles-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'deleteRoleMapping',
+                        roleMappingId: id
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('Role mapping deleted successfully');
+                    await loadRolesConfig();
+                } else {
+                    showStatus(data.error || 'Failed to delete role mapping', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting role mapping:', error);
+                showStatus('Failed to delete role mapping', 'error');
+            }
+        };
+
+        // Event listeners
+        document.getElementById('addRoleMappingBtn').addEventListener('click', () => openModal(false));
+        document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+        document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
+
+        document.getElementById('roleMappingModal').addEventListener('click', (e) => {
+            if (e.target.id === 'roleMappingModal') closeModal();
+        });
+
+        document.getElementById('roleMappingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const roleMappingId = document.getElementById('roleMappingId').value;
+            const isEdit = !!roleMappingId;
+
+            const form = e.target;
+            const selectedPermissions = Array.from(form.querySelectorAll('input[name="permissions"]:checked'))
+                .map(cb => cb.value);
+
+            const roleMapping = {
+                discordRoleId: document.getElementById('discordRoleId').value.trim(),
+                roleName: document.getElementById('roleName').value.trim(),
+                description: document.getElementById('roleDescription').value.trim(),
+                internalRole: document.getElementById('internalRole').value,
+                priority: parseInt(document.getElementById('rolePriority').value) || 10,
+                permissions: selectedPermissions
+            };
+
+            try {
+                const response = await fetch('/api/roles-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: isEdit ? 'updateRoleMapping' : 'addRoleMapping',
+                        roleMapping,
+                        roleMappingId: isEdit ? roleMappingId : undefined
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus(isEdit ? 'Role mapping updated successfully' : 'Role mapping added successfully');
+                    closeModal();
+                    await loadRolesConfig();
+                } else {
+                    showStatus(data.error || 'Failed to save role mapping', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving role mapping:', error);
+                showStatus('Failed to save role mapping', 'error');
+            }
+        });
+
+        // Initialize
+        validateSessionAndPermissions().then(valid => {
+            if (valid) {
+                loadRolesConfig();
+            }
+        });
+    </script>
+</Layout>

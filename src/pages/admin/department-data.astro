@@ -220,12 +220,13 @@ import Layout from '../../layouts/Layout.astro';
 
         // Default subdivision leadership structure
         const defaultSubdivisionLeadership = [
-            { division: 'Subdivision Overseer', name: '', callSign: '', jobTitle: '' },
-            { division: 'Field Training Division', name: '', callSign: '', jobTitle: '' },
-            { division: 'Special Weapons and Tactics', name: '', callSign: '', jobTitle: '' },
-            { division: 'Traffic Enforcement Unit', name: '', callSign: '', jobTitle: '' },
-            { division: 'Criminal Investigations Unit', name: '', callSign: '', jobTitle: '' },
-            { division: 'K9 Division', name: '', callSign: '', jobTitle: '' }
+            { division: 'Subdivision Overseer', name: '', callSign: '', jobTitle: '', positionType: 'overseer' },
+            { division: 'Assistant Head of Subdivisions', name: '', callSign: '', jobTitle: '', positionType: 'assistant_head' },
+            { division: 'Field Training Division', name: '', callSign: '', jobTitle: '', positionType: 'leader' },
+            { division: 'Special Weapons and Tactics', name: '', callSign: '', jobTitle: '', positionType: 'leader' },
+            { division: 'Traffic Enforcement Unit', name: '', callSign: '', jobTitle: '', positionType: 'leader' },
+            { division: 'Criminal Investigations Unit', name: '', callSign: '', jobTitle: '', positionType: 'leader' },
+            { division: 'K9 Division', name: '', callSign: '', jobTitle: '', positionType: 'leader' }
         ];
 
         // Rank colors for styling
@@ -551,8 +552,18 @@ import Layout from '../../layouts/Layout.astro';
                 return sub ? `${sub.abbreviation} - ${sub.name}` : null;
             }
 
+            // Helper function to get position type display info
+            function getPositionTypeInfo(positionType) {
+                switch(positionType) {
+                    case 'overseer': return { label: 'Subdivision Overseer', color: 'teal' };
+                    case 'assistant_head': return { label: 'Assistant Head', color: 'purple' };
+                    default: return { label: 'Subdivision Leader', color: 'orange' };
+                }
+            }
+
             container.innerHTML = departmentData.subdivisionLeadership.map((subdivision, index) => {
                 const linkedName = getLinkedSubdivisionName(subdivision.subdivisionId);
+                const posInfo = getPositionTypeInfo(subdivision.positionType);
 
                 return `
                 <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${subdivision.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
@@ -619,7 +630,19 @@ import Layout from '../../layouts/Layout.astro';
                             </button>
                         </div>
                     </div>
-                    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Position Type</label>
+                            <select
+                                class="subdivision-position-type w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-${posInfo.color}-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                data-index="${index}"
+                            >
+                                <option value="leader" ${!subdivision.positionType || subdivision.positionType === 'leader' ? 'selected' : ''}>Subdivision Leader</option>
+                                <option value="assistant_head" ${subdivision.positionType === 'assistant_head' ? 'selected' : ''}>Assistant Head of Subdivisions</option>
+                                <option value="overseer" ${subdivision.positionType === 'overseer' ? 'selected' : ''}>Subdivision Overseer</option>
+                            </select>
+                            <p class="text-xs text-${posInfo.color}-400 mt-1">Current: ${posInfo.label}</p>
+                        </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-1">Link to Subdivision</label>
                             <select
@@ -643,6 +666,19 @@ import Layout from '../../layouts/Layout.astro';
                             >
                             <p class="text-xs text-white/50 mt-1">Use "subdivision-overseer" for the Subdivision Overseer</p>
                         </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-slate-300 mb-1">
+                            Discord ID
+                            <span class="text-xs text-white/50 font-normal ml-1">(for webhook mentions - not visible on site)</span>
+                        </label>
+                        <input
+                            type="text"
+                            value="${subdivision.discordId || ''}"
+                            placeholder="Enter Discord User ID (e.g., 123456789012345678)"
+                            class="subdivision-discord-id w-full md:w-1/2 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            data-index="${index}"
+                        >
                     </div>
                     <div class="mt-2">
                         ${linkedName ? `<p class="text-xs text-green-400">Linked to: ${linkedName}</p>` :
@@ -870,6 +906,21 @@ import Layout from '../../layouts/Layout.astro';
                 input.addEventListener('input', (e) => {
                     const index = parseInt(e.target.dataset.index);
                     departmentData.subdivisionLeadership[index].jobTitle = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.subdivision-position-type').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.subdivisionLeadership[index].positionType = e.target.value;
+                    renderSubdivisionLeadership();
+                });
+            });
+
+            document.querySelectorAll('.subdivision-discord-id').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.subdivisionLeadership[index].discordId = e.target.value;
                 });
             });
 

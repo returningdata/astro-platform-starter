@@ -108,7 +108,7 @@ export const GET: APIRoute = async ({ request }) => {
         }
 
         // Determine user role based on Discord roles
-        const roleInfo = determineUserRole(guildMember.roles);
+        const roleInfo = await determineUserRole(guildMember.roles);
 
         if (!roleInfo) {
             // User doesn't have any valid admin roles

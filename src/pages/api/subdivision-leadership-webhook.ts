@@ -1,21 +1,26 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import type { SubdivisionLeadershipConfig } from './webhook-config';
+import { DEFAULT_WEBHOOK_CONFIG } from './webhook-config';
 
 export const prerender = false;
 
-// Webhook URL for subdivision leadership
-const WEBHOOK_URL = 'https://discord.com/api/webhooks/1417131683144274011/yaZZquFoq962gjs2oFS_rNt13r12kz3o0zxO6v2GZLJbASZioQPgowx4aDIiUrRMGdcv';
-
-// DPPD Logo URL
-const DPPD_LOGO_URL = 'https://delperro.netlify.app/images/DPPD_Seal_3.png';
-
-// Color scheme for embeds
-const COLORS = {
-    primary: 0x1e40af,       // Professional blue
-    overseer: 0x0d9488,      // Teal for overseer
-    subdivision: 0x3b82f6,   // Blue for subdivisions
-    footer: 0x14b8a6,        // Teal for footer
-};
+/**
+ * Get webhook configuration from blob store
+ */
+async function getWebhookConfigForSubdiv(): Promise<SubdivisionLeadershipConfig> {
+    try {
+        const store = getStore({ name: 'webhook-config', consistency: 'strong' });
+        const data = await store.get('config', { type: 'json' }) as { subdivisionLeadership?: SubdivisionLeadershipConfig } | null;
+        if (data?.subdivisionLeadership) {
+            return { ...DEFAULT_WEBHOOK_CONFIG.subdivisionLeadership, ...data.subdivisionLeadership };
+        }
+        return DEFAULT_WEBHOOK_CONFIG.subdivisionLeadership;
+    } catch (error) {
+        console.error('Error fetching webhook config:', error);
+        return DEFAULT_WEBHOOK_CONFIG.subdivisionLeadership;
+    }
+}
 
 interface WebhookState {
     lastMessageIds: string[];
@@ -30,6 +35,7 @@ interface SubdivisionLeader {
     subdivisionId?: string;
     isLOA?: boolean;
     discordId?: string;
+    positionType?: 'overseer' | 'assistant_head' | 'leader'; // New field to distinguish position type
 }
 
 interface Subdivision {
@@ -178,13 +184,16 @@ function findSubdivisionForLeader(leader: SubdivisionLeader, subdivisions: Subdi
 /**
  * Build embeds for subdivision leadership
  */
-function buildSubdivisionLeadershipEmbeds(departmentData: DepartmentData, subdivisions: Subdivision[]): any[] {
+function buildSubdivisionLeadershipEmbeds(departmentData: DepartmentData, subdivisions: Subdivision[], config: SubdivisionLeadershipConfig): any[] {
     const embeds: any[] = [];
     const timestamp = new Date().toISOString();
     const leadership = departmentData.subdivisionLeadership || [];
+    const COLORS = config.colors;
+    const LOGO_URL = config.logoUrl;
 
-    // Find the Subdivision Overseer (should be first entry)
+    // Find the Subdivision Overseer (check positionType first, then fall back to name matching)
     const overseer = leadership.find(l =>
+        l.positionType === 'overseer' ||
         l.division.toLowerCase().includes('overseer') ||
         l.division.toLowerCase() === 'subdivision overseer'
     );
@@ -194,23 +203,61 @@ function buildSubdivisionLeadershipEmbeds(departmentData: DepartmentData, subdiv
         const overseerLine = formatLeader(
             overseer.name,
             overseer.callSign,
-            'Subdivision Overseer',
+            config.overseerTitle,
             overseer.discordId,
             overseer.isLOA
         );
 
         embeds.push({
-            title: 'Subdivision Overseer',
+            title: config.overseerTitle,
             description: overseerLine,
             color: COLORS.overseer,
             timestamp: timestamp
         });
     }
 
-    // Subdivision Leaders
+    // Find Assistant Head of Subdivisions (new section)
+    const assistantHeads = leadership.filter(l =>
+        l.positionType === 'assistant_head' ||
+        l.division.toLowerCase().includes('assistant head') ||
+        l.division.toLowerCase().includes('assistant overseer')
+    );
+
+    if (assistantHeads.length > 0) {
+        const assistantHeadLines: string[] = [];
+
+        for (const assistant of assistantHeads) {
+            const assistantLine = formatLeader(
+                assistant.name,
+                assistant.callSign,
+                config.assistantHeadTitle,
+                assistant.discordId,
+                assistant.isLOA
+            );
+            assistantHeadLines.push(assistantLine);
+        }
+
+        if (assistantHeadLines.length > 0) {
+            embeds.push({
+                title: config.assistantHeadTitle,
+                description: assistantHeadLines.join('\n\n'),
+                color: COLORS.assistantHead,
+                timestamp: timestamp
+            });
+        }
+    }
+
+    // Subdivision Leaders (exclude overseer and assistant heads)
     const subdivisionLeaders = leadership.filter(l => {
+        // Exclude overseers
+        if (l.positionType === 'overseer') return false;
+        if (l.positionType === 'assistant_head') return false;
+
         const normalizedDiv = l.division.toLowerCase();
-        return !normalizedDiv.includes('overseer') || normalizedDiv !== 'subdivision overseer';
+        if (normalizedDiv.includes('overseer') && normalizedDiv === 'subdivision overseer') return false;
+        if (normalizedDiv.includes('assistant head') || normalizedDiv.includes('assistant overseer')) return false;
+
+        return true;
     });
 
     if (subdivisionLeaders.length > 0) {
@@ -236,7 +283,7 @@ function buildSubdivisionLeadershipEmbeds(departmentData: DepartmentData, subdiv
 
         if (leaderLines.length > 0) {
             embeds.push({
-                title: 'Subdivision Leadership',
+                title: config.leadershipTitle,
                 description: leaderLines.join('\n\n'),
                 color: COLORS.subdivision,
                 timestamp: timestamp
@@ -244,17 +291,17 @@ function buildSubdivisionLeadershipEmbeds(departmentData: DepartmentData, subdiv
         }
     }
 
-    // Footer with DPPD Logo
+    // Footer with DPPD Logo (configurable)
     embeds.push({
-        title: 'Del Perro Police Department',
-        description: '*Subdivision Leadership*',
+        title: config.footerTitle,
+        description: config.footerDescription,
         color: COLORS.footer,
         image: {
-            url: DPPD_LOGO_URL
+            url: LOGO_URL
         },
         footer: {
-            text: 'DPPD Subdivision Leadership | Manual Updates',
-            icon_url: DPPD_LOGO_URL
+            text: config.footerText,
+            icon_url: LOGO_URL
         },
         timestamp: timestamp
     });
@@ -265,10 +312,10 @@ function buildSubdivisionLeadershipEmbeds(departmentData: DepartmentData, subdiv
 /**
  * Delete existing webhook messages
  */
-async function deleteMessages(messageIds: string[]): Promise<void> {
+async function deleteMessages(messageIds: string[], webhookUrl: string): Promise<void> {
     for (const messageId of messageIds) {
         try {
-            const deleteUrl = `${WEBHOOK_URL}/messages/${messageId}`;
+            const deleteUrl = `${webhookUrl}/messages/${messageId}`;
             const response = await fetch(deleteUrl, {
                 method: 'DELETE'
             });
@@ -290,7 +337,7 @@ async function deleteMessages(messageIds: string[]): Promise<void> {
  * Send embeds to Discord and return message IDs
  * Uses strict sequential execution with retry logic to ensure correct order
  */
-async function sendEmbeds(embeds: any[]): Promise<string[]> {
+async function sendEmbeds(embeds: any[], webhookUrl: string): Promise<string[]> {
     const messageIds: string[] = [];
 
     // Send embeds one at a time in strict order
@@ -309,7 +356,7 @@ async function sendEmbeds(embeds: any[]): Promise<string[]> {
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
 
-                const response = await fetch(`${WEBHOOK_URL}?wait=true`, {
+                const response = await fetch(`${webhookUrl}?wait=true`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -385,6 +432,19 @@ export const GET: APIRoute = async () => {
 // POST - Force update (manual trigger)
 export const POST: APIRoute = async () => {
     try {
+        // Get webhook configuration
+        const config = await getWebhookConfigForSubdiv();
+
+        if (!config.webhookUrl) {
+            return new Response(JSON.stringify({
+                success: false,
+                message: 'Webhook URL not configured. Please configure it in admin settings.'
+            }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         // Get current state
         const state = await getWebhookState();
 
@@ -403,16 +463,16 @@ export const POST: APIRoute = async () => {
         // Get subdivisions data
         const subdivisionsData = await getSubdivisionsData();
 
-        // Build embeds
-        const embeds = buildSubdivisionLeadershipEmbeds(departmentData, subdivisionsData);
+        // Build embeds using config
+        const embeds = buildSubdivisionLeadershipEmbeds(departmentData, subdivisionsData, config);
 
         // Delete old messages
         if (state.lastMessageIds && state.lastMessageIds.length > 0) {
-            await deleteMessages(state.lastMessageIds);
+            await deleteMessages(state.lastMessageIds, config.webhookUrl);
         }
 
         // Send new messages
-        const newMessageIds = await sendEmbeds(embeds);
+        const newMessageIds = await sendEmbeds(embeds, config.webhookUrl);
 
         if (newMessageIds.length > 0) {
             // Save new state

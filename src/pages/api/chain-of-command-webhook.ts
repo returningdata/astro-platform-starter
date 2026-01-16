@@ -1,29 +1,26 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import type { ChainOfCommandConfig } from './webhook-config';
+import { DEFAULT_WEBHOOK_CONFIG } from './webhook-config';
 
 export const prerender = false;
 
-// Webhook URL for chain of command
-const WEBHOOK_URL = 'https://discord.com/api/webhooks/1416682696645541998/43pD9FZHnnWcCvdj35NdhxYAOAjS8agn4KbBDImDYDnA6kSfglmQ3im0otqr3gKkff1H';
-
-// DPPD Logo URL
-const DPPD_LOGO_URL = 'https://delperro.netlify.app/images/DPPD_Seal_3.png';
-
-// Color scheme for embeds
-const COLORS = {
-    primary: 0x1e40af,       // Professional blue
-    highCommand: 0x0d9488,   // Teal
-    trialHighCommand: 0x06b6d4, // Cyan
-    lowCommand: 0x3b82f6,    // Blue
-    trialLowCommand: 0x6366f1, // Indigo
-    supervisors: 0xa855f7,   // Purple
-    trialSupervisor: 0x8b5cf6, // Violet
-    officers: 0xf59e0b,      // Amber
-    reserves: 0x84cc16,      // Lime
-    cadets: 0x22c55e,        // Green
-    warning: 0xfbbf24,       // Amber/Yellow for warning
-    footer: 0x14b8a6,        // Teal for footer
-};
+/**
+ * Get webhook configuration from blob store
+ */
+async function getWebhookConfig(): Promise<ChainOfCommandConfig> {
+    try {
+        const store = getStore({ name: 'webhook-config', consistency: 'strong' });
+        const data = await store.get('config', { type: 'json' }) as { chainOfCommand?: ChainOfCommandConfig } | null;
+        if (data?.chainOfCommand) {
+            return { ...DEFAULT_WEBHOOK_CONFIG.chainOfCommand, ...data.chainOfCommand };
+        }
+        return DEFAULT_WEBHOOK_CONFIG.chainOfCommand;
+    } catch (error) {
+        console.error('Error fetching webhook config:', error);
+        return DEFAULT_WEBHOOK_CONFIG.chainOfCommand;
+    }
+}
 
 interface WebhookState {
     lastMessageIds: string[];
@@ -161,9 +158,11 @@ function formatRankRoleOnly(rank: string, discordRoleId?: string): string {
 /**
  * Build embeds for chain of command
  */
-function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
+function buildChainOfCommandEmbeds(data: DepartmentData, config: ChainOfCommandConfig): any[] {
     const embeds: any[] = [];
     const timestamp = new Date().toISOString();
+    const COLORS = config.colors;
+    const LOGO_URL = config.logoUrl;
 
     // High Command (Chief of Police through Lieutenant Colonel)
     const highCommandRanks = ['Chief of Police', 'Deputy Chief of Police', 'Assistant Chief of Police', 'Colonel', 'Lieutenant Colonel'];
@@ -367,35 +366,25 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
         });
     }
 
-    // Important Notice/Warning about skipping chain of command
+    // Important Notice/Warning about skipping chain of command (configurable)
     embeds.push({
-        title: 'Chain of Command Protocol',
-        description: [
-            '**At no time should the order of the chain of command be skipped in any shape or form, unless you have spoken to all options.**',
-            '',
-            '**Examples of this would be:**',
-            '',
-            'A probationary officer going to an of the higher officers to learn, then going to supervisors, then low command then high',
-            '',
-            '**Never should you ever skip this chain of command unless it is an urgent emergency.**',
-            '',
-            '*DPPD | High Command Team*'
-        ].join('\n'),
+        title: config.protocolTitle,
+        description: config.protocolMessage,
         color: COLORS.warning,
         timestamp: timestamp
     });
 
-    // Footer with DPPD Logo
+    // Footer with DPPD Logo (configurable)
     embeds.push({
-        title: 'Del Perro Police Department',
-        description: '*Protecting and serving the citizens of Del Perro*',
+        title: config.footerTitle,
+        description: config.footerDescription,
         color: COLORS.footer,
         image: {
-            url: DPPD_LOGO_URL
+            url: LOGO_URL
         },
         footer: {
-            text: 'DPPD Chain of Command | Updates every 6 hours',
-            icon_url: DPPD_LOGO_URL
+            text: config.footerText,
+            icon_url: LOGO_URL
         },
         timestamp: timestamp
     });
@@ -406,10 +395,10 @@ function buildChainOfCommandEmbeds(data: DepartmentData): any[] {
 /**
  * Delete existing webhook messages
  */
-async function deleteMessages(messageIds: string[]): Promise<void> {
+async function deleteMessages(messageIds: string[], webhookUrl: string): Promise<void> {
     for (const messageId of messageIds) {
         try {
-            const deleteUrl = `${WEBHOOK_URL}/messages/${messageId}`;
+            const deleteUrl = `${webhookUrl}/messages/${messageId}`;
             const response = await fetch(deleteUrl, {
                 method: 'DELETE'
             });
@@ -431,7 +420,7 @@ async function deleteMessages(messageIds: string[]): Promise<void> {
  * Send embeds to Discord and return message IDs
  * Uses strict sequential execution with retry logic to ensure correct order
  */
-async function sendEmbeds(embeds: any[]): Promise<string[]> {
+async function sendEmbeds(embeds: any[], webhookUrl: string): Promise<string[]> {
     const messageIds: string[] = [];
 
     // Send embeds one at a time in strict order
@@ -450,7 +439,7 @@ async function sendEmbeds(embeds: any[]): Promise<string[]> {
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
 
-                const response = await fetch(`${WEBHOOK_URL}?wait=true`, {
+                const response = await fetch(`${webhookUrl}?wait=true`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -527,6 +516,19 @@ export const GET: APIRoute = async () => {
 // POST - Force update (manual trigger)
 export const POST: APIRoute = async () => {
     try {
+        // Get webhook configuration
+        const config = await getWebhookConfig();
+
+        if (!config.webhookUrl) {
+            return new Response(JSON.stringify({
+                success: false,
+                message: 'Webhook URL not configured. Please configure it in admin settings.'
+            }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         // Get current state
         const state = await getWebhookState();
 
@@ -542,16 +544,16 @@ export const POST: APIRoute = async () => {
             });
         }
 
-        // Build embeds
-        const embeds = buildChainOfCommandEmbeds(departmentData);
+        // Build embeds using config
+        const embeds = buildChainOfCommandEmbeds(departmentData, config);
 
         // Delete old messages
         if (state.lastMessageIds && state.lastMessageIds.length > 0) {
-            await deleteMessages(state.lastMessageIds);
+            await deleteMessages(state.lastMessageIds, config.webhookUrl);
         }
 
         // Send new messages
-        const newMessageIds = await sendEmbeds(embeds);
+        const newMessageIds = await sendEmbeds(embeds, config.webhookUrl);
 
         if (newMessageIds.length > 0) {
             // Save new state

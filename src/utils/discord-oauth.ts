@@ -3,9 +3,11 @@
  *
  * Handles Discord OAuth2 authentication flow and role-based access control.
  * Uses environment variables for sensitive configuration.
+ * Now supports configurable role mappings from the admin panel.
  */
 
 import type { AdminUser } from './session';
+import { getStore } from '@netlify/blobs';
 
 // Discord API endpoints
 const DISCORD_API_BASE = 'https://discord.com/api/v10';
@@ -14,6 +16,23 @@ const DISCORD_OAUTH_TOKEN = `${DISCORD_API_BASE}/oauth2/token`;
 
 // OAuth2 scopes needed for authentication
 const OAUTH_SCOPES = ['identify', 'guilds.members.read'];
+
+/**
+ * Role mapping interface for configurable roles
+ */
+interface DiscordRoleMapping {
+    id: string;
+    discordRoleId: string;
+    roleName: string;
+    internalRole: 'super_admin' | 'subdivision_overseer' | 'custom';
+    permissions: string[];
+    priority: number;
+    description?: string;
+}
+
+interface RolesConfig {
+    discordRoleMappings: DiscordRoleMapping[];
+}
 
 /**
  * Discord user data from the /users/@me endpoint
@@ -193,12 +212,47 @@ export async function getGuildMember(userId: string): Promise<DiscordGuildMember
 }
 
 /**
- * Determine user role based on Discord roles
+ * Get configurable role mappings from blob store
  */
-export function determineUserRole(memberRoles: string[]): {
+async function getConfigurableRoleMappings(): Promise<DiscordRoleMapping[]> {
+    try {
+        const store = getStore({ name: 'roles-config', consistency: 'strong' });
+        const data = await store.get('config', { type: 'json' }) as RolesConfig | null;
+        if (data?.discordRoleMappings && data.discordRoleMappings.length > 0) {
+            // Sort by priority (higher first)
+            return [...data.discordRoleMappings].sort((a, b) => b.priority - a.priority);
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching role mappings:', error);
+        return [];
+    }
+}
+
+/**
+ * Determine user role based on Discord roles
+ * First checks configurable role mappings, then falls back to environment variables
+ */
+export async function determineUserRole(memberRoles: string[]): Promise<{
     role: AdminUser['role'];
     permissions: string[];
-} | null {
+} | null> {
+    // First, check configurable role mappings
+    const configurableRoleMappings = await getConfigurableRoleMappings();
+
+    if (configurableRoleMappings.length > 0) {
+        // Check configurable mappings in priority order
+        for (const mapping of configurableRoleMappings) {
+            if (memberRoles.includes(mapping.discordRoleId)) {
+                return {
+                    role: mapping.internalRole,
+                    permissions: mapping.permissions
+                };
+            }
+        }
+    }
+
+    // Fall back to environment variable-based role checking
     const config = getDiscordConfig();
 
     // Check for Super Admin role
@@ -213,7 +267,8 @@ export function determineUserRole(memberRoles: string[]): {
                 'theme-settings',
                 'department-data',
                 'subdivisions',
-                'user-management'
+                'user-management',
+                'roles-management'
             ]
         };
     }

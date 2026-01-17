@@ -16,6 +16,7 @@ export interface ChainOfCommandConfig {
     protocolTitle: string;
     protocolMessage: string;
     colors: {
+        departmentLiaisons: number;
         highCommand: number;
         trialHighCommand: number;
         lowCommand: number;
@@ -73,6 +74,7 @@ A probationary officer going to an of the higher officers to learn, then going t
 
 *DPPD | High Command Team*`,
         colors: {
+            departmentLiaisons: 0xf43f5e,  // Rose/pink color
             highCommand: 0x0d9488,
             trialHighCommand: 0x06b6d4,
             lowCommand: 0x3b82f6,

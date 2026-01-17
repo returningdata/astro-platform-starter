@@ -1,0 +1,440 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+---
+
+<Layout title="Loading Form..." description="Submit a form">
+    <div class="space-y-8">
+        <!-- Back Link -->
+        <a href="/forms" class="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Forms
+        </a>
+
+        <!-- Header (will be populated) -->
+        <div class="text-center" id="formHeader">
+            <h1 class="text-4xl md:text-5xl font-bold mb-2" id="formTitle">Loading...</h1>
+            <p class="text-white/70" id="formDescription">Please wait...</p>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+            <p class="text-white/60 mt-4">Loading form...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden text-center py-12 bg-red-500/10 rounded-lg border border-red-500/30">
+            <svg class="w-16 h-16 mx-auto text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h3 class="text-xl font-semibold text-red-300 mb-2" id="errorTitle">Form Not Found</h3>
+            <p class="text-red-400/70" id="errorMessage">The requested form could not be found.</p>
+            <a href="/forms" class="mt-4 inline-block px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                View All Forms
+            </a>
+        </div>
+
+        <!-- Form Container -->
+        <form id="dynamicForm" class="hidden space-y-6">
+            <!-- Sections will be generated here -->
+        </form>
+    </div>
+
+    <script type="module" define:vars={{ slug }}>
+        const colorClasses = {
+            'indigo': {
+                bg: 'bg-indigo-500/20',
+                border: 'border-indigo-500/30',
+                ring: 'focus:ring-indigo-500',
+                icon: 'text-indigo-400'
+            },
+            'blue': {
+                bg: 'bg-blue-500/20',
+                border: 'border-blue-500/30',
+                ring: 'focus:ring-blue-500',
+                icon: 'text-blue-400'
+            },
+            'purple': {
+                bg: 'bg-purple-500/20',
+                border: 'border-purple-500/30',
+                ring: 'focus:ring-purple-500',
+                icon: 'text-purple-400'
+            },
+            'cyan': {
+                bg: 'bg-cyan-500/20',
+                border: 'border-cyan-500/30',
+                ring: 'focus:ring-cyan-500',
+                icon: 'text-cyan-400'
+            },
+            'amber': {
+                bg: 'bg-amber-500/20',
+                border: 'border-amber-500/30',
+                ring: 'focus:ring-amber-500',
+                icon: 'text-amber-400'
+            },
+            'green': {
+                bg: 'bg-green-500/20',
+                border: 'border-green-500/30',
+                ring: 'focus:ring-green-500',
+                icon: 'text-green-400'
+            },
+            'red': {
+                bg: 'bg-red-500/20',
+                border: 'border-red-500/30',
+                ring: 'focus:ring-red-500',
+                icon: 'text-red-400'
+            },
+            'pink': {
+                bg: 'bg-pink-500/20',
+                border: 'border-pink-500/30',
+                ring: 'focus:ring-pink-500',
+                icon: 'text-pink-400'
+            },
+            'orange': {
+                bg: 'bg-orange-500/20',
+                border: 'border-orange-500/30',
+                ring: 'focus:ring-orange-500',
+                icon: 'text-orange-400'
+            },
+            'teal': {
+                bg: 'bg-teal-500/20',
+                border: 'border-teal-500/30',
+                ring: 'focus:ring-teal-500',
+                icon: 'text-teal-400'
+            }
+        };
+
+        function getColorClass(color) {
+            return colorClasses[color] || colorClasses['indigo'];
+        }
+
+        let currentForm = null;
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (type === 'success') {
+                setTimeout(() => statusEl.classList.add('hidden'), 10000);
+            }
+        }
+
+        function renderField(field, colors) {
+            const required = field.required ? '<span class="text-red-400">*</span>' : '';
+            const helpText = field.helpText ? `<p class="text-xs text-white/50 mt-1">${field.helpText}</p>` : '';
+            const placeholder = field.placeholder || '';
+
+            const baseInputClass = `w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 ${colors.ring} focus:border-transparent`;
+
+            switch (field.type) {
+                case 'text':
+                    // Support minLength/maxLength for text fields
+                    const minLengthAttr = field.minLength ? `minlength="${field.minLength}"` : '';
+                    const maxLengthAttr = field.maxLength ? `maxlength="${field.maxLength}"` : '';
+                    const lengthHint = (field.minLength || field.maxLength)
+                        ? `<p class="text-xs text-white/40 mt-1">${field.minLength ? `Min: ${field.minLength}` : ''}${field.minLength && field.maxLength ? ' | ' : ''}${field.maxLength ? `Max: ${field.maxLength}` : ''} characters</p>`
+                        : '';
+                    return `
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">${field.label} ${required}</label>
+                            <input type="text" id="${field.id}" name="${field.id}" ${field.required ? 'required' : ''} ${minLengthAttr} ${maxLengthAttr} class="${baseInputClass}" placeholder="${placeholder}">
+                            ${helpText}
+                            ${lengthHint}
+                        </div>
+                    `;
+
+                case 'email':
+                case 'url':
+                    return `
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">${field.label} ${required}</label>
+                            <input type="${field.type}" id="${field.id}" name="${field.id}" ${field.required ? 'required' : ''} class="${baseInputClass}" placeholder="${placeholder}">
+                            ${helpText}
+                        </div>
+                    `;
+
+                case 'discord-id':
+                    return `
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">${field.label} ${required}</label>
+                            <input type="text" id="${field.id}" name="${field.id}" ${field.required ? 'required' : ''} pattern="[0-9]{17,19}(\\s*,\\s*[0-9]{17,19})*" title="Enter Discord ID(s) - 17-19 digit numbers, separated by commas for multiple" class="${baseInputClass} font-mono" placeholder="${placeholder || '123456789012345678, 987654321098765432'}">
+                            ${helpText || '<p class="text-xs text-white/50 mt-1">Enter Discord ID(s) - separate multiple IDs with commas</p>'}
+                        </div>
+                    `;
+
+                case 'number':
+                    // Support min/max for number fields
+                    const minAttr = field.min !== undefined ? `min="${field.min}"` : '';
+                    const maxAttr = field.max !== undefined ? `max="${field.max}"` : '';
+                    const rangeHint = (field.min !== undefined || field.max !== undefined)
+                        ? `<p class="text-xs text-white/40 mt-1">Range: ${field.min !== undefined ? field.min : 'No min'} - ${field.max !== undefined ? field.max : 'No max'}</p>`
+                        : '';
+                    return `
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">${field.label} ${required}</label>
+                            <input type="number" id="${field.id}" name="${field.id}" ${field.required ? 'required' : ''} ${minAttr} ${maxAttr} class="${baseInputClass}" placeholder="${placeholder}">
+                            ${helpText}
+                            ${rangeHint}
+                        </div>
+                    `;
+
+                case 'date':
+                    return `
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">${field.label} ${required}</label>
+                            <input type="date" id="${field.id}" name="${field.id}" ${field.required ? 'required' : ''} class="${baseInputClass}" placeholder="${placeholder}">
+                            ${helpText}
+                        </div>
+                    `;
+
+                case 'datetime':
+                    return `
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">${field.label} ${required}</label>
+                            <input type="datetime-local" id="${field.id}" name="${field.id}" ${field.required ? 'required' : ''} class="${baseInputClass}" placeholder="${placeholder}">
+                            ${helpText}
+                        </div>
+                    `;
+
+                case 'textarea':
+                    // Support custom rows for textarea
+                    const rows = field.rows || 4;
+                    return `
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-300 mb-1">${field.label} ${required}</label>
+                            <textarea id="${field.id}" name="${field.id}" ${field.required ? 'required' : ''} rows="${rows}" class="${baseInputClass} resize-none" placeholder="${placeholder}"></textarea>
+                            ${helpText}
+                        </div>
+                    `;
+
+                case 'select':
+                    const options = (field.options || []).map(opt =>
+                        `<option value="${opt}">${opt}</option>`
+                    ).join('');
+                    return `
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">${field.label} ${required}</label>
+                            <select id="${field.id}" name="${field.id}" ${field.required ? 'required' : ''} class="${baseInputClass}">
+                                <option value="">Select an option</option>
+                                ${options}
+                            </select>
+                            ${helpText}
+                        </div>
+                    `;
+
+                case 'checkbox':
+                    return `
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="${field.id}" name="${field.id}" class="w-5 h-5 text-primary bg-slate-700 border-slate-600 rounded focus:ring-primary">
+                            <label for="${field.id}" class="text-sm font-medium text-slate-300">${field.label}</label>
+                        </div>
+                    `;
+
+                case 'checkbox-group':
+                    const checkboxes = (field.options || []).map(opt => `
+                        <label class="flex items-center gap-2 cursor-pointer bg-slate-700/30 px-3 py-2 rounded-lg hover:bg-slate-700/50 transition-colors">
+                            <input type="checkbox" name="${field.id}" value="${opt}" class="w-4 h-4 text-primary bg-slate-700 border-slate-600 rounded focus:ring-primary">
+                            <span class="text-sm">${opt}</span>
+                        </label>
+                    `).join('');
+                    return `
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${field.label} ${required}</label>
+                            ${field.helpText ? `<p class="text-xs text-white/50 mb-3">${field.helpText}</p>` : ''}
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                ${checkboxes}
+                            </div>
+                        </div>
+                    `;
+
+                default:
+                    return '';
+            }
+        }
+
+        function renderSection(section, index) {
+            const colors = getColorClass(section.color);
+            const fields = (section.fields || []).map(field => renderField(field, colors)).join('');
+
+            return `
+                <div class="${colors.bg} backdrop-blur-sm rounded-lg p-6 border ${colors.border}">
+                    <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                        <span class="${colors.icon}">Section ${index + 1}:</span>
+                        ${section.title}
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${fields}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderForm(form) {
+            currentForm = form;
+
+            // Update page title and description
+            document.getElementById('formTitle').textContent = form.name;
+            document.getElementById('formDescription').textContent = form.description || 'Submit the form below';
+            document.title = `${form.name} | DPPD`;
+
+            // Render sections
+            const formContainer = document.getElementById('dynamicForm');
+            const sections = (form.sections || []).map((section, index) => renderSection(section, index)).join('');
+
+            formContainer.innerHTML = `
+                ${sections}
+                <!-- Submit Button -->
+                <div class="flex justify-center">
+                    <button type="submit" id="submitBtn" class="px-8 py-3 bg-green-600 hover:bg-green-500 rounded-lg transition-colors font-bold text-lg shadow-lg hover:shadow-green-500/25">
+                        Submit ${form.name}
+                    </button>
+                </div>
+            `;
+
+            // Show the form
+            document.getElementById('loadingState').classList.add('hidden');
+            formContainer.classList.remove('hidden');
+
+            // Attach submit handler
+            formContainer.addEventListener('submit', handleSubmit);
+        }
+
+        function collectFormData() {
+            const data = {
+                formSlug: currentForm.slug
+            };
+
+            for (const section of currentForm.sections || []) {
+                for (const field of section.fields || []) {
+                    if (field.type === 'checkbox') {
+                        const checkbox = document.getElementById(field.id);
+                        data[field.id] = checkbox ? checkbox.checked : false;
+                    } else if (field.type === 'checkbox-group') {
+                        const checkboxes = document.querySelectorAll(`input[name="${field.id}"]:checked`);
+                        data[field.id] = Array.from(checkboxes).map(cb => cb.value);
+                    } else {
+                        const input = document.getElementById(field.id);
+                        data[field.id] = input ? input.value : '';
+                    }
+                }
+            }
+
+            return data;
+        }
+
+        function validateForm() {
+            for (const section of currentForm.sections || []) {
+                for (const field of section.fields || []) {
+                    if (field.required) {
+                        if (field.type === 'checkbox-group') {
+                            const checkboxes = document.querySelectorAll(`input[name="${field.id}"]:checked`);
+                            if (checkboxes.length === 0) {
+                                showStatus(`Please select at least one option for "${field.label}"`, 'error');
+                                return false;
+                            }
+                        } else if (field.type === 'checkbox') {
+                            // Checkboxes that are required must be checked
+                            const checkbox = document.getElementById(field.id);
+                            if (checkbox && !checkbox.checked) {
+                                showStatus(`Please check "${field.label}"`, 'error');
+                                return false;
+                            }
+                        } else {
+                            const input = document.getElementById(field.id);
+                            if (input && !input.value.trim()) {
+                                showStatus(`Please fill in "${field.label}"`, 'error');
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+
+            if (!validateForm()) {
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                const formData = collectFormData();
+
+                const response = await fetch('/api/form-submissions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus(`${currentForm.name} submitted successfully! Submission ID: ${result.submission.id}`, 'success');
+                    document.getElementById('dynamicForm').reset();
+                } else {
+                    showStatus(result.error || 'Failed to submit form', 'error');
+                }
+            } catch (error) {
+                console.error('Submit error:', error);
+                showStatus('Failed to submit form. Please try again.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = `Submit ${currentForm.name}`;
+            }
+        }
+
+        function showError(title, message) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('formTitle').textContent = 'Error';
+            document.getElementById('formDescription').textContent = '';
+        }
+
+        async function loadForm() {
+            try {
+                const response = await fetch(`/api/forms?slug=${encodeURIComponent(slug)}`);
+                const data = await response.json();
+
+                if (!data.success || !data.form) {
+                    showError('Form Not Found', 'The requested form could not be found or may have been removed.');
+                    return;
+                }
+
+                if (!data.form.enabled) {
+                    showError('Form Disabled', 'This form is currently not accepting submissions.');
+                    return;
+                }
+
+                renderForm(data.form);
+            } catch (error) {
+                console.error('Failed to load form:', error);
+                showError('Error Loading Form', 'An error occurred while loading the form. Please try again later.');
+            }
+        }
+
+        // Initialize
+        loadForm();
+    </script>
+</Layout>

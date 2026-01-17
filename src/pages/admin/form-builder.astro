@@ -1,0 +1,1380 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Admin - Form Builder">
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Form Builder</h1>
+                <p class="text-white/70">Create and manage dynamic forms</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/forms" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    View Forms
+                </a>
+                <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Forms List / Create New -->
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Forms List -->
+            <div class="lg:w-1/3">
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 sticky top-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-bold">Your Forms</h2>
+                        <button id="createFormBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors text-sm font-semibold">
+                            + New Form
+                        </button>
+                    </div>
+                    <div id="formsList" class="space-y-3">
+                        <div class="text-center py-8 text-white/60">
+                            <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent mb-2"></div>
+                            <p>Loading forms...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Editor -->
+            <div class="lg:w-2/3">
+                <div id="editorPlaceholder" class="bg-white/10 backdrop-blur-sm rounded-lg p-12 border border-white/20 text-center">
+                    <svg class="w-16 h-16 mx-auto text-white/40 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 class="text-xl font-semibold text-white/70 mb-2">No Form Selected</h3>
+                    <p class="text-white/50">Select a form from the list to edit, or create a new form.</p>
+                </div>
+
+                <div id="formEditor" class="hidden space-y-6">
+                    <!-- Basic Info -->
+                    <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                        <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Basic Information
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-1">Form Name <span class="text-red-400">*</span></label>
+                                <input type="text" id="formName" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="e.g., Arrest Report">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-1">URL Slug</label>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-white/50">/forms/</span>
+                                    <input type="text" id="formSlug" class="flex-1 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono" placeholder="auto-generated">
+                                </div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-slate-300 mb-1">Description</label>
+                                <textarea id="formDescription" rows="2" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none" placeholder="Brief description of this form"></textarea>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-slate-300 mb-1">Discord Webhook URL</label>
+                                <input type="url" id="formWebhook" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm" placeholder="https://discord.com/api/webhooks/...">
+                                <p class="text-xs text-white/50 mt-1">Submissions will be sent to this Discord channel. Each section becomes a separate embed.</p>
+                            </div>
+                            <div>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="formEnabled" checked class="w-5 h-5 text-primary bg-slate-700 border-slate-600 rounded focus:ring-primary">
+                                    <span class="text-sm font-medium text-slate-300">Form Enabled</span>
+                                </label>
+                                <p class="text-xs text-white/50 mt-1 ml-7">Disabled forms cannot be accessed by users</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sections -->
+                    <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                </svg>
+                                Form Sections
+                            </h3>
+                            <button id="addSectionBtn" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors text-sm font-semibold">
+                                + Add Section
+                            </button>
+                        </div>
+                        <p class="text-white/50 text-sm mb-4">Each section will become a separate Discord embed when submitted.</p>
+                        <div id="sectionsContainer" class="space-y-4">
+                            <!-- Sections will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex flex-wrap gap-4 justify-between items-center">
+                        <button id="deleteFormBtn" class="px-6 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors font-semibold">
+                            Delete Form
+                        </button>
+                        <div class="flex gap-4">
+                            <button id="previewFormBtn" class="px-6 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors font-semibold">
+                                Preview
+                            </button>
+                            <button id="saveFormBtn" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                                Save Form
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Template (hidden) -->
+    <template id="sectionTemplate">
+        <div class="section-item bg-slate-800/50 rounded-lg p-4 border border-slate-700" data-section-id="">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <button class="section-move-up p-1 text-white/40 hover:text-white transition-colors" title="Move Up">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                        </svg>
+                    </button>
+                    <button class="section-move-down p-1 text-white/40 hover:text-white transition-colors" title="Move Down">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <input type="text" class="section-title bg-slate-700/50 border border-slate-600 rounded px-3 py-1 text-white font-semibold" placeholder="Section Title">
+                </div>
+                <div class="flex items-center gap-3">
+                    <select class="section-color bg-slate-700/50 border border-slate-600 rounded px-3 py-1 text-white text-sm">
+                        <option value="indigo">Indigo</option>
+                        <option value="blue">Blue</option>
+                        <option value="purple">Purple</option>
+                        <option value="cyan">Cyan</option>
+                        <option value="amber">Amber</option>
+                        <option value="green">Green</option>
+                        <option value="red">Red</option>
+                        <option value="pink">Pink</option>
+                        <option value="orange">Orange</option>
+                        <option value="teal">Teal</option>
+                    </select>
+                    <button class="section-toggle-collapse p-1 text-white/40 hover:text-white transition-colors" title="Collapse/Expand">
+                        <svg class="w-5 h-5 collapse-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                        </svg>
+                    </button>
+                    <button class="section-delete p-1 text-red-400 hover:text-red-300 transition-colors" title="Delete Section">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="section-fields space-y-3">
+                <!-- Fields will be rendered here -->
+            </div>
+            <button class="add-field-btn mt-3 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-sm w-full">
+                + Add Field
+            </button>
+        </div>
+    </template>
+
+    <!-- Field Template (hidden) -->
+    <template id="fieldTemplate">
+        <div class="field-item bg-slate-700/30 rounded-lg p-4 border border-slate-600 transition-all hover:border-slate-500" data-field-id="">
+            <!-- Field Header with Move Controls -->
+            <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-600/50">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1">
+                        <button class="field-move-up p-1.5 text-white/40 hover:text-white hover:bg-slate-600/50 rounded transition-colors" title="Move Up">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                            </svg>
+                        </button>
+                        <button class="field-move-down p-1.5 text-white/40 hover:text-white hover:bg-slate-600/50 rounded transition-colors" title="Move Down">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="field-type-badge px-2 py-1 rounded text-xs font-medium bg-slate-600/50 text-white/70">
+                        <span class="field-type-icon mr-1"></span>
+                        <span class="field-type-name">Text Input</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="flex items-center gap-2 cursor-pointer px-2 py-1 rounded hover:bg-slate-600/30 transition-colors">
+                        <input type="checkbox" class="field-required w-4 h-4 text-primary bg-slate-700 border-slate-600 rounded focus:ring-primary">
+                        <span class="text-xs text-white/70">Required</span>
+                    </label>
+                    <button class="field-delete p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors" title="Delete Field">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Field Configuration -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Left Column: Settings -->
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-white/50 mb-1">Field Label <span class="text-red-400">*</span></label>
+                            <input type="text" class="field-label w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="e.g., Full Name">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-white/50 mb-1">Field Type</label>
+                            <div class="relative">
+                                <button type="button" class="field-type-picker w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm text-left flex items-center justify-between hover:bg-slate-600/50 transition-colors">
+                                    <span class="field-type-display flex items-center gap-2">
+                                        <span class="type-icon">Aa</span>
+                                        <span class="type-name">Text Input</span>
+                                    </span>
+                                    <svg class="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                <input type="hidden" class="field-type" value="text">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-white/50 mb-1">Placeholder Text</label>
+                        <input type="text" class="field-placeholder w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Text shown when field is empty">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-white/50 mb-1">Help Text <span class="text-white/30">(optional)</span></label>
+                        <input type="text" class="field-helptext w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Additional instructions for users">
+                    </div>
+
+                    <!-- Options for select/checkbox-group -->
+                    <div class="field-options-container hidden">
+                        <label class="block text-xs text-white/50 mb-1">Options <span class="text-red-400">*</span></label>
+                        <textarea class="field-options w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-primary focus:border-transparent" rows="4" placeholder="Enter one option per line&#10;Option 1&#10;Option 2&#10;Option 3"></textarea>
+                        <p class="text-xs text-white/40 mt-1">Each line becomes a separate option</p>
+                    </div>
+
+                    <!-- Advanced Settings (type-specific) -->
+                    <div class="field-advanced-settings hidden pt-3 border-t border-slate-600/50 space-y-3">
+                        <p class="text-xs text-white/50 font-medium">Advanced Settings</p>
+                        <!-- Number settings -->
+                        <div class="field-number-settings hidden grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-white/50 mb-1">Min Value</label>
+                                <input type="number" class="field-min w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm" placeholder="No minimum">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-white/50 mb-1">Max Value</label>
+                                <input type="number" class="field-max w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm" placeholder="No maximum">
+                            </div>
+                        </div>
+                        <!-- Textarea settings -->
+                        <div class="field-textarea-settings hidden">
+                            <label class="block text-xs text-white/50 mb-1">Rows</label>
+                            <input type="number" class="field-rows w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm" placeholder="4" min="2" max="20" value="4">
+                        </div>
+                        <!-- Text settings -->
+                        <div class="field-text-settings hidden grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-white/50 mb-1">Min Length</label>
+                                <input type="number" class="field-minlength w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm" placeholder="No minimum" min="0">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-white/50 mb-1">Max Length</label>
+                                <input type="number" class="field-maxlength w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white text-sm" placeholder="No maximum" min="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Live Preview -->
+                <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-600/50">
+                    <p class="text-xs text-white/50 mb-3 font-medium flex items-center gap-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Live Preview
+                    </p>
+                    <div class="field-preview">
+                        <!-- Preview will be rendered here dynamically -->
+                        <div class="preview-label text-sm font-medium text-white mb-1">Field Label</div>
+                        <div class="preview-input"></div>
+                        <div class="preview-helptext text-xs text-white/40 mt-1 hidden"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Field Type Picker Modal -->
+    <div id="fieldTypeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="bg-slate-800 rounded-xl border border-slate-700 shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+            <div class="p-4 border-b border-slate-700">
+                <h3 class="text-lg font-bold text-white">Choose Field Type</h3>
+                <p class="text-sm text-white/50">Select the type of input for this field</p>
+            </div>
+            <div class="p-4 overflow-y-auto max-h-[60vh]">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Text Input -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="text">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-mono text-lg shrink-0">
+                                Aa
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Text Input</div>
+                                <p class="text-xs text-white/50 mt-0.5">Single line text field for short answers</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2">
+                                    <input type="text" disabled class="w-full px-2 py-1 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-xs" placeholder="Example text...">
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Textarea -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="textarea">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Text Area</div>
+                                <p class="text-xs text-white/50 mt-0.5">Multi-line text for longer responses</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2">
+                                    <div class="w-full h-8 bg-slate-700/50 border border-slate-600 rounded"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Select/Dropdown -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="select">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Dropdown</div>
+                                <p class="text-xs text-white/50 mt-0.5">Select one option from a list</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2">
+                                    <div class="w-full px-2 py-1 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-xs flex justify-between items-center">
+                                        <span>Select option...</span>
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Checkbox -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="checkbox">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Checkbox</div>
+                                <p class="text-xs text-white/50 mt-0.5">Single yes/no toggle</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2 flex items-center gap-2">
+                                    <div class="w-4 h-4 bg-slate-700/50 border border-slate-600 rounded"></div>
+                                    <span class="text-xs text-white/50">I agree to...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Checkbox Group -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="checkbox-group">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Checkbox Group</div>
+                                <p class="text-xs text-white/50 mt-0.5">Select multiple options from a list</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2 space-y-1">
+                                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-primary border border-primary rounded"></div><span class="text-xs text-white/50">Option 1</span></div>
+                                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-slate-700/50 border border-slate-600 rounded"></div><span class="text-xs text-white/50">Option 2</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Number -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="number">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-mono text-lg shrink-0">
+                                #
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Number</div>
+                                <p class="text-xs text-white/50 mt-0.5">Numeric input with optional min/max</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2">
+                                    <input type="number" disabled class="w-full px-2 py-1 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-xs" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Date -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="date">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Date</div>
+                                <p class="text-xs text-white/50 mt-0.5">Date picker calendar input</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2">
+                                    <div class="w-full px-2 py-1 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-xs flex justify-between items-center">
+                                        <span>mm/dd/yyyy</span>
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Email -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="email">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Email</div>
+                                <p class="text-xs text-white/50 mt-0.5">Email address with validation</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2">
+                                    <input type="email" disabled class="w-full px-2 py-1 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-xs" placeholder="user@example.com">
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- URL -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="url">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">URL</div>
+                                <p class="text-xs text-white/50 mt-0.5">Website link with validation</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2">
+                                    <input type="url" disabled class="w-full px-2 py-1 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-xs" placeholder="https://example.com">
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Discord ID -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="discord-id">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 0 0-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 0 0-5.487 0 12.36 12.36 0 0 0-.617-1.23A.077.077 0 0 0 8.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 0 0-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 0 0 .031.055 20.03 20.03 0 0 0 5.993 2.98.078.078 0 0 0 .084-.026c.462-.62.874-1.275 1.226-1.963.021-.04.001-.088-.041-.104a13.201 13.201 0 0 1-1.872-.878.075.075 0 0 1-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 0 1 .078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 0 1 .079.009c.12.098.245.195.372.288a.075.075 0 0 1-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 0 0-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 0 0 .084.028 19.963 19.963 0 0 0 6.002-2.981.076.076 0 0 0 .032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 0 0-.031-.028zM8.02 15.278c-1.182 0-2.157-1.069-2.157-2.38 0-1.312.956-2.38 2.157-2.38 1.21 0 2.176 1.077 2.157 2.38 0 1.312-.956 2.38-2.157 2.38zm7.975 0c-1.183 0-2.157-1.069-2.157-2.38 0-1.312.955-2.38 2.157-2.38 1.21 0 2.176 1.077 2.157 2.38 0 1.312-.946 2.38-2.157 2.38z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Discord ID(s)</div>
+                                <p class="text-xs text-white/50 mt-0.5">One or more Discord user IDs, formatted as mentions</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2">
+                                    <div class="w-full px-2 py-1 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-xs flex items-center gap-1">
+                                        <span class="text-violet-400">&lt;@</span>id1<span class="text-violet-400">&gt;</span><span class="text-white/30">,</span> <span class="text-violet-400">&lt;@</span>id2<span class="text-violet-400">&gt;</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Date & Time -->
+                    <button class="type-option group p-4 bg-slate-700/30 hover:bg-slate-700/60 border border-slate-600 hover:border-primary/50 rounded-lg text-left transition-all" data-type="datetime">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-semibold text-white group-hover:text-primary transition-colors">Date & Time</div>
+                                <p class="text-xs text-white/50 mt-0.5">Combined date and time picker</p>
+                                <div class="mt-2 bg-slate-800/50 rounded p-2">
+                                    <div class="w-full px-2 py-1 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-xs flex justify-between items-center">
+                                        <span>mm/dd/yyyy, --:-- --</span>
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-700 flex justify-end">
+                <button id="closeTypeModal" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        let adminUser = null;
+        let allForms = [];
+        let currentForm = null;
+        let isNewForm = false;
+        let currentFieldElement = null; // Track which field is being edited for type selection
+
+        // Field type configuration with icons and display info
+        const fieldTypes = {
+            text: {
+                name: 'Text Input',
+                icon: 'Aa',
+                iconType: 'text',
+                color: 'blue',
+                hasAdvanced: true,
+                advancedType: 'text'
+            },
+            textarea: {
+                name: 'Text Area',
+                icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10" /></svg>',
+                iconType: 'svg',
+                color: 'purple',
+                hasAdvanced: true,
+                advancedType: 'textarea'
+            },
+            select: {
+                name: 'Dropdown',
+                icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" /></svg>',
+                iconType: 'svg',
+                color: 'cyan',
+                hasOptions: true
+            },
+            checkbox: {
+                name: 'Checkbox',
+                icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>',
+                iconType: 'svg',
+                color: 'green'
+            },
+            'checkbox-group': {
+                name: 'Checkbox Group',
+                icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>',
+                iconType: 'svg',
+                color: 'emerald',
+                hasOptions: true
+            },
+            number: {
+                name: 'Number',
+                icon: '#',
+                iconType: 'text',
+                color: 'amber',
+                hasAdvanced: true,
+                advancedType: 'number'
+            },
+            date: {
+                name: 'Date',
+                icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>',
+                iconType: 'svg',
+                color: 'rose'
+            },
+            email: {
+                name: 'Email',
+                icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>',
+                iconType: 'svg',
+                color: 'indigo'
+            },
+            url: {
+                name: 'URL',
+                icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>',
+                iconType: 'svg',
+                color: 'teal'
+            },
+            'discord-id': {
+                name: 'Discord ID(s)',
+                icon: '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.317 4.492c-1.53-.69-3.17-1.2-4.885-1.49a.075.075 0 0 0-.079.036c-.21.369-.444.85-.608 1.23a18.566 18.566 0 0 0-5.487 0 12.36 12.36 0 0 0-.617-1.23A.077.077 0 0 0 8.562 3c-1.714.29-3.354.8-4.885 1.491a.07.07 0 0 0-.032.027C.533 9.093-.32 13.555.099 17.961a.08.08 0 0 0 .031.055 20.03 20.03 0 0 0 5.993 2.98.078.078 0 0 0 .084-.026c.462-.62.874-1.275 1.226-1.963.021-.04.001-.088-.041-.104a13.201 13.201 0 0 1-1.872-.878.075.075 0 0 1-.008-.125c.126-.093.252-.19.372-.287a.075.075 0 0 1 .078-.01c3.927 1.764 8.18 1.764 12.061 0a.075.075 0 0 1 .079.009c.12.098.245.195.372.288a.075.075 0 0 1-.006.125c-.598.344-1.22.635-1.873.877a.075.075 0 0 0-.041.105c.36.687.772 1.341 1.225 1.962a.077.077 0 0 0 .084.028 19.963 19.963 0 0 0 6.002-2.981.076.076 0 0 0 .032-.054c.5-5.094-.838-9.52-3.549-13.442a.06.06 0 0 0-.031-.028zM8.02 15.278c-1.182 0-2.157-1.069-2.157-2.38 0-1.312.956-2.38 2.157-2.38 1.21 0 2.176 1.077 2.157 2.38 0 1.312-.956 2.38-2.157 2.38zm7.975 0c-1.183 0-2.157-1.069-2.157-2.38 0-1.312.955-2.38 2.157-2.38 1.21 0 2.176 1.077 2.157 2.38 0 1.312-.946 2.38-2.157 2.38z"/></svg>',
+                iconType: 'svg',
+                color: 'violet'
+            },
+            datetime: {
+                name: 'Date & Time',
+                icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>',
+                iconType: 'svg',
+                color: 'sky'
+            }
+        };
+
+        // Validate session
+        async function validateSessionAndPermissions() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+
+                adminUser = data.user;
+
+                if (!hasPermission()) {
+                    document.body.innerHTML = `
+                        <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                            <div class="text-center p-8">
+                                <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                                <p class="text-white/70 mb-4">You don't have permission to access the form builder.</p>
+                                <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                            </div>
+                        </div>
+                    `;
+                    return false;
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Session validation error:', error);
+                window.location.href = '/admin/login';
+                return false;
+            }
+        }
+
+        function hasPermission() {
+            if (!adminUser) return false;
+            if (adminUser.role === 'super_admin') return true;
+            return adminUser.permissions && adminUser.permissions.includes('form-builder');
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        function generateId() {
+            return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+
+        // Load forms list
+        async function loadForms() {
+            try {
+                const response = await fetch('/api/forms', { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.success) {
+                    allForms = data.forms || [];
+                    renderFormsList();
+                } else {
+                    showStatus('Failed to load forms: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Failed to load forms:', error);
+                showStatus('Failed to load forms', 'error');
+            }
+        }
+
+        function renderFormsList() {
+            const container = document.getElementById('formsList');
+
+            if (allForms.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-white/60">
+                        <p>No forms created yet.</p>
+                        <p class="text-sm mt-1">Click "New Form" to create one.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = allForms.map(form => `
+                <div class="form-list-item p-3 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-primary/50 cursor-pointer transition-all ${currentForm && currentForm.id === form.id ? 'border-primary ring-1 ring-primary/50' : ''}" data-form-id="${form.id}">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-semibold text-white">${form.name}</h4>
+                            <p class="text-xs text-white/50">/forms/${form.slug}</p>
+                        </div>
+                        <span class="px-2 py-1 rounded text-xs ${form.enabled ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
+                            ${form.enabled ? 'Active' : 'Disabled'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            container.querySelectorAll('.form-list-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const formId = item.dataset.formId;
+                    const form = allForms.find(f => f.id === formId);
+                    if (form) {
+                        loadFormIntoEditor(form);
+                    }
+                });
+            });
+        }
+
+        function loadFormIntoEditor(form) {
+            currentForm = JSON.parse(JSON.stringify(form)); // Deep copy
+            isNewForm = false;
+
+            document.getElementById('editorPlaceholder').classList.add('hidden');
+            document.getElementById('formEditor').classList.remove('hidden');
+
+            // Fill basic info
+            document.getElementById('formName').value = form.name || '';
+            document.getElementById('formSlug').value = form.slug || '';
+            document.getElementById('formDescription').value = form.description || '';
+            document.getElementById('formWebhook').value = form.discordWebhookUrl || '';
+            document.getElementById('formEnabled').checked = form.enabled !== false;
+
+            // Render sections
+            renderSections(form.sections || []);
+
+            // Update list selection
+            renderFormsList();
+        }
+
+        function createNewForm() {
+            currentForm = {
+                id: null,
+                name: '',
+                slug: '',
+                description: '',
+                sections: [],
+                discordWebhookUrl: '',
+                enabled: true
+            };
+            isNewForm = true;
+
+            document.getElementById('editorPlaceholder').classList.add('hidden');
+            document.getElementById('formEditor').classList.remove('hidden');
+
+            // Clear form
+            document.getElementById('formName').value = '';
+            document.getElementById('formSlug').value = '';
+            document.getElementById('formDescription').value = '';
+            document.getElementById('formWebhook').value = '';
+            document.getElementById('formEnabled').checked = true;
+
+            // Clear sections
+            document.getElementById('sectionsContainer').innerHTML = '';
+
+            // Update list selection
+            renderFormsList();
+        }
+
+        function renderSections(sections) {
+            const container = document.getElementById('sectionsContainer');
+            container.innerHTML = '';
+
+            sections.forEach((section, index) => {
+                const sectionEl = createSectionElement(section);
+                container.appendChild(sectionEl);
+            });
+        }
+
+        function createSectionElement(section) {
+            const template = document.getElementById('sectionTemplate');
+            const sectionEl = template.content.cloneNode(true).querySelector('.section-item');
+
+            sectionEl.dataset.sectionId = section.id || generateId();
+            sectionEl.querySelector('.section-title').value = section.title || '';
+            sectionEl.querySelector('.section-color').value = section.color || 'indigo';
+
+            // Render fields
+            const fieldsContainer = sectionEl.querySelector('.section-fields');
+            (section.fields || []).forEach(field => {
+                const fieldEl = createFieldElement(field);
+                fieldsContainer.appendChild(fieldEl);
+            });
+
+            // Attach section event handlers
+            attachSectionHandlers(sectionEl);
+
+            return sectionEl;
+        }
+
+        function createFieldElement(field) {
+            const template = document.getElementById('fieldTemplate');
+            const fieldEl = template.content.cloneNode(true).querySelector('.field-item');
+            const type = field.type || 'text';
+            const typeConfig = fieldTypes[type] || fieldTypes.text;
+
+            fieldEl.dataset.fieldId = field.id || generateId();
+            fieldEl.querySelector('.field-label').value = field.label || '';
+            fieldEl.querySelector('.field-type').value = type;
+            fieldEl.querySelector('.field-placeholder').value = field.placeholder || '';
+            fieldEl.querySelector('.field-required').checked = field.required || false;
+            fieldEl.querySelector('.field-helptext').value = field.helpText || '';
+
+            // Update the type badge and picker display
+            updateFieldTypeDisplay(fieldEl, type);
+
+            // Show options if needed
+            const optionsContainer = fieldEl.querySelector('.field-options-container');
+            if (['select', 'checkbox-group'].includes(type)) {
+                optionsContainer.classList.remove('hidden');
+                fieldEl.querySelector('.field-options').value = (field.options || []).join('\n');
+            }
+
+            // Show/configure advanced settings
+            updateAdvancedSettings(fieldEl, type, field);
+
+            // Set initial preview
+            updateFieldPreview(fieldEl);
+
+            // Attach field event handlers
+            attachFieldHandlers(fieldEl);
+
+            return fieldEl;
+        }
+
+        function updateFieldTypeDisplay(fieldEl, type) {
+            const typeConfig = fieldTypes[type] || fieldTypes.text;
+
+            // Update badge in header
+            const badge = fieldEl.querySelector('.field-type-badge');
+            const iconEl = badge.querySelector('.field-type-icon');
+            const nameEl = badge.querySelector('.field-type-name');
+
+            if (typeConfig.iconType === 'svg') {
+                iconEl.innerHTML = typeConfig.icon;
+            } else {
+                iconEl.textContent = typeConfig.icon;
+            }
+            nameEl.textContent = typeConfig.name;
+
+            // Update badge color
+            badge.className = `field-type-badge px-2 py-1 rounded text-xs font-medium bg-${typeConfig.color}-500/20 text-${typeConfig.color}-400 flex items-center gap-1`;
+
+            // Update picker button display
+            const pickerBtn = fieldEl.querySelector('.field-type-picker');
+            const displayIcon = pickerBtn.querySelector('.type-icon');
+            const displayName = pickerBtn.querySelector('.type-name');
+
+            if (typeConfig.iconType === 'svg') {
+                displayIcon.innerHTML = typeConfig.icon;
+            } else {
+                displayIcon.textContent = typeConfig.icon;
+            }
+            displayName.textContent = typeConfig.name;
+        }
+
+        function updateAdvancedSettings(fieldEl, type, field = {}) {
+            const advancedContainer = fieldEl.querySelector('.field-advanced-settings');
+            const numberSettings = fieldEl.querySelector('.field-number-settings');
+            const textareaSettings = fieldEl.querySelector('.field-textarea-settings');
+            const textSettings = fieldEl.querySelector('.field-text-settings');
+
+            // Hide all first
+            numberSettings.classList.add('hidden');
+            textareaSettings.classList.add('hidden');
+            textSettings.classList.add('hidden');
+            advancedContainer.classList.add('hidden');
+
+            const typeConfig = fieldTypes[type];
+            if (typeConfig && typeConfig.hasAdvanced) {
+                advancedContainer.classList.remove('hidden');
+
+                if (typeConfig.advancedType === 'number') {
+                    numberSettings.classList.remove('hidden');
+                    if (field.min !== undefined) fieldEl.querySelector('.field-min').value = field.min;
+                    if (field.max !== undefined) fieldEl.querySelector('.field-max').value = field.max;
+                } else if (typeConfig.advancedType === 'textarea') {
+                    textareaSettings.classList.remove('hidden');
+                    fieldEl.querySelector('.field-rows').value = field.rows || 4;
+                } else if (typeConfig.advancedType === 'text') {
+                    textSettings.classList.remove('hidden');
+                    if (field.minLength !== undefined) fieldEl.querySelector('.field-minlength').value = field.minLength;
+                    if (field.maxLength !== undefined) fieldEl.querySelector('.field-maxlength').value = field.maxLength;
+                }
+            }
+        }
+
+        function updateFieldPreview(fieldEl) {
+            const type = fieldEl.querySelector('.field-type').value;
+            const label = fieldEl.querySelector('.field-label').value || 'Field Label';
+            const placeholder = fieldEl.querySelector('.field-placeholder').value;
+            const helpText = fieldEl.querySelector('.field-helptext').value;
+            const required = fieldEl.querySelector('.field-required').checked;
+            const options = fieldEl.querySelector('.field-options')?.value.split('\n').filter(o => o.trim()) || [];
+
+            const previewContainer = fieldEl.querySelector('.field-preview');
+            const previewLabel = previewContainer.querySelector('.preview-label');
+            const previewInput = previewContainer.querySelector('.preview-input');
+            const previewHelptext = previewContainer.querySelector('.preview-helptext');
+
+            // Update label with required indicator
+            previewLabel.innerHTML = `${label}${required ? ' <span class="text-red-400">*</span>' : ''}`;
+
+            // Update help text
+            if (helpText) {
+                previewHelptext.textContent = helpText;
+                previewHelptext.classList.remove('hidden');
+            } else {
+                previewHelptext.classList.add('hidden');
+            }
+
+            // Generate preview input based on type
+            let inputHtml = '';
+            switch (type) {
+                case 'text':
+                    inputHtml = `<input type="text" disabled class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm" placeholder="${placeholder || 'Enter text...'}">`;
+                    break;
+                case 'textarea':
+                    const rows = fieldEl.querySelector('.field-rows')?.value || 4;
+                    inputHtml = `<textarea disabled rows="${Math.min(rows, 3)}" class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm resize-none" placeholder="${placeholder || 'Enter text...'}"></textarea>`;
+                    break;
+                case 'select':
+                    inputHtml = `
+                        <select disabled class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm">
+                            <option>${placeholder || 'Select an option...'}</option>
+                            ${options.slice(0, 3).map(opt => `<option>${opt}</option>`).join('')}
+                            ${options.length > 3 ? `<option>...and ${options.length - 3} more</option>` : ''}
+                        </select>`;
+                    break;
+                case 'checkbox':
+                    inputHtml = `
+                        <label class="flex items-center gap-2 cursor-not-allowed opacity-70">
+                            <input type="checkbox" disabled class="w-4 h-4 bg-slate-700/50 border-slate-600 rounded">
+                            <span class="text-sm text-white/70">${placeholder || label || 'Checkbox option'}</span>
+                        </label>`;
+                    break;
+                case 'checkbox-group':
+                    const displayOptions = options.length > 0 ? options.slice(0, 3) : ['Option 1', 'Option 2', 'Option 3'];
+                    inputHtml = `
+                        <div class="space-y-2">
+                            ${displayOptions.map((opt, i) => `
+                                <label class="flex items-center gap-2 cursor-not-allowed opacity-70">
+                                    <input type="checkbox" disabled ${i === 0 ? 'checked' : ''} class="w-4 h-4 bg-slate-700/50 border-slate-600 rounded">
+                                    <span class="text-sm text-white/70">${opt}</span>
+                                </label>
+                            `).join('')}
+                            ${options.length > 3 ? `<p class="text-xs text-white/40">...and ${options.length - 3} more options</p>` : ''}
+                        </div>`;
+                    break;
+                case 'number':
+                    const min = fieldEl.querySelector('.field-min')?.value;
+                    const max = fieldEl.querySelector('.field-max')?.value;
+                    let numPlaceholder = placeholder || '0';
+                    if (min || max) {
+                        numPlaceholder = `${min || '∞'} - ${max || '∞'}`;
+                    }
+                    inputHtml = `<input type="number" disabled class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm" placeholder="${numPlaceholder}"${min ? ` min="${min}"` : ''}${max ? ` max="${max}"` : ''}>`;
+                    break;
+                case 'date':
+                    inputHtml = `
+                        <div class="relative">
+                            <input type="text" disabled class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm pr-10" placeholder="${placeholder || 'mm/dd/yyyy'}">
+                            <svg class="w-4 h-4 text-white/40 absolute right-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>`;
+                    break;
+                case 'email':
+                    inputHtml = `<input type="email" disabled class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm" placeholder="${placeholder || 'user@example.com'}">`;
+                    break;
+                case 'url':
+                    inputHtml = `<input type="url" disabled class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm" placeholder="${placeholder || 'https://example.com'}">`;
+                    break;
+                case 'discord-id':
+                    inputHtml = `
+                        <div class="relative">
+                            <input type="text" disabled class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm font-mono" placeholder="${placeholder || '123456789, 987654321'}">
+                        </div>
+                        <p class="text-xs text-white/40 mt-1">Multiple IDs separated by commas, formatted as <span class="text-violet-400 font-mono">&lt;@id&gt;</span> in Discord</p>`;
+                    break;
+                case 'datetime':
+                    inputHtml = `
+                        <div class="relative">
+                            <input type="text" disabled class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm pr-10" placeholder="${placeholder || 'mm/dd/yyyy, --:-- --'}">
+                            <svg class="w-4 h-4 text-white/40 absolute right-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>`;
+                    break;
+                default:
+                    inputHtml = `<input type="text" disabled class="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white/50 text-sm" placeholder="${placeholder || 'Enter text...'}">`;
+            }
+
+            previewInput.innerHTML = inputHtml;
+        }
+
+        function attachSectionHandlers(sectionEl) {
+            // Delete section
+            sectionEl.querySelector('.section-delete').addEventListener('click', () => {
+                if (confirm('Are you sure you want to delete this section?')) {
+                    sectionEl.remove();
+                }
+            });
+
+            // Move up
+            sectionEl.querySelector('.section-move-up').addEventListener('click', () => {
+                const prev = sectionEl.previousElementSibling;
+                if (prev) {
+                    sectionEl.parentNode.insertBefore(sectionEl, prev);
+                }
+            });
+
+            // Move down
+            sectionEl.querySelector('.section-move-down').addEventListener('click', () => {
+                const next = sectionEl.nextElementSibling;
+                if (next) {
+                    sectionEl.parentNode.insertBefore(next, sectionEl);
+                }
+            });
+
+            // Toggle collapse
+            sectionEl.querySelector('.section-toggle-collapse').addEventListener('click', () => {
+                const fieldsContainer = sectionEl.querySelector('.section-fields');
+                const addFieldBtn = sectionEl.querySelector('.add-field-btn');
+                const icon = sectionEl.querySelector('.collapse-icon');
+
+                fieldsContainer.classList.toggle('hidden');
+                addFieldBtn.classList.toggle('hidden');
+                icon.style.transform = fieldsContainer.classList.contains('hidden') ? 'rotate(180deg)' : '';
+            });
+
+            // Add field
+            sectionEl.querySelector('.add-field-btn').addEventListener('click', () => {
+                const fieldsContainer = sectionEl.querySelector('.section-fields');
+                const fieldEl = createFieldElement({ id: generateId(), type: 'text', label: '', required: false });
+                fieldsContainer.appendChild(fieldEl);
+            });
+        }
+
+        function attachFieldHandlers(fieldEl) {
+            // Delete field
+            fieldEl.querySelector('.field-delete').addEventListener('click', () => {
+                fieldEl.remove();
+            });
+
+            // Move up
+            fieldEl.querySelector('.field-move-up').addEventListener('click', () => {
+                const prev = fieldEl.previousElementSibling;
+                if (prev) {
+                    fieldEl.parentNode.insertBefore(fieldEl, prev);
+                }
+            });
+
+            // Move down
+            fieldEl.querySelector('.field-move-down').addEventListener('click', () => {
+                const next = fieldEl.nextElementSibling;
+                if (next) {
+                    fieldEl.parentNode.insertBefore(next, fieldEl);
+                }
+            });
+
+            // Type picker button - opens modal
+            fieldEl.querySelector('.field-type-picker').addEventListener('click', () => {
+                currentFieldElement = fieldEl;
+                document.getElementById('fieldTypeModal').classList.remove('hidden');
+            });
+
+            // Update preview on various input changes
+            const updatePreviewDebounced = debounce(() => updateFieldPreview(fieldEl), 150);
+
+            fieldEl.querySelector('.field-label').addEventListener('input', updatePreviewDebounced);
+            fieldEl.querySelector('.field-placeholder').addEventListener('input', updatePreviewDebounced);
+            fieldEl.querySelector('.field-helptext').addEventListener('input', updatePreviewDebounced);
+            fieldEl.querySelector('.field-required').addEventListener('change', () => updateFieldPreview(fieldEl));
+            fieldEl.querySelector('.field-options')?.addEventListener('input', updatePreviewDebounced);
+
+            // Advanced settings change handlers
+            const minInput = fieldEl.querySelector('.field-min');
+            const maxInput = fieldEl.querySelector('.field-max');
+            const rowsInput = fieldEl.querySelector('.field-rows');
+            const minLengthInput = fieldEl.querySelector('.field-minlength');
+            const maxLengthInput = fieldEl.querySelector('.field-maxlength');
+
+            if (minInput) minInput.addEventListener('input', updatePreviewDebounced);
+            if (maxInput) maxInput.addEventListener('input', updatePreviewDebounced);
+            if (rowsInput) rowsInput.addEventListener('input', updatePreviewDebounced);
+            if (minLengthInput) minLengthInput.addEventListener('input', updatePreviewDebounced);
+            if (maxLengthInput) maxLengthInput.addEventListener('input', updatePreviewDebounced);
+        }
+
+        // Debounce helper
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function selectFieldType(type) {
+            if (!currentFieldElement) return;
+
+            // Update the hidden input
+            currentFieldElement.querySelector('.field-type').value = type;
+
+            // Update display
+            updateFieldTypeDisplay(currentFieldElement, type);
+
+            // Show/hide options container
+            const optionsContainer = currentFieldElement.querySelector('.field-options-container');
+            if (['select', 'checkbox-group'].includes(type)) {
+                optionsContainer.classList.remove('hidden');
+            } else {
+                optionsContainer.classList.add('hidden');
+            }
+
+            // Update advanced settings
+            updateAdvancedSettings(currentFieldElement, type);
+
+            // Update preview
+            updateFieldPreview(currentFieldElement);
+
+            // Close modal
+            document.getElementById('fieldTypeModal').classList.add('hidden');
+            currentFieldElement = null;
+        }
+
+        function collectFormData() {
+            const sections = [];
+            document.querySelectorAll('#sectionsContainer .section-item').forEach(sectionEl => {
+                const fields = [];
+                sectionEl.querySelectorAll('.field-item').forEach(fieldEl => {
+                    const type = fieldEl.querySelector('.field-type').value;
+                    const field = {
+                        id: fieldEl.dataset.fieldId,
+                        type,
+                        label: fieldEl.querySelector('.field-label').value,
+                        placeholder: fieldEl.querySelector('.field-placeholder').value,
+                        required: fieldEl.querySelector('.field-required').checked,
+                        helpText: fieldEl.querySelector('.field-helptext').value
+                    };
+
+                    if (['select', 'checkbox-group'].includes(type)) {
+                        field.options = fieldEl.querySelector('.field-options').value
+                            .split('\n')
+                            .map(opt => opt.trim())
+                            .filter(opt => opt);
+                    }
+
+                    // Collect advanced settings based on type
+                    if (type === 'number') {
+                        const min = fieldEl.querySelector('.field-min')?.value;
+                        const max = fieldEl.querySelector('.field-max')?.value;
+                        if (min) field.min = parseInt(min, 10);
+                        if (max) field.max = parseInt(max, 10);
+                    } else if (type === 'textarea') {
+                        const rows = fieldEl.querySelector('.field-rows')?.value;
+                        if (rows) field.rows = parseInt(rows, 10);
+                    } else if (type === 'text') {
+                        const minLength = fieldEl.querySelector('.field-minlength')?.value;
+                        const maxLength = fieldEl.querySelector('.field-maxlength')?.value;
+                        if (minLength) field.minLength = parseInt(minLength, 10);
+                        if (maxLength) field.maxLength = parseInt(maxLength, 10);
+                    }
+
+                    fields.push(field);
+                });
+
+                sections.push({
+                    id: sectionEl.dataset.sectionId,
+                    title: sectionEl.querySelector('.section-title').value,
+                    color: sectionEl.querySelector('.section-color').value,
+                    fields
+                });
+            });
+
+            return {
+                id: currentForm?.id,
+                name: document.getElementById('formName').value,
+                slug: document.getElementById('formSlug').value || undefined,
+                description: document.getElementById('formDescription').value,
+                discordWebhookUrl: document.getElementById('formWebhook').value,
+                enabled: document.getElementById('formEnabled').checked,
+                sections
+            };
+        }
+
+        async function saveForm() {
+            const formData = collectFormData();
+
+            if (!formData.name.trim()) {
+                showStatus('Please enter a form name', 'error');
+                return;
+            }
+
+            const saveBtn = document.getElementById('saveFormBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const method = isNewForm ? 'POST' : 'PUT';
+                const response = await fetch('/api/forms', {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus(isNewForm ? 'Form created successfully!' : 'Form saved successfully!');
+                    await loadForms();
+
+                    if (isNewForm && result.form) {
+                        loadFormIntoEditor(result.form);
+                    } else if (result.form) {
+                        currentForm = result.form;
+                        document.getElementById('formSlug').value = result.form.slug;
+                    }
+                } else {
+                    showStatus(result.error || 'Failed to save form', 'error');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showStatus('Failed to save form', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Form';
+            }
+        }
+
+        async function deleteForm() {
+            if (!currentForm || !currentForm.id) {
+                showStatus('No form selected', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to delete "${currentForm.name}"? This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/forms', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ id: currentForm.id })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('Form deleted successfully');
+                    currentForm = null;
+                    document.getElementById('formEditor').classList.add('hidden');
+                    document.getElementById('editorPlaceholder').classList.remove('hidden');
+                    await loadForms();
+                } else {
+                    showStatus(result.error || 'Failed to delete form', 'error');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                showStatus('Failed to delete form', 'error');
+            }
+        }
+
+        function previewForm() {
+            const formData = collectFormData();
+            if (!formData.slug && !formData.name) {
+                showStatus('Please enter a form name first', 'error');
+                return;
+            }
+
+            const slug = formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            window.open(`/forms/${slug}`, '_blank');
+        }
+
+        function addSection() {
+            const container = document.getElementById('sectionsContainer');
+            const sectionEl = createSectionElement({
+                id: generateId(),
+                title: 'New Section',
+                color: 'indigo',
+                fields: []
+            });
+            container.appendChild(sectionEl);
+        }
+
+        // Initialize
+        validateSessionAndPermissions().then(valid => {
+            if (valid) {
+                loadForms();
+
+                // Attach button handlers
+                document.getElementById('createFormBtn').addEventListener('click', createNewForm);
+                document.getElementById('addSectionBtn').addEventListener('click', addSection);
+                document.getElementById('saveFormBtn').addEventListener('click', saveForm);
+                document.getElementById('deleteFormBtn').addEventListener('click', deleteForm);
+                document.getElementById('previewFormBtn').addEventListener('click', previewForm);
+
+                // Auto-generate slug from name
+                document.getElementById('formName').addEventListener('input', (e) => {
+                    if (isNewForm || !document.getElementById('formSlug').value) {
+                        const slug = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                        document.getElementById('formSlug').value = slug;
+                    }
+                });
+
+                // Field type modal handlers
+                const fieldTypeModal = document.getElementById('fieldTypeModal');
+                const closeTypeModalBtn = document.getElementById('closeTypeModal');
+
+                // Close modal when clicking cancel button
+                closeTypeModalBtn.addEventListener('click', () => {
+                    fieldTypeModal.classList.add('hidden');
+                    currentFieldElement = null;
+                });
+
+                // Close modal when clicking backdrop
+                fieldTypeModal.addEventListener('click', (e) => {
+                    if (e.target === fieldTypeModal) {
+                        fieldTypeModal.classList.add('hidden');
+                        currentFieldElement = null;
+                    }
+                });
+
+                // Handle type option selection
+                fieldTypeModal.querySelectorAll('.type-option').forEach(option => {
+                    option.addEventListener('click', () => {
+                        const type = option.dataset.type;
+                        selectFieldType(type);
+                    });
+                });
+
+                // Close on Escape key
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && !fieldTypeModal.classList.contains('hidden')) {
+                        fieldTypeModal.classList.add('hidden');
+                        currentFieldElement = null;
+                    }
+                });
+            }
+        });
+    </script>
+</Layout>

@@ -331,13 +331,50 @@ async function fetchRosterData(): Promise<RosterEntry[]> {
     }
 }
 
+// Default empty rank positions for initialization
+const defaultRankPositions: RankPositions[] = multiMemberRanks.map(rank => ({
+    rank,
+    members: [
+        { name: '', callSign: '', jobTitle: '', discordId: '', isLOA: false },
+        { name: '', callSign: '', jobTitle: '', discordId: '', isLOA: false },
+        { name: '', callSign: '', jobTitle: '', discordId: '', isLOA: false },
+        { name: '', callSign: '', jobTitle: '', discordId: '', isLOA: false },
+        { name: '', callSign: '', jobTitle: '', discordId: '', isLOA: false },
+        { name: '', callSign: '', jobTitle: '', discordId: '', isLOA: false }
+    ]
+}));
+
 // Get current department data from blob store
 async function getDepartmentData(): Promise<DepartmentData | null> {
     try {
         const store = getStore({ name: 'department-data', consistency: 'strong' });
         const data = await store.get('department-data', { type: 'json' });
         if (data && typeof data === 'object') {
-            return data as DepartmentData;
+            const result = data as DepartmentData;
+
+            // Ensure all default rank positions exist in stored data
+            // This fixes sync issues where ranks like 'Major' might be missing from blob storage
+            if (result.rankPositions) {
+                const existingRanks = new Set(result.rankPositions.map(rp => rp.rank));
+                for (const defaultRank of defaultRankPositions) {
+                    if (!existingRanks.has(defaultRank.rank)) {
+                        // Find the correct position to insert the missing rank
+                        const defaultIndex = defaultRankPositions.findIndex(rp => rp.rank === defaultRank.rank);
+                        result.rankPositions.splice(defaultIndex, 0, {
+                            rank: defaultRank.rank,
+                            members: defaultRank.members.map(m => ({ ...m }))
+                        });
+                        console.log(`Added missing rank position: ${defaultRank.rank}`);
+                    }
+                }
+            } else {
+                result.rankPositions = defaultRankPositions.map(rp => ({
+                    rank: rp.rank,
+                    members: rp.members.map(m => ({ ...m }))
+                }));
+            }
+
+            return result;
         }
         return null;
     } catch (error) {

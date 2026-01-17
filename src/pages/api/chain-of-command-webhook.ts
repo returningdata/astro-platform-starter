@@ -50,9 +50,20 @@ interface RankPositions {
     discordRoleId?: string;  // Discord role ID for role mentions in webhook
 }
 
+interface SubdivisionLeader {
+    division: string;
+    name: string;
+    callSign: string;
+    jobTitle: string;
+    isLOA?: boolean;
+    discordId?: string;
+    positionType?: 'department_liaison' | 'overseer' | 'assistant_head' | 'leader';
+}
+
 interface DepartmentData {
     commandPositions: CommandPosition[];
     rankPositions: RankPositions[];
+    subdivisionLeadership?: SubdivisionLeader[];
 }
 
 /**
@@ -163,6 +174,23 @@ function buildChainOfCommandEmbeds(data: DepartmentData, config: ChainOfCommandC
     const timestamp = new Date().toISOString();
     const COLORS = config.colors;
     const LOGO_URL = config.logoUrl;
+
+    // Department Liaisons - at the very top of the chain of command
+    // Show only their name in Discord mention format <@discordId>
+    if (data.subdivisionLeadership) {
+        const departmentLiaisons = data.subdivisionLeadership
+            .filter(leader => leader.positionType === 'department_liaison' && leader.name && leader.discordId);
+
+        if (departmentLiaisons.length > 0) {
+            const liaisonMentions = departmentLiaisons.map(liaison => `<@${liaison.discordId}>`);
+            embeds.push({
+                title: 'Department Liaisons',
+                description: liaisonMentions.join('\n'),
+                color: COLORS.departmentLiaisons,
+                timestamp: timestamp
+            });
+        }
+    }
 
     // High Command (Chief of Police through Lieutenant Colonel)
     const highCommandRanks = ['Chief of Police', 'Deputy Chief of Police', 'Assistant Chief of Police', 'Colonel', 'Lieutenant Colonel'];

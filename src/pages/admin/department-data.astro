@@ -10,10 +10,16 @@ import Layout from '../../layouts/Layout.astro';
                 <h1 class="text-4xl md:text-5xl font-bold mb-2">Department Data</h1>
                 <p class="text-white/70">Manage awards recipients and chain of command</p>
             </div>
-            <div class="flex gap-4">
+            <div class="flex gap-4 flex-wrap">
                 <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
                     Back to Dashboard
                 </a>
+                <button id="syncRosterBtn" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors font-semibold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Manual Sync
+                </button>
                 <button id="saveBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
                     Save Changes
                 </button>
@@ -22,6 +28,51 @@ import Layout from '../../layouts/Layout.astro';
 
         <!-- Status Messages -->
         <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Sync Info Banner -->
+        <div class="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+                <svg class="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <h3 class="font-semibold text-green-300">Roster Auto-Sync Enabled</h3>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span id="autoSyncStatus" class="flex items-center gap-1.5 text-green-400">
+                                <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                                Active
+                            </span>
+                            <span class="text-white/50">|</span>
+                            <span id="lastSyncTime" class="text-white/70">Last sync: Never</span>
+                            <span class="text-white/50">|</span>
+                            <span id="nextSyncTime" class="text-white/70">Next: --:--</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-white/70 mt-1">
+                        Roster automatically syncs from the
+                        <a href="https://docs.google.com/spreadsheets/d/1iUCnkFyPlNd5jorr3g2ZH2PLhwuQOcFXvx_DlbKdnI0/edit?gid=1853319408" target="_blank" class="text-green-400 hover:text-green-300 underline">DPPD Master Roster</a>
+                        every minute. Data is auto-saved to the Chain of Command page.
+                        Use "Manual Sync" to sync immediately.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Department Liaisons Section -->
+        <div id="departmentLiaisonsSection" class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-rose-400">Department Liaisons</h2>
+                    <p class="text-white/60">Manage Department Liaisons that appear at the top of the Chain of Command. Up to 5 slots available.</p>
+                </div>
+            </div>
+            <div id="departmentLiaisonsList" class="space-y-4">
+                <div class="text-center py-8 text-white/60">
+                    Loading department liaisons data...
+                </div>
+            </div>
         </div>
 
         <!-- Chain of Command Section - High Command -->
@@ -220,6 +271,11 @@ import Layout from '../../layouts/Layout.astro';
 
         // Default subdivision leadership structure
         const defaultSubdivisionLeadership = [
+            { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+            { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+            { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+            { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+            { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
             { division: 'Subdivision Overseer', name: '', callSign: '', jobTitle: '', positionType: 'overseer' },
             { division: 'Assistant Head of Subdivisions', name: '', callSign: '', jobTitle: '', positionType: 'assistant_head' },
             { division: 'Field Training Division', name: '', callSign: '', jobTitle: '', positionType: 'leader' },
@@ -288,6 +344,7 @@ import Layout from '../../layouts/Layout.astro';
 
                 renderCommandPositions();
                 renderRankPositions();
+                renderDepartmentLiaisons();
                 renderSubdivisionLeadership();
                 renderAwards();
             } catch (error) {
@@ -302,6 +359,139 @@ import Layout from '../../layouts/Layout.astro';
             statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
             statusEl.classList.remove('hidden');
             setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        // Ensure we have exactly 5 Department Liaison slots
+        function ensureDepartmentLiaisonSlots() {
+            // Filter out department liaisons from subdivision leadership
+            const liaisons = departmentData.subdivisionLeadership.filter(l => l.positionType === 'department_liaison');
+            const others = departmentData.subdivisionLeadership.filter(l => l.positionType !== 'department_liaison');
+
+            // Ensure we have exactly 5 slots
+            while (liaisons.length < 5) {
+                liaisons.push({
+                    division: 'Department Liaison',
+                    name: '',
+                    callSign: '',
+                    jobTitle: '',
+                    discordId: '',
+                    positionType: 'department_liaison'
+                });
+            }
+
+            // Reconstruct subdivisionLeadership with liaisons first, then others
+            departmentData.subdivisionLeadership = [...liaisons.slice(0, 5), ...others];
+        }
+
+        function renderDepartmentLiaisons() {
+            const container = document.getElementById('departmentLiaisonsList');
+
+            // Ensure we have 5 slots
+            ensureDepartmentLiaisonSlots();
+
+            // Get only department liaisons
+            const liaisons = departmentData.subdivisionLeadership.filter(l => l.positionType === 'department_liaison');
+
+            container.innerHTML = liaisons.map((liaison, index) => `
+                <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${liaison.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-full bg-rose-500/30 flex items-center justify-center text-rose-300 font-bold text-sm">
+                            ${index + 1}
+                        </div>
+                        <span class="text-rose-300 font-medium">Liaison Slot ${index + 1}</span>
+                        ${!liaison.name ? '<span class="text-white/40 text-sm">(Empty)</span>' : ''}
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Name</label>
+                            <input
+                                type="text"
+                                value="${liaison.name || ''}"
+                                placeholder="Enter liaison name..."
+                                class="liaison-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                                data-index="${index}"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Job Title</label>
+                            <input
+                                type="text"
+                                value="${liaison.jobTitle || ''}"
+                                placeholder="Enter job title..."
+                                class="liaison-job w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white italic focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                                data-index="${index}"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">
+                                Discord ID
+                                <span class="text-xs text-white/50 font-normal ml-1">(optional)</span>
+                            </label>
+                            <input
+                                type="text"
+                                value="${liaison.discordId || ''}"
+                                placeholder="Discord User ID..."
+                                class="liaison-discord-id w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                data-index="${index}"
+                            >
+                        </div>
+                        <div class="flex items-end">
+                            <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${liaison.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
+                                <input
+                                    type="checkbox"
+                                    class="liaison-loa w-4 h-4 rounded border-slate-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
+                                    data-index="${index}"
+                                    ${liaison.isLOA ? 'checked' : ''}
+                                >
+                                <span class="text-sm font-medium ${liaison.isLOA ? 'text-yellow-400' : 'text-slate-300'}">LOA</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            attachLiaisonListeners();
+        }
+
+        function attachLiaisonListeners() {
+            // Get all department liaisons for updating
+            const getLiaisonByIndex = (index) => {
+                const liaisons = departmentData.subdivisionLeadership.filter(l => l.positionType === 'department_liaison');
+                return liaisons[index];
+            };
+
+            document.querySelectorAll('.liaison-name').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const liaison = getLiaisonByIndex(index);
+                    if (liaison) liaison.name = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.liaison-job').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const liaison = getLiaisonByIndex(index);
+                    if (liaison) liaison.jobTitle = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.liaison-discord-id').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const liaison = getLiaisonByIndex(index);
+                    if (liaison) liaison.discordId = e.target.value;
+                });
+            });
+
+            document.querySelectorAll('.liaison-loa').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const liaison = getLiaisonByIndex(index);
+                    if (liaison) liaison.isLOA = e.target.checked;
+                    renderDepartmentLiaisons();
+                });
+            });
         }
 
         function renderCommandPositions() {
@@ -461,7 +651,7 @@ import Layout from '../../layouts/Layout.astro';
 
                         <div class="space-y-4">
                             ${rankPos.members.map((member, memberIndex) => `
-                                <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${member.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
+                                <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${member.isSuspended ? 'border-red-500/50 bg-red-500/10' : member.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
                                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-slate-300 mb-1">Name #${memberIndex + 1}</label>
@@ -509,6 +699,59 @@ import Layout from '../../layouts/Layout.astro';
                                             </label>
                                         </div>
                                     </div>
+                                    <!-- Status Row: Strikes, Activity, Suspension -->
+                                    <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-300 mb-1">Strikes</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="10"
+                                                value="${member.strikes || 0}"
+                                                placeholder="0"
+                                                class="rank-member-strikes w-full px-4 py-2 bg-slate-700/50 border ${member.strikes > 0 ? 'border-orange-500' : 'border-slate-600'} rounded-lg ${member.strikes > 0 ? 'text-orange-300' : 'text-white'} focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                                data-rank-index="${rankIndex}"
+                                                data-member-index="${memberIndex}"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-300 mb-1">Activity Status</label>
+                                            <select
+                                                class="rank-member-activity-status w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-${colorClass}-500 focus:border-transparent"
+                                                data-rank-index="${rankIndex}"
+                                                data-member-index="${memberIndex}"
+                                            >
+                                                <option value="" ${!member.activityStatus || member.activityStatus === 'active' ? 'selected' : ''}>Active</option>
+                                                <option value="warning" ${member.activityStatus === 'warning' ? 'selected' : ''}>Activity Warning</option>
+                                                <option value="probation" ${member.activityStatus === 'probation' ? 'selected' : ''}>On Probation</option>
+                                                <option value="inactive" ${member.activityStatus === 'inactive' ? 'selected' : ''}>Inactive</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-end">
+                                            <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${member.isSuspended ? 'border-red-500 bg-red-500/20' : ''}">
+                                                <input
+                                                    type="checkbox"
+                                                    class="rank-member-suspended w-4 h-4 rounded border-slate-500 text-red-500 focus:ring-red-500 focus:ring-offset-0"
+                                                    data-rank-index="${rankIndex}"
+                                                    data-member-index="${memberIndex}"
+                                                    ${member.isSuspended ? 'checked' : ''}
+                                                >
+                                                <span class="text-sm font-medium ${member.isSuspended ? 'text-red-400' : 'text-slate-300'}">Suspended</span>
+                                            </label>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-300 mb-1">Suspension Reason</label>
+                                            <input
+                                                type="text"
+                                                value="${member.suspensionReason || ''}"
+                                                placeholder="Reason (if suspended)..."
+                                                class="rank-member-suspension-reason w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-red-300 italic focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                                data-rank-index="${rankIndex}"
+                                                data-member-index="${memberIndex}"
+                                                ${member.isSuspended ? '' : 'disabled'}
+                                            >
+                                        </div>
+                                    </div>
                                     <div class="mt-3">
                                         <label class="block text-sm font-medium text-slate-300 mb-1">
                                             Discord User ID
@@ -536,7 +779,12 @@ import Layout from '../../layouts/Layout.astro';
         function renderSubdivisionLeadership() {
             const container = document.getElementById('subdivisionList');
 
-            if (!departmentData.subdivisionLeadership || departmentData.subdivisionLeadership.length === 0) {
+            // Filter out Department Liaisons - they are managed in the dedicated Department Liaisons section
+            const subdivisionLeadersOnly = departmentData.subdivisionLeadership
+                .map((item, originalIndex) => ({ ...item, originalIndex }))
+                .filter(item => item.positionType !== 'department_liaison');
+
+            if (!subdivisionLeadersOnly || subdivisionLeadersOnly.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-8 text-white/60">
                         No subdivision leadership data found. Click "Add Subdivision" to create one.
@@ -555,13 +803,14 @@ import Layout from '../../layouts/Layout.astro';
             // Helper function to get position type display info
             function getPositionTypeInfo(positionType) {
                 switch(positionType) {
-                    case 'overseer': return { label: 'Subdivision Overseer', color: 'teal' };
+                    case 'overseer': return { label: 'Head of Subdivisions', color: 'teal' };
                     case 'assistant_head': return { label: 'Assistant Head', color: 'purple' };
                     default: return { label: 'Subdivision Leader', color: 'orange' };
                 }
             }
 
-            container.innerHTML = departmentData.subdivisionLeadership.map((subdivision, index) => {
+            container.innerHTML = subdivisionLeadersOnly.map((subdivision) => {
+                const index = subdivision.originalIndex;
                 const linkedName = getLinkedSubdivisionName(subdivision.subdivisionId);
                 const posInfo = getPositionTypeInfo(subdivision.positionType);
 
@@ -639,7 +888,7 @@ import Layout from '../../layouts/Layout.astro';
                             >
                                 <option value="leader" ${!subdivision.positionType || subdivision.positionType === 'leader' ? 'selected' : ''}>Subdivision Leader</option>
                                 <option value="assistant_head" ${subdivision.positionType === 'assistant_head' ? 'selected' : ''}>Assistant Head of Subdivisions</option>
-                                <option value="overseer" ${subdivision.positionType === 'overseer' ? 'selected' : ''}>Subdivision Overseer</option>
+                                <option value="overseer" ${subdivision.positionType === 'overseer' ? 'selected' : ''}>Head of Subdivisions (Overseer)</option>
                             </select>
                             <p class="text-xs text-${posInfo.color}-400 mt-1">Current: ${posInfo.label}</p>
                         </div>
@@ -831,6 +1080,42 @@ import Layout from '../../layouts/Layout.astro';
                     departmentData.rankPositions[rankIndex].members[memberIndex].discordId = e.target.value;
                 });
             });
+
+            // New status field listeners
+            document.querySelectorAll('.rank-member-strikes').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const rankIndex = parseInt(e.target.dataset.rankIndex);
+                    const memberIndex = parseInt(e.target.dataset.memberIndex);
+                    const value = parseInt(e.target.value, 10);
+                    departmentData.rankPositions[rankIndex].members[memberIndex].strikes = isNaN(value) ? 0 : value;
+                    renderRankPositions();
+                });
+            });
+
+            document.querySelectorAll('.rank-member-activity-status').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const rankIndex = parseInt(e.target.dataset.rankIndex);
+                    const memberIndex = parseInt(e.target.dataset.memberIndex);
+                    departmentData.rankPositions[rankIndex].members[memberIndex].activityStatus = e.target.value || undefined;
+                });
+            });
+
+            document.querySelectorAll('.rank-member-suspended').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const rankIndex = parseInt(e.target.dataset.rankIndex);
+                    const memberIndex = parseInt(e.target.dataset.memberIndex);
+                    departmentData.rankPositions[rankIndex].members[memberIndex].isSuspended = e.target.checked;
+                    renderRankPositions();
+                });
+            });
+
+            document.querySelectorAll('.rank-member-suspension-reason').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const rankIndex = parseInt(e.target.dataset.rankIndex);
+                    const memberIndex = parseInt(e.target.dataset.memberIndex);
+                    departmentData.rankPositions[rankIndex].members[memberIndex].suspensionReason = e.target.value;
+                });
+            });
         }
 
         function attachCommandListeners() {
@@ -1014,15 +1299,273 @@ import Layout from '../../layouts/Layout.astro';
                 division: '',
                 name: '',
                 callSign: '',
-                jobTitle: ''
+                jobTitle: '',
+                positionType: 'leader'
             });
             renderSubdivisionLeadership();
+        });
+
+        // Sync from Roster button handler
+        document.getElementById('syncRosterBtn').addEventListener('click', async () => {
+            const syncBtn = document.getElementById('syncRosterBtn');
+            syncBtn.disabled = true;
+            syncBtn.innerHTML = `
+                <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Syncing...
+            `;
+
+            try {
+                const response = await fetch('/api/sync-roster', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update command positions
+                    if (result.data.commandPositions) {
+                        result.data.commandPositions.forEach((imported) => {
+                            const existing = departmentData.commandPositions.find(cp => cp.rank === imported.rank);
+                            if (existing) {
+                                // Only update if imported has data
+                                if (imported.name) {
+                                    existing.name = imported.name;
+                                    existing.callSign = imported.callSign || existing.callSign;
+                                    existing.isLOA = imported.isLOA || false;
+                                    // Keep existing jobTitle if imported one is same as rank
+                                    if (imported.jobTitle && imported.jobTitle !== imported.rank) {
+                                        existing.jobTitle = imported.jobTitle;
+                                    }
+                                    // Sync new status fields - always update to allow clearing values
+                                    existing.strikes = imported.strikes ?? 0;
+                                    existing.activityStatus = imported.activityStatus || undefined;
+                                    existing.isSuspended = imported.isSuspended ?? false;
+                                    existing.suspensionReason = imported.isSuspended ? imported.suspensionReason : undefined;
+                                }
+                            }
+                        });
+                    }
+
+                    // Update rank positions
+                    if (result.data.rankPositions) {
+                        result.data.rankPositions.forEach((imported) => {
+                            const existing = departmentData.rankPositions.find(rp => rp.rank === imported.rank);
+                            if (existing) {
+                                // Update members that have data
+                                imported.members.forEach((member, idx) => {
+                                    if (member.name && existing.members[idx]) {
+                                        existing.members[idx].name = member.name;
+                                        existing.members[idx].callSign = member.callSign || '';
+                                        existing.members[idx].isLOA = member.isLOA || false;
+                                        // Keep existing jobTitle if imported one is same as rank
+                                        if (member.jobTitle && member.jobTitle !== imported.rank) {
+                                            existing.members[idx].jobTitle = member.jobTitle;
+                                        }
+                                        // Sync new status fields - always update to allow clearing values
+                                        existing.members[idx].strikes = member.strikes ?? 0;
+                                        existing.members[idx].activityStatus = member.activityStatus || undefined;
+                                        existing.members[idx].isSuspended = member.isSuspended ?? false;
+                                        existing.members[idx].suspensionReason = member.isSuspended ? member.suspensionReason : undefined;
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    // Re-render all sections
+                    renderCommandPositions();
+                    renderRankPositions();
+
+                    // Update sync timestamp for auto-sync timer
+                    lastSyncTimestamp = new Date();
+                    updateSyncTimers();
+
+                    showStatus(`Synced ${result.data.totalActive} active members from roster. Click "Save Changes" to persist.`, 'success');
+                } else {
+                    showStatus(result.error || 'Failed to sync roster data', 'error');
+                }
+            } catch (error) {
+                console.error('Sync error:', error);
+                showStatus('Failed to sync roster data', 'error');
+            } finally {
+                syncBtn.disabled = false;
+                syncBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Manual Sync
+                `;
+            }
         });
 
         // Initialize
         validateSessionAndPermissions().then(valid => {
             if (valid) {
                 loadDepartmentData();
+                // Start auto-sync after initial load
+                startAutoSync();
+            }
+        });
+
+        // Auto-sync functionality
+        let autoSyncInterval = null;
+        let lastSyncTimestamp = null;
+        const SYNC_INTERVAL_MS = 60000; // 1 minute
+
+        function formatTime(date) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function updateSyncTimers() {
+            const lastSyncEl = document.getElementById('lastSyncTime');
+            const nextSyncEl = document.getElementById('nextSyncTime');
+
+            if (lastSyncTimestamp && lastSyncEl) {
+                lastSyncEl.textContent = `Last sync: ${formatTime(lastSyncTimestamp)}`;
+            }
+
+            if (nextSyncEl && lastSyncTimestamp) {
+                const nextSyncTime = new Date(lastSyncTimestamp.getTime() + SYNC_INTERVAL_MS);
+                nextSyncEl.textContent = `Next: ${formatTime(nextSyncTime)}`;
+            }
+        }
+
+        async function performAutoSync() {
+            const statusEl = document.getElementById('autoSyncStatus');
+
+            try {
+                // Update status to syncing
+                if (statusEl) {
+                    statusEl.innerHTML = `
+                        <svg class="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span class="text-yellow-400">Syncing...</span>
+                    `;
+                }
+
+                const response = await fetch('/api/sync-roster', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Update command positions
+                    if (result.data.commandPositions) {
+                        result.data.commandPositions.forEach((imported) => {
+                            const existing = departmentData.commandPositions.find(cp => cp.rank === imported.rank);
+                            if (existing) {
+                                if (imported.name) {
+                                    existing.name = imported.name;
+                                    existing.callSign = imported.callSign || existing.callSign;
+                                    existing.isLOA = imported.isLOA || false;
+                                    if (imported.jobTitle && imported.jobTitle !== imported.rank) {
+                                        existing.jobTitle = imported.jobTitle;
+                                    }
+                                    existing.strikes = imported.strikes ?? 0;
+                                    existing.activityStatus = imported.activityStatus || undefined;
+                                    existing.isSuspended = imported.isSuspended ?? false;
+                                    existing.suspensionReason = imported.isSuspended ? imported.suspensionReason : undefined;
+                                }
+                            }
+                        });
+                    }
+
+                    // Update rank positions
+                    if (result.data.rankPositions) {
+                        result.data.rankPositions.forEach((imported) => {
+                            const existing = departmentData.rankPositions.find(rp => rp.rank === imported.rank);
+                            if (existing) {
+                                imported.members.forEach((member, idx) => {
+                                    if (member.name && existing.members[idx]) {
+                                        existing.members[idx].name = member.name;
+                                        existing.members[idx].callSign = member.callSign || '';
+                                        existing.members[idx].isLOA = member.isLOA || false;
+                                        if (member.jobTitle && member.jobTitle !== imported.rank) {
+                                            existing.members[idx].jobTitle = member.jobTitle;
+                                        }
+                                        existing.members[idx].strikes = member.strikes ?? 0;
+                                        existing.members[idx].activityStatus = member.activityStatus || undefined;
+                                        existing.members[idx].isSuspended = member.isSuspended ?? false;
+                                        existing.members[idx].suspensionReason = member.isSuspended ? member.suspensionReason : undefined;
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    // Auto-save after sync
+                    const saveResponse = await fetch('/api/department-data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify(departmentData)
+                    });
+
+                    const saveResult = await saveResponse.json();
+
+                    // Re-render all sections
+                    renderCommandPositions();
+                    renderRankPositions();
+
+                    // Update last sync time
+                    lastSyncTimestamp = new Date();
+                    updateSyncTimers();
+
+                    // Update status to success
+                    if (statusEl) {
+                        statusEl.innerHTML = `
+                            <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                            <span class="text-green-400">Active</span>
+                        `;
+                    }
+
+                    console.log(`Auto-sync completed: ${result.data.totalActive} members synced and saved`);
+                } else {
+                    throw new Error(result.error || 'Sync failed');
+                }
+            } catch (error) {
+                console.error('Auto-sync error:', error);
+                // Update status to error
+                if (statusEl) {
+                    statusEl.innerHTML = `
+                        <span class="w-2 h-2 bg-red-400 rounded-full"></span>
+                        <span class="text-red-400">Error</span>
+                    `;
+                }
+                // Still update timestamp for next attempt
+                lastSyncTimestamp = new Date();
+                updateSyncTimers();
+            }
+        }
+
+        function startAutoSync() {
+            // Perform initial sync
+            performAutoSync();
+
+            // Set up interval for subsequent syncs
+            if (autoSyncInterval) {
+                clearInterval(autoSyncInterval);
+            }
+            autoSyncInterval = setInterval(performAutoSync, SYNC_INTERVAL_MS);
+
+            // Update countdown timer every second
+            setInterval(updateSyncTimers, 1000);
+
+            console.log('Auto-sync started: syncing every 60 seconds');
+        }
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (autoSyncInterval) {
+                clearInterval(autoSyncInterval);
             }
         });
     </script>

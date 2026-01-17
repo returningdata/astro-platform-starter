@@ -17,6 +17,11 @@ export interface CommandPosition {
     jobTitle: string;
     isLOA?: boolean;
     discordId?: string;
+    // New status fields
+    strikes?: number;
+    activityStatus?: 'active' | 'inactive' | 'warning' | 'probation';
+    isSuspended?: boolean;
+    suspensionReason?: string;
 }
 
 export interface RankMember {
@@ -25,6 +30,11 @@ export interface RankMember {
     jobTitle: string;
     isLOA?: boolean;
     discordId?: string;
+    // New status fields
+    strikes?: number;
+    activityStatus?: 'active' | 'inactive' | 'warning' | 'probation';
+    isSuspended?: boolean;
+    suspensionReason?: string;
 }
 
 export interface RankPositions {
@@ -51,6 +61,7 @@ export interface SubdivisionLeader {
     subdivisionId?: string;  // Links to subdivision ID for reliable matching
     isLOA?: boolean;
     discordId?: string;
+    positionType?: 'department_liaison' | 'overseer' | 'assistant_head' | 'leader';
 }
 
 export interface DepartmentData {
@@ -276,12 +287,19 @@ const defaultDepartmentData: DepartmentData = {
         }
     ],
     subdivisionLeadership: [
-        { division: 'Subdivision Overseer', name: '', callSign: '', jobTitle: '' },
-        { division: 'Field Training Division', name: '', callSign: '', jobTitle: '' },
-        { division: 'Special Weapons and Tactics', name: '', callSign: '', jobTitle: '' },
-        { division: 'Traffic Enforcement Unit', name: '', callSign: '', jobTitle: '' },
-        { division: 'Criminal Investigations Unit', name: '', callSign: '', jobTitle: '' },
-        { division: 'K9 Division', name: '', callSign: '', jobTitle: '' }
+        { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+        { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+        { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+        { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+        { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+        { division: 'Subdivision Overseer', name: '', callSign: '', jobTitle: '', positionType: 'overseer' },
+        { division: 'Assistant Head of Subdivisions', name: '', callSign: '', jobTitle: '', positionType: 'assistant_head' },
+        { division: 'Field Training Division', name: '', callSign: '', jobTitle: '', subdivisionId: 'ftd', positionType: 'leader' },
+        { division: 'Special Weapons and Tactics', name: '', callSign: '', jobTitle: '', subdivisionId: 'swat', positionType: 'leader' },
+        { division: 'Traffic Enforcement Unit', name: '', callSign: '', jobTitle: '', subdivisionId: 'teu', positionType: 'leader' },
+        { division: 'Criminal Investigations Unit', name: '', callSign: '', jobTitle: '', subdivisionId: 'ciu', positionType: 'leader' },
+        { division: 'K9 Division', name: '', callSign: '', jobTitle: '', subdivisionId: 'k9', positionType: 'leader' },
+        { division: 'Internal Affairs', name: '', callSign: '', jobTitle: '', subdivisionId: 'ia', positionType: 'leader' }
     ]
 };
 

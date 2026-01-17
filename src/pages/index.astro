@@ -10,6 +10,34 @@ import Layout from '../layouts/Layout.astro';
             <div class="absolute inset-0 bg-gradient-to-b from-complementary/80 via-complementary/90 to-complementary"></div>
         </div>
 
+        <!-- Leadership Sidebar -->
+        <div id="leadershipSidebar" class="hidden lg:block fixed top-24 left-4 z-40 w-64">
+            <div class="bg-slate-800/90 backdrop-blur-sm rounded-xl border border-white/20 shadow-xl overflow-hidden">
+                <div class="bg-gradient-to-r from-teal-500 to-teal-600 px-4 py-3">
+                    <h3 class="text-sm font-bold text-white">Department Leadership</h3>
+                </div>
+                <div class="p-3 space-y-3 max-h-[70vh] overflow-y-auto">
+                    <!-- Department Liaisons Section -->
+                    <div id="liaisonsSection" class="hidden">
+                        <div class="text-xs font-semibold text-rose-400 uppercase tracking-wide mb-2">Department Liaisons</div>
+                        <div id="liaisonsList" class="space-y-1.5"></div>
+                    </div>
+
+                    <!-- Chief of Police Section -->
+                    <div id="chiefSection" class="hidden">
+                        <div class="text-xs font-semibold text-teal-400 uppercase tracking-wide mb-2">Chief of Police</div>
+                        <div id="chiefCard" class="bg-teal-500/10 border border-teal-500/30 rounded-lg p-2"></div>
+                    </div>
+
+                    <!-- High Command Section -->
+                    <div id="highCommandSection" class="hidden">
+                        <div class="text-xs font-semibold text-teal-300 uppercase tracking-wide mb-2">High Command</div>
+                        <div id="highCommandList" class="space-y-1.5"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Hero Section -->
         <div class="text-center space-y-4">
             <h1 class="mb-6 text-5xl md:text-6xl">Del Perro Police Department</h1>
@@ -314,10 +342,13 @@ import Layout from '../layouts/Layout.astro';
                 const subdivisions = subData.subdivisions || [];
                 const subdivisionLeadership = deptData.subdivisionLeadership || [];
 
-                // Find the subdivision overseer by subdivisionId
+                // Find the subdivision overseer by positionType first, then by subdivisionId
                 const overseer = subdivisionLeadership.find(leader =>
-                    leader.subdivisionId === 'subdivision-overseer' ||
-                    (leader.division && leader.division.toLowerCase().includes('subdivision overseer'))
+                    leader.positionType !== 'department_liaison' && (
+                        leader.positionType === 'overseer' ||
+                        leader.subdivisionId === 'subdivision-overseer' ||
+                        (leader.division && leader.division.toLowerCase().includes('subdivision overseer'))
+                    )
                 );
 
                 // Display overseer if found and has a name
@@ -345,8 +376,10 @@ import Layout from '../layouts/Layout.astro';
                 const assistantHeadDetailsEl = document.getElementById('assistantHeadDetails');
 
                 const assistantHead = subdivisionLeadership.find(leader =>
-                    leader.positionType === 'assistant_head' ||
-                    (leader.division && leader.division.toLowerCase().includes('assistant head'))
+                    leader.positionType !== 'department_liaison' && (
+                        leader.positionType === 'assistant_head' ||
+                        (leader.division && leader.division.toLowerCase().includes('assistant head'))
+                    )
                 );
 
                 // Display assistant head if found and has a name
@@ -673,5 +706,109 @@ import Layout from '../layouts/Layout.astro';
         }
 
         loadPersonnelCount();
+
+        // Load leadership sidebar data
+        async function loadLeadershipSidebar() {
+            try {
+                const response = await fetch('/api/department-data');
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const commandPositions = data.commandPositions || [];
+                const subdivisionLeadership = data.subdivisionLeadership || [];
+
+                // Get Department Liaisons (non-vacant)
+                const liaisons = subdivisionLeadership.filter(l =>
+                    l.positionType === 'department_liaison' && l.name && l.name.trim() !== ''
+                );
+
+                // Get Chief of Police (if not vacant)
+                const chief = commandPositions.find(p => p.rank === 'Chief of Police' && p.name && p.name.trim() !== '');
+
+                // Get High Command (excluding Chief, excluding vacant)
+                // High Command ranks: Deputy Chief of Police, Assistant Chief of Police, Colonel, Lieutenant Colonel
+                const highCommandRanks = ['Deputy Chief of Police', 'Assistant Chief of Police', 'Colonel', 'Lieutenant Colonel'];
+                const highCommand = commandPositions.filter(p =>
+                    highCommandRanks.includes(p.rank) && p.name && p.name.trim() !== ''
+                );
+
+                // Populate Department Liaisons section
+                const liaisonsSection = document.getElementById('liaisonsSection');
+                const liaisonsList = document.getElementById('liaisonsList');
+                if (liaisons.length > 0 && liaisonsSection && liaisonsList) {
+                    liaisonsSection.classList.remove('hidden');
+                    liaisonsList.innerHTML = liaisons.map(l => `
+                        <div class="bg-rose-500/10 border border-rose-500/30 rounded-lg p-2 flex items-center gap-2">
+                            <div class="w-6 h-6 bg-rose-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-3 h-3 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-medium text-white truncate">${l.name}</div>
+                                ${l.jobTitle ? `<div class="text-[10px] text-rose-400/70 truncate">${l.jobTitle}</div>` : ''}
+                            </div>
+                            ${l.isLOA ? '<span class="px-1 py-0.5 text-[8px] font-bold bg-yellow-500 text-black rounded flex-shrink-0">LOA</span>' : ''}
+                        </div>
+                    `).join('');
+                }
+
+                // Populate Chief of Police section
+                const chiefSection = document.getElementById('chiefSection');
+                const chiefCard = document.getElementById('chiefCard');
+                if (chief && chiefSection && chiefCard) {
+                    chiefSection.classList.remove('hidden');
+                    chiefCard.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-bold text-white truncate">${chief.name}</div>
+                                ${chief.callSign ? `<div class="text-[10px] text-teal-400 font-mono">${chief.callSign}</div>` : ''}
+                                ${chief.jobTitle ? `<div class="text-[10px] text-white/50 truncate">${chief.jobTitle}</div>` : ''}
+                            </div>
+                            ${chief.isLOA ? '<span class="px-1.5 py-0.5 text-[9px] font-bold bg-yellow-500 text-black rounded flex-shrink-0">LOA</span>' : ''}
+                        </div>
+                    `;
+                }
+
+                // Populate High Command section
+                const highCommandSection = document.getElementById('highCommandSection');
+                const highCommandList = document.getElementById('highCommandList');
+                if (highCommand.length > 0 && highCommandSection && highCommandList) {
+                    highCommandSection.classList.remove('hidden');
+                    highCommandList.innerHTML = highCommand.map(hc => `
+                        <div class="bg-teal-500/10 border border-teal-500/20 rounded-lg p-2 flex items-center gap-2">
+                            <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-3 h-3 text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-medium text-white truncate">${hc.name}</div>
+                                <div class="text-[10px] text-teal-300/70 truncate">${hc.rank}</div>
+                                ${hc.callSign ? `<div class="text-[9px] text-white/40 font-mono">${hc.callSign}</div>` : ''}
+                            </div>
+                            ${hc.isLOA ? '<span class="px-1 py-0.5 text-[8px] font-bold bg-yellow-500 text-black rounded flex-shrink-0">LOA</span>' : ''}
+                        </div>
+                    `).join('');
+                }
+
+                // Show the sidebar if any section has content
+                const sidebar = document.getElementById('leadershipSidebar');
+                if (sidebar && (liaisons.length > 0 || chief || highCommand.length > 0)) {
+                    sidebar.classList.remove('hidden');
+                    sidebar.classList.add('lg:block');
+                }
+
+            } catch (error) {
+                console.error('Failed to load leadership sidebar:', error);
+            }
+        }
+
+        loadLeadershipSidebar();
     </script>
 </Layout>

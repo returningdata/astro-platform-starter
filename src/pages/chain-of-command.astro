@@ -4,10 +4,34 @@ import Layout from '../layouts/Layout.astro';
 export const prerender = false;
 
 // Fetch command positions data
-let commandPositions: Array<{rank: string, name: string, callSign: string, jobTitle?: string, isLOA?: boolean}> = [];
+let commandPositions: Array<{
+    rank: string,
+    name: string,
+    callSign: string,
+    jobTitle?: string,
+    isLOA?: boolean,
+    discordId?: string,
+    strikes?: number,
+    activityStatus?: 'active' | 'inactive' | 'semi_active' | 'warning' | 'probation',
+    isSuspended?: boolean,
+    suspensionReason?: string
+}> = [];
 let tierPositions: Array<{tierName: string, members: Array<{name: string, jobTitle: string}>}> = [];
-let rankPositions: Array<{rank: string, members: Array<{name: string, callSign: string, jobTitle: string, isLOA?: boolean}>}> = [];
-let subdivisionLeadership: Array<{division: string, name: string, callSign: string, jobTitle: string, isLOA?: boolean, positionType?: 'overseer' | 'assistant_head' | 'leader'}> = [];
+let rankPositions: Array<{
+    rank: string,
+    members: Array<{
+        name: string,
+        callSign: string,
+        jobTitle: string,
+        isLOA?: boolean,
+        discordId?: string,
+        strikes?: number,
+        activityStatus?: 'active' | 'inactive' | 'semi_active' | 'warning' | 'probation',
+        isSuspended?: boolean,
+        suspensionReason?: string
+    }>
+}> = [];
+let subdivisionLeadership: Array<{division: string, name: string, callSign: string, jobTitle: string, isLOA?: boolean, discordId?: string, positionType?: 'department_liaison' | 'overseer' | 'assistant_head' | 'leader'}> = [];
 
 try {
     const response = await fetch(new URL('/api/department-data', Astro.url.origin));
@@ -25,7 +49,17 @@ try {
 // Helper function to get officer info for a rank
 function getOfficerInfo(rankName: string) {
     const position = commandPositions.find(p => p.rank === rankName);
-    return position ? { name: position.name, callSign: position.callSign, jobTitle: position.jobTitle, isLOA: position.isLOA } : null;
+    return position ? {
+        name: position.name,
+        callSign: position.callSign,
+        jobTitle: position.jobTitle,
+        isLOA: position.isLOA,
+        discordId: position.discordId,
+        strikes: position.strikes,
+        activityStatus: position.activityStatus,
+        isSuspended: position.isSuspended,
+        suspensionReason: position.suspensionReason
+    } : null;
 }
 
 // Helper function to get tier members (legacy support)
@@ -46,6 +80,41 @@ function getRankMembers(rankName: string) {
         return rankPos.members.filter(m => m.name || m.callSign || m.jobTitle);
     }
     return [];
+}
+
+// Helper function to get activity-based styles
+function getActivityStyles(activityStatus: string | undefined, tierBorderColor: string, tierTextColor: string) {
+    switch (activityStatus) {
+        case 'inactive':
+            return {
+                borderColor: 'border-red-800',
+                bgColor: 'bg-red-900/40',
+                nameColor: 'text-red-400',
+                textColor: 'text-red-400/70'
+            };
+        case 'semi_active':
+            return {
+                borderColor: 'border-orange-500',
+                bgColor: 'bg-orange-500/20',
+                nameColor: 'text-orange-300',
+                textColor: 'text-orange-300/70'
+            };
+        case 'active':
+            return {
+                borderColor: 'border-green-500',
+                bgColor: 'bg-green-500/20',
+                nameColor: 'text-green-300',
+                textColor: 'text-green-300/70'
+            };
+        default:
+            // Default to tier colors for warning, probation, or undefined
+            return {
+                borderColor: tierBorderColor,
+                bgColor: 'bg-slate-800/60',
+                nameColor: tierTextColor,
+                textColor: 'text-white/70'
+            };
+    }
 }
 
 // Rank hierarchy data
@@ -132,8 +201,23 @@ const rankHierarchy = [
     }
 ];
 
-// Ranks that support multiple members
-const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lieutenant", "Master Sergeant"];
+// Ranks that support multiple members (all non-High Command ranks)
+const ranksWithMultipleMembers = [
+    // Low Command
+    "Major", "Captain", "1st Lieutenant", "2nd Lieutenant",
+    // Trial Low Command
+    "Master Sergeant",
+    // Supervisors
+    "Sergeant First Class", "Staff Sergeant", "Sergeant",
+    // Trial Supervisor
+    "Corporal",
+    // Officers
+    "Officer III", "Officer II", "Officer I", "Probationary Officer",
+    // Reserves
+    "Reserve Officer",
+    // Training
+    "Cadet"
+];
 ---
 
 <Layout title="Chain of Command - Del Perro Police Department" description="DPPD officer directory, ranks, and department leadership roster">
@@ -145,6 +229,84 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
                 Del Perro Police Department Rank Structure
             </p>
         </div>
+
+        <!-- Department Liaisons Section - Above Chief of Police -->
+        {(() => {
+            const liaisons = subdivisionLeadership.filter(l =>
+                l.positionType === 'department_liaison'
+            ).filter(l => l.name || l.discordId);
+
+            if (liaisons.length > 0) {
+                return (
+                    <div class="relative">
+                        <div class="rounded-xl border border-rose-500 bg-rose-500/20 backdrop-blur-sm overflow-hidden">
+                            <div class="bg-gradient-to-r from-rose-500 to-rose-600 px-6 py-3">
+                                <h2 class="text-xl font-bold text-white text-center">Department Liaisons</h2>
+                            </div>
+                            <div class="p-6">
+                                <div class="flex justify-center flex-wrap gap-4">
+                                    {liaisons.map((liaison) => (
+                                        <div class={`flex flex-col rounded-lg border ${liaison.isLOA ? 'border-yellow-500' : 'border-rose-500'} bg-slate-800/60 overflow-hidden min-w-[220px] max-w-[300px]`}>
+                                            <div class={`flex items-center gap-3 px-5 py-3 ${liaison.isLOA ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' : 'bg-gradient-to-r from-rose-500 to-rose-600'}`}>
+                                                <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                    </svg>
+                                                </div>
+                                                <span class="font-semibold text-white text-sm flex-1">{liaison.jobTitle || 'Department Liaison'}</span>
+                                                {liaison.isLOA && (
+                                                    <span class="px-2 py-0.5 text-xs font-bold bg-black/30 text-white rounded">LOA</span>
+                                                )}
+                                                {/* Info Icon */}
+                                                <button
+                                                    class="info-btn text-white/60 hover:text-white transition-colors flex-shrink-0"
+                                                    data-rank="Department Liaison"
+                                                    data-tier="Department Liaisons"
+                                                    data-name={liaison.name || ''}
+                                                    data-callsign={liaison.callSign || ''}
+                                                    data-jobtitle={liaison.jobTitle || 'Department Liaison'}
+                                                    data-isloa={liaison.isLOA ? 'true' : 'false'}
+                                                    data-color="from-rose-500 to-rose-600"
+                                                    data-division={liaison.division}
+                                                    data-discordid={liaison.discordId || ''}
+                                                    data-description="Department Liaisons serve as the primary point of contact between the department and external agencies or departments."
+                                                    aria-label={`View details for ${liaison.name || 'Department Liaison'}`}
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div class="p-3">
+                                                <div class={`flex items-center gap-2 px-3 py-2 rounded border ${liaison.isLOA ? 'border-yellow-500 bg-yellow-500/20' : 'border-rose-500 bg-slate-900/40'}`}>
+                                                    <div class={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${liaison.isLOA ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' : 'bg-gradient-to-br from-rose-500 to-rose-600'}`}>
+                                                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                        </svg>
+                                                    </div>
+                                                    <div class="flex flex-col min-w-0">
+                                                        <div class="flex items-center gap-2 flex-wrap">
+                                                            {liaison.name && (
+                                                                <span class={`text-sm font-medium ${liaison.isLOA ? 'text-yellow-300' : 'text-rose-300'}`}>{liaison.name}</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        {/* Connector Line to Chief of Police */}
+                        <div class="flex justify-center">
+                            <div class="w-0.5 h-6 bg-gradient-to-b from-white/40 to-white/10"></div>
+                        </div>
+                    </div>
+                );
+            }
+            return null;
+        })()}
 
         <!-- Hierarchy Chart -->
         <div class="space-y-6">
@@ -164,12 +326,13 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
                                     const officerInfo = getOfficerInfo(rank);
                                     const rankMembers = getRankMembers(rank);
                                     const hasMultipleMembers = ranksWithMultipleMembers.includes(rank);
+                                    const activityStyles = officerInfo ? getActivityStyles(officerInfo.activityStatus, tier.borderColor, tier.textColor) : null;
 
                                     return (
                                         <div class="group relative">
                                             {/* Main rank card - for single-officer ranks or ranks without multiple member support */}
                                             {!hasMultipleMembers ? (
-                                                <div class={`flex items-center gap-3 px-5 py-3 rounded-lg border ${officerInfo?.isLOA ? 'border-yellow-500 bg-yellow-500/20' : tier.borderColor + ' bg-slate-800/60'} hover:bg-slate-700/60 transition-all duration-200`}>
+                                                <div class={`flex items-center gap-3 px-5 py-3 rounded-lg border ${officerInfo?.isSuspended ? 'border-red-500 bg-red-500/20' : officerInfo?.isLOA ? 'border-yellow-500 bg-yellow-500/20' : activityStyles ? activityStyles.borderColor + ' ' + activityStyles.bgColor : tier.borderColor + ' bg-slate-800/60'} hover:bg-slate-700/60 transition-all duration-200`}>
                                                     {/* Rank Icon */}
                                                     <div class={`w-10 h-10 rounded-full bg-gradient-to-br ${tier.color} flex items-center justify-center flex-shrink-0`}>
                                                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,26 +340,65 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
                                                         </svg>
                                                     </div>
                                                     {/* Rank Name and Officer Info */}
-                                                    <div class="flex flex-col">
-                                                        <div class="flex items-center gap-2">
+                                                    <div class="flex flex-col flex-1">
+                                                        <div class="flex items-center gap-2 flex-wrap">
                                                             <span class={`font-semibold ${tier.textColor}`}>{rank}</span>
-                                                            {officerInfo?.isLOA && (
+                                                            {officerInfo?.isSuspended && (
+                                                                <span class="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded" title={officerInfo.suspensionReason || 'Suspended'}>SUSPENDED</span>
+                                                            )}
+                                                            {officerInfo?.isLOA && !officerInfo?.isSuspended && (
                                                                 <span class="px-2 py-0.5 text-xs font-bold bg-yellow-500 text-black rounded">LOA</span>
+                                                            )}
+                                                            {officerInfo && (
+                                                                <span class={`px-2 py-0.5 text-xs font-bold rounded ${officerInfo.strikes && officerInfo.strikes > 0 ? 'bg-orange-500 text-white' : 'bg-slate-600 text-white/70'}`} title={`${officerInfo.strikes || 0} strike(s)`}>{officerInfo.strikes || 0} Strike{(officerInfo.strikes || 0) !== 1 ? 's' : ''}</span>
+                                                            )}
+                                                            {officerInfo?.activityStatus === 'inactive' && (
+                                                                <span class="px-2 py-0.5 text-xs font-bold bg-red-800 text-white rounded">Inactive</span>
+                                                            )}
+                                                            {officerInfo?.activityStatus === 'semi_active' && (
+                                                                <span class="px-2 py-0.5 text-xs font-bold bg-orange-500 text-black rounded">Semi Active</span>
+                                                            )}
+                                                            {officerInfo?.activityStatus === 'warning' && (
+                                                                <span class="px-2 py-0.5 text-xs font-bold bg-amber-500 text-black rounded">Activity Warning</span>
+                                                            )}
+                                                            {officerInfo?.activityStatus === 'probation' && (
+                                                                <span class="px-2 py-0.5 text-xs font-bold bg-purple-500 text-white rounded">Probation</span>
                                                             )}
                                                         </div>
                                                         {officerInfo && (officerInfo.name || officerInfo.callSign || officerInfo.jobTitle) && (
                                                             <div class="flex flex-col">
                                                                 {(officerInfo.name || officerInfo.callSign) && (
-                                                                    <span class={`text-sm italic ${officerInfo.isLOA ? 'text-yellow-300/70' : 'text-white/70'}`}>
+                                                                    <span class={`text-sm italic ${officerInfo.isSuspended ? 'text-red-300/70' : officerInfo.isLOA ? 'text-yellow-300/70' : activityStyles ? activityStyles.textColor : 'text-white/70'}`}>
                                                                         {officerInfo.name}{officerInfo.name && officerInfo.callSign ? ' - ' : ''}{officerInfo.callSign}
                                                                     </span>
                                                                 )}
                                                                 {officerInfo.jobTitle && (
-                                                                    <span class={`text-xs ${officerInfo.isLOA ? 'text-yellow-300/50' : 'text-white/50'}`}>{officerInfo.jobTitle}</span>
+                                                                    <span class={`text-xs ${officerInfo.isSuspended ? 'text-red-300/50' : officerInfo.isLOA ? 'text-yellow-300/50' : 'text-white/50'}`}>{officerInfo.jobTitle}</span>
                                                                 )}
                                                             </div>
                                                         )}
                                                     </div>
+                                                    {/* Info Icon */}
+                                                    <button
+                                                        class="info-btn text-white/40 hover:text-white/80 transition-colors flex-shrink-0"
+                                                        data-rank={rank}
+                                                        data-tier={tier.tier}
+                                                        data-name={officerInfo?.name || ''}
+                                                        data-callsign={officerInfo?.callSign || ''}
+                                                        data-jobtitle={officerInfo?.jobTitle || ''}
+                                                        data-isloa={officerInfo?.isLOA ? 'true' : 'false'}
+                                                        data-strikes={officerInfo?.strikes?.toString() || '0'}
+                                                        data-activitystatus={officerInfo?.activityStatus || ''}
+                                                        data-issuspended={officerInfo?.isSuspended ? 'true' : 'false'}
+                                                        data-suspensionreason={officerInfo?.suspensionReason || ''}
+                                                        data-discordid={officerInfo?.discordId || ''}
+                                                        data-color={tier.color}
+                                                        aria-label={`View details for ${rank}`}
+                                                    >
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             ) : (
                                                 /* Rank card for ranks with multiple members */
@@ -208,36 +410,77 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                             </svg>
                                                         </div>
-                                                        <span class="font-semibold text-white">{rank}</span>
+                                                        <span class="font-semibold text-white flex-1">{rank}</span>
                                                     </div>
                                                     {/* Members list */}
                                                     {rankMembers.length > 0 ? (
                                                         <div class="p-3 space-y-2">
-                                                            {rankMembers.map((member) => (
-                                                                <div class={`flex items-center gap-2 px-3 py-2 rounded border ${member.isLOA ? 'border-yellow-500 bg-yellow-500/20' : tier.borderColor + ' bg-slate-900/40'}`}>
+                                                            {rankMembers.map((member) => {
+                                                                const memberActivityStyles = getActivityStyles(member.activityStatus, tier.borderColor, tier.textColor);
+                                                                return (
+                                                                <div class={`flex items-center gap-2 px-3 py-2 rounded border ${member.isSuspended ? 'border-red-500 bg-red-500/20' : member.isLOA ? 'border-yellow-500 bg-yellow-500/20' : memberActivityStyles.borderColor + ' ' + memberActivityStyles.bgColor}`}>
                                                                     <div class={`w-6 h-6 rounded-full bg-gradient-to-br ${tier.color} flex items-center justify-center flex-shrink-0`}>
                                                                         <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                                         </svg>
                                                                     </div>
                                                                     <div class="flex flex-col min-w-0 flex-1">
-                                                                        <div class="flex items-center gap-2">
+                                                                        <div class="flex items-center gap-2 flex-wrap">
                                                                             {member.name && (
-                                                                                <span class={`text-sm font-medium truncate ${member.isLOA ? 'text-yellow-300' : tier.textColor}`}>{member.name}</span>
+                                                                                <span class={`text-sm font-medium truncate ${member.isSuspended ? 'text-red-300' : member.isLOA ? 'text-yellow-300' : memberActivityStyles.nameColor}`}>{member.name}</span>
                                                                             )}
                                                                             {member.callSign && (
-                                                                                <span class={`text-xs font-mono ${member.isLOA ? 'text-yellow-300/60' : 'text-white/60'}`}>({member.callSign})</span>
+                                                                                <span class={`text-xs font-mono ${member.isSuspended ? 'text-red-300/60' : member.isLOA ? 'text-yellow-300/60' : memberActivityStyles.textColor}`}>({member.callSign})</span>
                                                                             )}
-                                                                            {member.isLOA && (
+                                                                            {member.isSuspended && (
+                                                                                <span class="px-1.5 py-0.5 text-xs font-bold bg-red-500 text-white rounded ml-auto flex-shrink-0" title={member.suspensionReason || 'Suspended'}>SUSPENDED</span>
+                                                                            )}
+                                                                            {member.isLOA && !member.isSuspended && (
                                                                                 <span class="px-1.5 py-0.5 text-xs font-bold bg-yellow-500 text-black rounded ml-auto flex-shrink-0">LOA</span>
                                                                             )}
                                                                         </div>
-                                                                        {member.jobTitle && (
-                                                                            <span class={`text-xs italic truncate ${member.isLOA ? 'text-yellow-300/50' : 'text-white/50'}`}>{member.jobTitle}</span>
-                                                                        )}
+                                                                        <div class="flex items-center gap-2 flex-wrap">
+                                                                            {member.jobTitle && (
+                                                                                <span class={`text-xs italic truncate ${member.isSuspended ? 'text-red-300/50' : member.isLOA ? 'text-yellow-300/50' : 'text-white/50'}`}>{member.jobTitle}</span>
+                                                                            )}
+                                                                            <span class={`px-1 py-0.5 text-[10px] font-bold rounded ${member.strikes && member.strikes > 0 ? 'bg-orange-500 text-white' : 'bg-slate-600 text-white/70'}`} title={`${member.strikes || 0} strike(s)`}>{member.strikes || 0} Strike{(member.strikes || 0) !== 1 ? 's' : ''}</span>
+                                                                            {member.activityStatus === 'inactive' && (
+                                                                                <span class="px-1 py-0.5 text-[10px] font-bold bg-red-800 text-white rounded">Inactive</span>
+                                                                            )}
+                                                                            {member.activityStatus === 'semi_active' && (
+                                                                                <span class="px-1 py-0.5 text-[10px] font-bold bg-orange-500 text-black rounded">Semi Active</span>
+                                                                            )}
+                                                                            {member.activityStatus === 'warning' && (
+                                                                                <span class="px-1 py-0.5 text-[10px] font-bold bg-amber-500 text-black rounded">Warning</span>
+                                                                            )}
+                                                                            {member.activityStatus === 'probation' && (
+                                                                                <span class="px-1 py-0.5 text-[10px] font-bold bg-purple-500 text-white rounded">Probation</span>
+                                                                            )}
+                                                                        </div>
                                                                     </div>
+                                                                    {/* Info Icon for individual member */}
+                                                                    <button
+                                                                        class="info-btn text-white/40 hover:text-white/80 transition-colors flex-shrink-0"
+                                                                        data-rank={rank}
+                                                                        data-tier={tier.tier}
+                                                                        data-name={member.name || ''}
+                                                                        data-callsign={member.callSign || ''}
+                                                                        data-jobtitle={member.jobTitle || ''}
+                                                                        data-isloa={member.isLOA ? 'true' : 'false'}
+                                                                        data-strikes={member.strikes?.toString() || '0'}
+                                                                        data-activitystatus={member.activityStatus || ''}
+                                                                        data-issuspended={member.isSuspended ? 'true' : 'false'}
+                                                                        data-suspensionreason={member.suspensionReason || ''}
+                                                                        data-discordid={member.discordId || ''}
+                                                                        data-color={tier.color}
+                                                                        aria-label={`View details for ${member.name || rank}`}
+                                                                    >
+                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                                        </svg>
+                                                                    </button>
                                                                 </div>
-                                                            ))}
+                                                            )})}
                                                         </div>
                                                     ) : (
                                                         <div class="p-3 text-center text-white/40 text-sm">
@@ -296,6 +539,25 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
                                                 {overseer.isLOA && (
                                                     <span class="px-2 py-0.5 text-xs font-bold bg-black/30 text-white rounded">LOA</span>
                                                 )}
+                                                {/* Info Icon */}
+                                                <button
+                                                    class="info-btn text-white/60 hover:text-white transition-colors flex-shrink-0"
+                                                    data-rank="Head of Subdivisions"
+                                                    data-tier="Subdivision Leadership"
+                                                    data-name={overseer.name || ''}
+                                                    data-callsign={overseer.callSign || ''}
+                                                    data-jobtitle={overseer.jobTitle || ''}
+                                                    data-isloa={overseer.isLOA ? 'true' : 'false'}
+                                                    data-color="from-teal-500 to-teal-600"
+                                                    data-division={overseer.division}
+                                                    data-discordid={overseer.discordId || ''}
+                                                    data-description="The Head of Subdivisions manages and coordinates all department subdivisions."
+                                                    aria-label="View details for Head of Subdivisions"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </button>
                                             </div>
                                             <div class="p-3">
                                                 <div class={`flex items-center gap-2 px-3 py-2 rounded border ${overseer.isLOA ? 'border-yellow-500 bg-yellow-500/20' : 'border-teal-500 bg-slate-900/40'}`}>
@@ -352,6 +614,25 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
                                                     {leader.isLOA && (
                                                         <span class="px-2 py-0.5 text-xs font-bold bg-black/30 text-white rounded">LOA</span>
                                                     )}
+                                                    {/* Info Icon */}
+                                                    <button
+                                                        class="info-btn text-white/60 hover:text-white transition-colors flex-shrink-0"
+                                                        data-rank="Assistant Head of Subdivisions"
+                                                        data-tier="Subdivision Leadership"
+                                                        data-name={leader.name || ''}
+                                                        data-callsign={leader.callSign || ''}
+                                                        data-jobtitle={leader.jobTitle || ''}
+                                                        data-isloa={leader.isLOA ? 'true' : 'false'}
+                                                        data-color="from-purple-500 to-purple-600"
+                                                        data-division={leader.division}
+                                                        data-discordid={leader.discordId || ''}
+                                                        data-description="Assists the Head of Subdivisions in managing and coordinating department subdivisions."
+                                                        aria-label={`View details for ${leader.division}`}
+                                                    >
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                                 <div class="p-3">
                                                     <div class={`flex items-center gap-2 px-3 py-2 rounded border ${leader.isLOA ? 'border-yellow-500 bg-yellow-500/20' : 'border-purple-500 bg-slate-900/40'}`}>
@@ -387,6 +668,8 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
                     {/* Subdivision Leaders Section */}
                     {(() => {
                         const leaders = subdivisionLeadership.filter(l => {
+                            // Exclude department liaisons - they are shown in their own section
+                            if (l.positionType === 'department_liaison') return false;
                             // Exclude overseers
                             if (l.positionType === 'overseer') return false;
                             if (l.positionType === 'assistant_head') return false;
@@ -394,6 +677,8 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
                             const normalizedDiv = l.division.toLowerCase();
                             if (normalizedDiv.includes('overseer') && normalizedDiv === 'subdivision overseer') return false;
                             if (normalizedDiv.includes('assistant head') || normalizedDiv.includes('assistant overseer')) return false;
+                            // Also exclude by division name for department liaisons
+                            if (normalizedDiv === 'department liaison') return false;
 
                             return true;
                         }).filter(leader => leader.name || leader.callSign || leader.jobTitle);
@@ -415,6 +700,25 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
                                                     {leader.isLOA && (
                                                         <span class="px-2 py-0.5 text-xs font-bold bg-black/30 text-white rounded">LOA</span>
                                                     )}
+                                                    {/* Info Icon */}
+                                                    <button
+                                                        class="info-btn text-white/60 hover:text-white transition-colors flex-shrink-0"
+                                                        data-rank="Subdivision Leader"
+                                                        data-tier="Subdivision Leadership"
+                                                        data-name={leader.name || ''}
+                                                        data-callsign={leader.callSign || ''}
+                                                        data-jobtitle={leader.jobTitle || ''}
+                                                        data-isloa={leader.isLOA ? 'true' : 'false'}
+                                                        data-color="from-orange-500 to-orange-600"
+                                                        data-division={leader.division}
+                                                        data-discordid={leader.discordId || ''}
+                                                        data-description={`Leads and manages the ${leader.division} subdivision.`}
+                                                        aria-label={`View details for ${leader.division}`}
+                                                    >
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                                 <div class="p-3">
                                                     <div class={`flex items-center gap-2 px-3 py-2 rounded border ${leader.isLOA ? 'border-yellow-500 bg-yellow-500/20' : 'border-orange-500 bg-slate-900/40'}`}>
@@ -523,4 +827,424 @@ const ranksWithMultipleMembers = ["Major", "Captain", "1st Lieutenant", "2nd Lie
             </a>
         </div>
     </div>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="relative bg-slate-800 rounded-xl border border-white/20 shadow-2xl max-w-md w-full overflow-hidden animate-fadeIn">
+            <!-- Modal Header -->
+            <div id="modalHeader" class="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600">
+                <h3 id="modalTitle" class="text-lg font-bold text-white">Position Details</h3>
+                <div class="flex items-center gap-2">
+                    <a id="discordMessageBtn" href="#" target="_blank" rel="noopener noreferrer" class="hidden items-center gap-2 px-3 py-1.5 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-medium transition-colors">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                        </svg>
+                        Send Message
+                    </a>
+                    <button id="closeModal" class="text-white/80 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-4">
+                <!-- Officer Info -->
+                <div id="officerSection" class="flex items-center gap-4">
+                    <div id="officerIcon" class="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center border-2 border-orange-400">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p id="officerName" class="text-lg font-semibold text-white">Officer Name</p>
+                        <p id="officerCallSign" class="text-sm text-orange-400 font-mono">Call Sign</p>
+                    </div>
+                </div>
+
+                <!-- Position Info -->
+                <div class="space-y-3">
+                    <div id="positionRow">
+                        <p class="text-xs text-white/50 uppercase tracking-wider">POSITION</p>
+                        <div id="positionValue" class="bg-slate-700/50 rounded-lg px-4 py-2 mt-1">
+                            <p class="text-white">Position Title</p>
+                        </div>
+                    </div>
+
+                    <div id="divisionRow" class="hidden">
+                        <p class="text-xs text-white/50 uppercase tracking-wider">DIVISION</p>
+                        <div id="divisionValue" class="bg-slate-700/50 rounded-lg px-4 py-2 mt-1">
+                            <p class="text-white">Division Name</p>
+                        </div>
+                    </div>
+
+                    <div id="tierRow">
+                        <p class="text-xs text-white/50 uppercase tracking-wider">TIER</p>
+                        <div id="tierValue" class="bg-slate-700/50 rounded-lg px-4 py-2 mt-1">
+                            <p class="text-white">Tier Name</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div id="descriptionSection" class="hidden pt-2 border-t border-white/10">
+                    <p id="descriptionText" class="text-white/70 text-sm leading-relaxed">Description text here</p>
+                </div>
+
+                <!-- LOA Badge -->
+                <div id="loaBadge" class="hidden">
+                    <div class="bg-yellow-500/20 border border-yellow-500 rounded-lg px-4 py-2 flex items-center gap-2">
+                        <span class="px-2 py-0.5 text-xs font-bold bg-yellow-500 text-black rounded">LOA</span>
+                        <span class="text-yellow-300 text-sm">Currently on Leave of Absence</span>
+                    </div>
+                </div>
+
+                <!-- Suspension Badge -->
+                <div id="suspensionBadge" class="hidden">
+                    <div class="bg-red-500/20 border border-red-500 rounded-lg px-4 py-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded">SUSPENDED</span>
+                            <span class="text-red-300 text-sm">Officer is currently suspended</span>
+                        </div>
+                        <p id="suspensionReason" class="text-red-300/70 text-xs mt-1 hidden"></p>
+                    </div>
+                </div>
+
+                <!-- Strikes Badge -->
+                <div id="strikesBadge">
+                    <div id="strikesBadgeContent" class="rounded-lg px-4 py-2 flex items-center gap-2">
+                        <span class="px-2 py-0.5 text-xs font-bold rounded" id="strikesCount">0 Strikes</span>
+                        <span id="strikesText" class="text-sm">Disciplinary strikes</span>
+                    </div>
+                </div>
+
+                <!-- Activity Status Badge -->
+                <div id="activityBadge" class="hidden">
+                    <div id="activityBadgeContent" class="rounded-lg px-4 py-2 flex items-center gap-2">
+                        <span id="activityStatusLabel" class="px-2 py-0.5 text-xs font-bold rounded">Status</span>
+                        <span id="activityStatusText" class="text-sm">Activity status text</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .animate-fadeIn {
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        #infoModal.show {
+            display: flex;
+        }
+    </style>
+
+    <script>
+        // Get modal elements
+        const modal = document.getElementById('infoModal');
+        const closeBtn = document.getElementById('closeModal');
+        const modalHeader = document.getElementById('modalHeader');
+        const modalTitle = document.getElementById('modalTitle');
+        const officerSection = document.getElementById('officerSection');
+        const officerIcon = document.getElementById('officerIcon');
+        const officerName = document.getElementById('officerName');
+        const officerCallSign = document.getElementById('officerCallSign');
+        const positionRow = document.getElementById('positionRow');
+        const positionValue = document.getElementById('positionValue');
+        const divisionRow = document.getElementById('divisionRow');
+        const divisionValue = document.getElementById('divisionValue');
+        const tierRow = document.getElementById('tierRow');
+        const tierValue = document.getElementById('tierValue');
+        const descriptionSection = document.getElementById('descriptionSection');
+        const descriptionText = document.getElementById('descriptionText');
+        const loaBadge = document.getElementById('loaBadge');
+        const suspensionBadge = document.getElementById('suspensionBadge');
+        const suspensionReasonEl = document.getElementById('suspensionReason');
+        const strikesBadge = document.getElementById('strikesBadge');
+        const strikesCount = document.getElementById('strikesCount');
+        const activityBadge = document.getElementById('activityBadge');
+        const activityBadgeContent = document.getElementById('activityBadgeContent');
+        const activityStatusLabel = document.getElementById('activityStatusLabel');
+        const activityStatusText = document.getElementById('activityStatusText');
+        const discordMessageBtn = document.getElementById('discordMessageBtn') as HTMLAnchorElement | null;
+
+        // Color mapping for gradients
+        const colorMap: Record<string, { gradient: string, border: string, text: string }> = {
+            'from-teal-600 to-teal-700': { gradient: 'from-teal-600 to-teal-700', border: 'border-teal-500', text: 'text-teal-400' },
+            'from-teal-500 to-teal-600': { gradient: 'from-teal-500 to-teal-600', border: 'border-teal-400', text: 'text-teal-300' },
+            'from-cyan-500 to-cyan-600': { gradient: 'from-cyan-500 to-cyan-600', border: 'border-cyan-400', text: 'text-cyan-300' },
+            'from-blue-500 to-blue-600': { gradient: 'from-blue-500 to-blue-600', border: 'border-blue-400', text: 'text-blue-300' },
+            'from-indigo-500 to-indigo-600': { gradient: 'from-indigo-500 to-indigo-600', border: 'border-indigo-400', text: 'text-indigo-300' },
+            'from-purple-500 to-purple-600': { gradient: 'from-purple-500 to-purple-600', border: 'border-purple-400', text: 'text-purple-300' },
+            'from-violet-500 to-violet-600': { gradient: 'from-violet-500 to-violet-600', border: 'border-violet-400', text: 'text-violet-300' },
+            'from-amber-500 to-amber-600': { gradient: 'from-amber-500 to-amber-600', border: 'border-amber-400', text: 'text-amber-300' },
+            'from-lime-500 to-lime-600': { gradient: 'from-lime-500 to-lime-600', border: 'border-lime-400', text: 'text-lime-300' },
+            'from-green-500 to-green-600': { gradient: 'from-green-500 to-green-600', border: 'border-green-400', text: 'text-green-300' },
+            'from-orange-500 to-orange-600': { gradient: 'from-orange-500 to-orange-600', border: 'border-orange-400', text: 'text-orange-300' },
+            'from-rose-500 to-rose-600': { gradient: 'from-rose-500 to-rose-600', border: 'border-rose-400', text: 'text-rose-300' },
+        };
+
+        // Rank descriptions
+        const rankDescriptions: Record<string, string> = {
+            'Chief of Police': 'The Chief of Police is the highest-ranking officer in the department, responsible for overall department operations and policy.',
+            'Deputy Chief of Police': 'Second-in-command of the department, assists the Chief in managing operations and policy implementation.',
+            'Assistant Chief of Police': 'Senior command staff member responsible for assisting in department-wide management and operations.',
+            'Colonel': 'High Command officer responsible for major departmental divisions and strategic operations.',
+            'Lieutenant Colonel': 'High Command officer assisting in managing major departmental divisions.',
+            'Commander': 'Trial High Command officer overseeing specialized units or district operations.',
+            'Major': 'Low Command officer responsible for significant operational areas within the department.',
+            'Captain': 'Low Command officer managing specific divisions or shifts within the department.',
+            '1st Lieutenant': 'Low Command officer assisting in division management and operations.',
+            '2nd Lieutenant': 'Low Command officer beginning their command leadership journey.',
+            'Master Sergeant': 'Trial Low Command, transitioning from supervision to command responsibilities.',
+            'Sergeant First Class': 'Senior supervisor responsible for guiding sergeants and officers.',
+            'Staff Sergeant': 'Experienced supervisor managing patrol teams and field operations.',
+            'Sergeant': 'First-line supervisor responsible for direct supervision of officers.',
+            'Corporal': 'Trial Supervisor position, preparing for full supervisory responsibilities.',
+            'Officer III': 'Senior officer with extensive field experience and department knowledge.',
+            'Officer II': 'Experienced officer demonstrating consistent performance and growth.',
+            'Officer I': 'Officer who has completed probation and proven their capabilities.',
+            'Probationary Officer': 'New officer completing their probationary period and training.',
+            'Reserve Officer': 'Part-time officer supporting department operations as needed.',
+            'Cadet': 'Officer in training, learning department procedures and law enforcement fundamentals.',
+        };
+
+        function openModal(data: DOMStringMap) {
+            if (!modal) return;
+
+            const rank = data.rank || '';
+            const tier = data.tier || '';
+            const name = data.name || '';
+            const callSign = data.callsign || '';
+            const jobTitle = data.jobtitle || '';
+            const isLOA = data.isloa === 'true';
+            const color = data.color || 'from-orange-500 to-orange-600';
+            const division = data.division || '';
+            const customDescription = data.description || '';
+            const isMulti = data.ismulti === 'true';
+            const memberCount = data.membercount || '0';
+            // New status fields
+            const strikes = parseInt(data.strikes || '0', 10);
+            const activityStatus = data.activitystatus || '';
+            const isSuspended = data.issuspended === 'true';
+            const suspensionReason = data.suspensionreason || '';
+            const discordId = data.discordid || '';
+
+            // Set colors
+            const colors = colorMap[color] || colorMap['from-orange-500 to-orange-600'];
+            if (modalHeader) {
+                modalHeader.className = `flex items-center justify-between px-6 py-4 bg-gradient-to-r ${colors.gradient}`;
+            }
+            if (officerIcon) {
+                officerIcon.className = `w-12 h-12 rounded-full bg-gradient-to-br ${colors.gradient} flex items-center justify-center border-2 ${colors.border}`;
+            }
+
+            // Set title
+            if (modalTitle) {
+                modalTitle.textContent = division || rank;
+            }
+
+            // Handle officer section
+            if (officerSection && officerName && officerCallSign) {
+                if (name || callSign) {
+                    officerSection.classList.remove('hidden');
+                    officerName.textContent = name || 'Position Vacant';
+                    officerCallSign.textContent = callSign || '';
+                    officerCallSign.className = `text-sm ${colors.text} font-mono`;
+                } else if (isMulti) {
+                    officerSection.classList.remove('hidden');
+                    officerName.textContent = `${memberCount} members assigned`;
+                    officerCallSign.textContent = '';
+                } else {
+                    officerSection.classList.add('hidden');
+                }
+            }
+
+            // Set position
+            if (positionRow && positionValue) {
+                if (jobTitle || rank) {
+                    positionRow.classList.remove('hidden');
+                    positionValue.innerHTML = `<p class="text-white">${jobTitle || rank}</p>`;
+                } else {
+                    positionRow.classList.add('hidden');
+                }
+            }
+
+            // Set division (for subdivision leadership)
+            if (divisionRow && divisionValue) {
+                if (division && tier === 'Subdivision Leadership') {
+                    divisionRow.classList.remove('hidden');
+                    divisionValue.innerHTML = `<p class="text-white">${division}</p>`;
+                } else {
+                    divisionRow.classList.add('hidden');
+                }
+            }
+
+            // Set tier
+            if (tierRow && tierValue) {
+                tierValue.innerHTML = `<p class="text-white">${tier}</p>`;
+            }
+
+            // Set description
+            if (descriptionSection && descriptionText) {
+                const desc = customDescription || rankDescriptions[rank] || '';
+                if (desc) {
+                    descriptionSection.classList.remove('hidden');
+                    descriptionText.textContent = desc;
+                } else {
+                    descriptionSection.classList.add('hidden');
+                }
+            }
+
+            // Handle LOA badge
+            if (loaBadge) {
+                if (isLOA && !isSuspended) {
+                    loaBadge.classList.remove('hidden');
+                } else {
+                    loaBadge.classList.add('hidden');
+                }
+            }
+
+            // Handle Suspension badge
+            if (suspensionBadge) {
+                if (isSuspended) {
+                    suspensionBadge.classList.remove('hidden');
+                    if (suspensionReasonEl) {
+                        if (suspensionReason) {
+                            suspensionReasonEl.textContent = `Reason: ${suspensionReason}`;
+                            suspensionReasonEl.classList.remove('hidden');
+                        } else {
+                            suspensionReasonEl.classList.add('hidden');
+                        }
+                    }
+                } else {
+                    suspensionBadge.classList.add('hidden');
+                }
+            }
+
+            // Handle Strikes badge - always show
+            if (strikesBadge && strikesCount) {
+                const strikesBadgeContent = document.getElementById('strikesBadgeContent');
+                const strikesText = document.getElementById('strikesText');
+                strikesBadge.classList.remove('hidden');
+                strikesCount.textContent = `${strikes} Strike${strikes !== 1 ? 's' : ''}`;
+                if (strikes > 0) {
+                    if (strikesBadgeContent) strikesBadgeContent.className = 'bg-orange-500/20 border border-orange-500 rounded-lg px-4 py-2 flex items-center gap-2';
+                    strikesCount.className = 'px-2 py-0.5 text-xs font-bold bg-orange-500 text-white rounded';
+                    if (strikesText) {
+                        strikesText.className = 'text-orange-300 text-sm';
+                        strikesText.textContent = 'Active disciplinary strikes';
+                    }
+                } else {
+                    if (strikesBadgeContent) strikesBadgeContent.className = 'bg-slate-600/20 border border-slate-500 rounded-lg px-4 py-2 flex items-center gap-2';
+                    strikesCount.className = 'px-2 py-0.5 text-xs font-bold bg-slate-600 text-white/70 rounded';
+                    if (strikesText) {
+                        strikesText.className = 'text-slate-400 text-sm';
+                        strikesText.textContent = 'No disciplinary strikes';
+                    }
+                }
+            }
+
+            // Handle Activity Status badge
+            if (activityBadge && activityBadgeContent && activityStatusLabel && activityStatusText) {
+                if (activityStatus && activityStatus !== 'active') {
+                    activityBadge.classList.remove('hidden');
+                    if (activityStatus === 'warning') {
+                        activityBadgeContent.className = 'bg-amber-500/20 border border-amber-500 rounded-lg px-4 py-2 flex items-center gap-2';
+                        activityStatusLabel.className = 'px-2 py-0.5 text-xs font-bold bg-amber-500 text-black rounded';
+                        activityStatusLabel.textContent = 'Activity Warning';
+                        activityStatusText.className = 'text-amber-300 text-sm';
+                        activityStatusText.textContent = 'Activity levels below requirements';
+                    } else if (activityStatus === 'probation') {
+                        activityBadgeContent.className = 'bg-purple-500/20 border border-purple-500 rounded-lg px-4 py-2 flex items-center gap-2';
+                        activityStatusLabel.className = 'px-2 py-0.5 text-xs font-bold bg-purple-500 text-white rounded';
+                        activityStatusLabel.textContent = 'On Probation';
+                        activityStatusText.className = 'text-purple-300 text-sm';
+                        activityStatusText.textContent = 'Officer is on activity probation';
+                    } else if (activityStatus === 'inactive') {
+                        activityBadgeContent.className = 'bg-red-800/20 border border-red-800 rounded-lg px-4 py-2 flex items-center gap-2';
+                        activityStatusLabel.className = 'px-2 py-0.5 text-xs font-bold bg-red-800 text-white rounded';
+                        activityStatusLabel.textContent = 'Inactive';
+                        activityStatusText.className = 'text-red-400 text-sm';
+                        activityStatusText.textContent = 'Not currently active';
+                    } else if (activityStatus === 'semi_active') {
+                        activityBadgeContent.className = 'bg-orange-500/20 border border-orange-500 rounded-lg px-4 py-2 flex items-center gap-2';
+                        activityStatusLabel.className = 'px-2 py-0.5 text-xs font-bold bg-orange-500 text-black rounded';
+                        activityStatusLabel.textContent = 'Semi Active';
+                        activityStatusText.className = 'text-orange-300 text-sm';
+                        activityStatusText.textContent = 'Partially active status';
+                    } else {
+                        activityBadge.classList.add('hidden');
+                    }
+                } else {
+                    activityBadge.classList.add('hidden');
+                }
+            }
+
+            // Handle Discord Message button
+            if (discordMessageBtn) {
+                if (discordId) {
+                    discordMessageBtn.href = `http://www.discordapp.com/users/${discordId}`;
+                    discordMessageBtn.classList.remove('hidden');
+                    discordMessageBtn.classList.add('flex');
+                } else {
+                    discordMessageBtn.classList.add('hidden');
+                    discordMessageBtn.classList.remove('flex');
+                }
+            }
+
+            // Show modal
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            if (!modal) return;
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        // Attach event listeners to all info buttons
+        document.querySelectorAll('.info-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLElement;
+                openModal(target.dataset);
+            });
+        });
+
+        // Close modal events
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeModal);
+        }
+
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+        }
+
+        // Close on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
 </Layout>

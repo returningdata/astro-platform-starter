@@ -123,40 +123,40 @@ function normalizeRank(rank: string): string {
     }
     if (rankLower.includes('deputy chief')) return 'Deputy Chief of Police';
     if (rankLower.includes('assistant chief')) return 'Assistant Chief of Police';
-    if (rankLower === 'colonel') return 'Colonel';
-    if (rankLower === 'lieutenant colonel') return 'Lieutenant Colonel';
+    if (rankLower.startsWith('colonel') && !rankLower.includes('lieutenant')) return 'Colonel';
+    if (rankLower.startsWith('lieutenant colonel')) return 'Lieutenant Colonel';
 
     // Commander (including Trial High Command)
     if (rankLower.includes('commander')) return 'Commander';
 
-    // Low Command
-    if (rankLower === 'major') return 'Major';
-    if (rankLower === 'captain') return 'Captain';
-    if (rankLower === '1st lieutenant') return '1st Lieutenant';
-    if (rankLower === '2nd lieutenant') return '2nd Lieutenant';
+    // Low Command (use startsWith to handle suffixes like "(THC)" for Trial High Command)
+    if (rankLower.startsWith('major')) return 'Major';
+    if (rankLower.startsWith('captain')) return 'Captain';
+    if (rankLower.startsWith('1st lieutenant')) return '1st Lieutenant';
+    if (rankLower.startsWith('2nd lieutenant')) return '2nd Lieutenant';
 
-    // Trial Low Command
-    if (rankLower === 'master sergeant') return 'Master Sergeant';
+    // Trial Low Command (use startsWith to handle suffixes)
+    if (rankLower.startsWith('master sergeant')) return 'Master Sergeant';
 
-    // Supervisors
-    if (rankLower === 'sergeant first class') return 'Sergeant First Class';
-    if (rankLower === 'staff sergeant') return 'Staff Sergeant';
-    if (rankLower === 'sergeant' && !rankLower.includes('first') && !rankLower.includes('staff') && !rankLower.includes('master')) return 'Sergeant';
+    // Supervisors (use startsWith to handle suffixes)
+    if (rankLower.startsWith('sergeant first class')) return 'Sergeant First Class';
+    if (rankLower.startsWith('staff sergeant')) return 'Staff Sergeant';
+    if (rankLower.startsWith('sergeant') && !rankLower.includes('first') && !rankLower.includes('staff') && !rankLower.includes('master')) return 'Sergeant';
 
-    // Trial Supervisor
-    if (rankLower === 'corporal') return 'Corporal';
+    // Trial Supervisor (use startsWith to handle suffixes)
+    if (rankLower.startsWith('corporal')) return 'Corporal';
 
-    // Officers
-    if (rankLower === 'officer iii' || rankLower === 'officer 3') return 'Officer III';
-    if (rankLower === 'officer ii' || rankLower === 'officer 2') return 'Officer II';
-    if (rankLower === 'officer i' || rankLower === 'officer 1') return 'Officer I';
+    // Officers (use startsWith to handle suffixes)
+    if (rankLower.startsWith('officer iii') || rankLower.startsWith('officer 3')) return 'Officer III';
+    if (rankLower.startsWith('officer ii') || rankLower.startsWith('officer 2')) return 'Officer II';
+    if (rankLower.startsWith('officer i') || rankLower.startsWith('officer 1')) return 'Officer I';
     if (rankLower.includes('probationary')) return 'Probationary Officer';
 
     // Reserves
     if (rankLower.includes('reserve')) return 'Reserve Officer';
 
-    // Training
-    if (rankLower === 'cadet') return 'Cadet';
+    // Training (use startsWith to handle suffixes)
+    if (rankLower.startsWith('cadet')) return 'Cadet';
 
     return rank;
 }

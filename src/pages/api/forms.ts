@@ -33,6 +33,7 @@ export interface FormDefinition {
     sections: FormSection[];
     discordWebhookUrl?: string;
     enabled: boolean;
+    requiresApproval?: boolean; // If true, submissions will have an approval workflow
     createdAt: string;
     updatedAt: string;
     createdBy?: string;

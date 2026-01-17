@@ -91,6 +91,13 @@ import Layout from '../../layouts/Layout.astro';
                                 </label>
                                 <p class="text-xs text-white/50 mt-1 ml-7">Disabled forms cannot be accessed by users</p>
                             </div>
+                            <div>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="formRequiresApproval" class="w-5 h-5 text-primary bg-slate-700 border-slate-600 rounded focus:ring-primary">
+                                    <span class="text-sm font-medium text-slate-300">Requires Approval</span>
+                                </label>
+                                <p class="text-xs text-white/50 mt-1 ml-7">Submissions will require supervisor approval via Discord link</p>
+                            </div>
                         </div>
                     </div>
 
@@ -750,6 +757,7 @@ import Layout from '../../layouts/Layout.astro';
             document.getElementById('formDescription').value = form.description || '';
             document.getElementById('formWebhook').value = form.discordWebhookUrl || '';
             document.getElementById('formEnabled').checked = form.enabled !== false;
+            document.getElementById('formRequiresApproval').checked = form.requiresApproval === true;
 
             // Render sections
             renderSections(form.sections || []);
@@ -779,6 +787,7 @@ import Layout from '../../layouts/Layout.astro';
             document.getElementById('formDescription').value = '';
             document.getElementById('formWebhook').value = '';
             document.getElementById('formEnabled').checked = true;
+            document.getElementById('formRequiresApproval').checked = false;
 
             // Clear sections
             document.getElementById('sectionsContainer').innerHTML = '';
@@ -1215,6 +1224,7 @@ import Layout from '../../layouts/Layout.astro';
                 description: document.getElementById('formDescription').value,
                 discordWebhookUrl: document.getElementById('formWebhook').value,
                 enabled: document.getElementById('formEnabled').checked,
+                requiresApproval: document.getElementById('formRequiresApproval').checked,
                 sections
             };
         }

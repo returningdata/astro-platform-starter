@@ -14,6 +14,11 @@ export interface FormSubmission {
     discordMessageId?: string;
     createdAt: string;
     submittedBy?: string;
+    // Approval fields
+    approvalStatus?: 'pending' | 'approved' | 'denied';
+    approvedBy?: string;
+    approvedAt?: string;
+    approvalNote?: string;
 }
 
 /**
@@ -152,7 +157,16 @@ function buildSubmissionEmbeds(form: FormDefinition, submission: FormSubmission)
 }
 
 /**
+ * Get the site URL from environment or default
+ */
+function getSiteUrl(): string {
+    const url = import.meta.env.SITE || import.meta.env.URL || 'https://delperro.netlify.app';
+    return url.replace(/\/$/, ''); // Remove trailing slash if present
+}
+
+/**
  * Send submission to Discord webhook
+ * If the form requires approval, adds an approval link embed
  */
 async function sendToDiscord(form: FormDefinition, submission: FormSubmission): Promise<string | null> {
     if (!form.discordWebhookUrl) {
@@ -162,6 +176,28 @@ async function sendToDiscord(form: FormDefinition, submission: FormSubmission): 
 
     try {
         const embeds = buildSubmissionEmbeds(form, submission);
+
+        // If form requires approval, add an approval action embed
+        if (form.requiresApproval) {
+            const siteUrl = getSiteUrl();
+            const approveUrl = `${siteUrl}/api/form-approve?id=${encodeURIComponent(submission.id)}`;
+
+            const approvalEmbed = {
+                title: '✅ Supervisor Action Required',
+                description: `**[Click here to Approve this Submission](${approveUrl})**`,
+                color: 0x57F287, // Discord green
+                fields: [
+                    {
+                        name: '📋 Instructions',
+                        value: 'Click the link above to open the approval form. You will need to enter your Discord User ID to approve this submission.',
+                        inline: false
+                    }
+                ],
+                footer: { text: `Submission ID: ${submission.id}` }
+            };
+
+            embeds.push(approvalEmbed);
+        }
 
         const payload = {
             content: `**New ${form.name} Submission** - ID: \`${submission.id}\``,
@@ -310,7 +346,9 @@ export const POST: APIRoute = async ({ request }) => {
             formSlug: form.slug,
             data: formData,
             createdAt: new Date().toISOString(),
-            submittedBy: user?.username
+            submittedBy: user?.username,
+            // Set approval status to pending if form requires approval
+            approvalStatus: form.requiresApproval ? 'pending' : undefined
         };
 
         // Get existing submissions and add new one

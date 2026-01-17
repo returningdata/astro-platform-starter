@@ -4,11 +4,13 @@ import '@fontsource-variable/inter/wght.css';
 import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import AdminInactivityTimeout from '../components/AdminInactivityTimeout.astro';
 import { getStore } from '@netlify/blobs';
 
 interface Props {
     title: string;
     description?: string;
+    isAdmin?: boolean;
 }
 
 interface ThemeSettings {
@@ -42,7 +44,7 @@ async function getThemeSettings(): Promise<ThemeSettings> {
     }
 }
 
-const { title, description = 'Del Perro Police Department - Officer Resources and Information' } = Astro.props;
+const { title, description = 'Del Perro Police Department - Officer Resources and Information', isAdmin = false } = Astro.props;
 
 // Get the site URL for OG tags
 const siteUrl = Astro.url.origin || 'https://delperro.netlify.app';
@@ -773,5 +775,8 @@ const playerStyle = themePlayerStyles[activeTheme];
                 <Footer />
             </div>
         </div>
+
+        {/* Admin inactivity timeout - only for admin pages (excluding login) */}
+        {isAdmin && <AdminInactivityTimeout />}
     </body>
 </html>

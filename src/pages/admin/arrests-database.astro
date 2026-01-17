@@ -1,0 +1,368 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Admin - Arrests Database" isAdmin={true}>
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Arrests Database</h1>
+                <p class="text-white/70">Search suspects by name or CIV ID to view their arrest history</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/admin/arrest-reports" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    View Arrest Reports
+                </a>
+                <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Search Section -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-3">
+                <span class="text-xl">🔍</span>
+                Search Suspects
+            </h2>
+            <p class="text-white/60 mb-4">Enter a suspect's name or CIV ID to search the arrests database.</p>
+
+            <div class="flex gap-4">
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Enter name or CIV ID (e.g., John Smith or CIV123)"
+                    class="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-white/40 focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                <button id="searchBtn" class="px-6 py-3 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    Search
+                </button>
+            </div>
+        </div>
+
+        <!-- Search Results -->
+        <div id="searchResults" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-bold text-white/90" id="resultsHeader">Search Results</h2>
+                <button id="clearResultsBtn" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-sm">
+                    Clear Results
+                </button>
+            </div>
+            <div id="resultsContainer" class="space-y-6">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden">
+            <div class="text-center py-12 text-white/60">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-white/20 border-t-primary mb-4"></div>
+                <p>Searching database...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        let adminUser = null;
+
+        async function validateSessionAndPermissions() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+
+                adminUser = data.user;
+
+                if (!hasPermission()) {
+                    document.body.innerHTML = `
+                        <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                            <div class="text-center p-8">
+                                <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                                <p class="text-white/70 mb-4">You don't have permission to access this page.</p>
+                                <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                            </div>
+                        </div>
+                    `;
+                    return false;
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Session validation error:', error);
+                window.location.href = '/admin/login';
+                return false;
+            }
+        }
+
+        function hasPermission() {
+            if (!adminUser) return false;
+            if (adminUser.role === 'super_admin') return true;
+            return adminUser.permissions && (
+                adminUser.permissions.includes('arrests-database') ||
+                adminUser.permissions.includes('arrest-reports')
+            );
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Unknown';
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return 'Unknown';
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        const statusColors = {
+            open: { bg: 'bg-orange-500/20', border: 'border-orange-500/30', text: 'text-orange-400' },
+            closed: { bg: 'bg-green-500/20', border: 'border-green-500/30', text: 'text-green-400' },
+            unresolved: { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400' }
+        };
+
+        function renderSuspectCard(suspect) {
+            const hasImage = suspect.suspectImage && suspect.suspectImage.trim() !== '';
+
+            return `
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 overflow-hidden">
+                    <!-- Suspect Header -->
+                    <div class="p-6 border-b border-white/10">
+                        <div class="flex flex-col md:flex-row gap-6">
+                            <!-- Suspect Image -->
+                            <div class="flex-shrink-0">
+                                ${hasImage ? `
+                                    <img
+                                        src="${suspect.suspectImage}"
+                                        alt="Suspect: ${suspect.suspectName}"
+                                        class="w-32 h-32 md:w-40 md:h-40 object-cover rounded-lg border-2 border-white/20"
+                                        onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23666%22><path d=%22M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%22/></svg>';"
+                                    >
+                                ` : `
+                                    <div class="w-32 h-32 md:w-40 md:h-40 bg-slate-700 rounded-lg border-2 border-white/20 flex items-center justify-center">
+                                        <svg class="w-16 h-16 text-white/30" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                        </svg>
+                                    </div>
+                                `}
+                            </div>
+
+                            <!-- Suspect Info -->
+                            <div class="flex-1">
+                                <h3 class="text-2xl font-bold text-white mb-3">${suspect.suspectName}</h3>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                                    <div class="bg-slate-700/30 rounded-lg p-3">
+                                        <div class="text-white/50 text-xs uppercase tracking-wide mb-1">CIV ID</div>
+                                        <div class="text-white font-mono font-semibold">${suspect.suspectCid || 'N/A'}</div>
+                                    </div>
+                                    <div class="bg-slate-700/30 rounded-lg p-3">
+                                        <div class="text-white/50 text-xs uppercase tracking-wide mb-1">Date of Birth</div>
+                                        <div class="text-white font-semibold">${suspect.suspectDob || 'N/A'}</div>
+                                    </div>
+                                    <div class="bg-slate-700/30 rounded-lg p-3">
+                                        <div class="text-white/50 text-xs uppercase tracking-wide mb-1">Gender</div>
+                                        <div class="text-white font-semibold">${suspect.suspectGender || 'N/A'}</div>
+                                    </div>
+                                    <div class="bg-slate-700/30 rounded-lg p-3">
+                                        <div class="text-white/50 text-xs uppercase tracking-wide mb-1">Total Arrests</div>
+                                        <div class="text-white font-semibold text-xl">${suspect.totalArrests}</div>
+                                    </div>
+                                </div>
+
+                                <!-- Case Status Summary -->
+                                <div class="flex flex-wrap gap-3">
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusColors.open.bg} ${statusColors.open.border} ${statusColors.open.text} border">
+                                        ${suspect.caseStatuses.open} Open
+                                    </span>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusColors.closed.bg} ${statusColors.closed.border} ${statusColors.closed.text} border">
+                                        ${suspect.caseStatuses.closed} Closed
+                                    </span>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusColors.unresolved.bg} ${statusColors.unresolved.border} ${statusColors.unresolved.text} border">
+                                        ${suspect.caseStatuses.unresolved} Unresolved
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Previous Charges Section -->
+                    <div class="p-6 border-b border-white/10 bg-slate-800/30">
+                        <h4 class="text-lg font-bold text-white/90 mb-3 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Previous Charges (${suspect.allCharges.length})
+                        </h4>
+                        ${suspect.allCharges.length > 0 ? `
+                            <div class="flex flex-wrap gap-2">
+                                ${suspect.allCharges.map(charge => `
+                                    <span class="px-3 py-1 bg-red-500/20 border border-red-500/30 text-red-300 rounded-lg text-sm">
+                                        ${charge}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <p class="text-white/50 text-sm">No charges on record</p>
+                        `}
+                    </div>
+
+                    <!-- Arrest History Section -->
+                    <div class="p-6">
+                        <h4 class="text-lg font-bold text-white/90 mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Arrest History
+                        </h4>
+
+                        <div class="space-y-3">
+                            ${suspect.arrests.map(arrest => {
+                                const colors = statusColors[arrest.caseStatus] || statusColors.open;
+                                return `
+                                    <div class="bg-slate-700/30 rounded-lg p-4 border border-white/10">
+                                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-mono text-primary font-semibold">${arrest.id}</span>
+                                                <span class="px-2 py-0.5 rounded text-xs font-semibold uppercase ${colors.bg} ${colors.border} ${colors.text} border">
+                                                    ${arrest.caseStatus}
+                                                </span>
+                                            </div>
+                                            <span class="text-white/50 text-sm">${formatDateTime(arrest.createdAt)}</span>
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                            <div>
+                                                <span class="text-white/50">Officer:</span>
+                                                <span class="text-white ml-1">${arrest.officerName || 'N/A'} (${arrest.officerCallsign || 'N/A'})</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-white/50">Booking:</span>
+                                                <span class="text-white ml-1">${arrest.bookingLocation || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 text-sm">
+                                            <span class="text-white/50">Charges:</span>
+                                            <span class="text-white/80 ml-1">${arrest.charges ? (arrest.charges.length > 150 ? arrest.charges.substring(0, 150) + '...' : arrest.charges) : 'N/A'}</span>
+                                        </div>
+                                        ${arrest.reasonForStop ? `
+                                            <div class="mt-2 text-sm">
+                                                <span class="text-white/50">Reason for Stop:</span>
+                                                <span class="text-white/80 ml-1">${arrest.reasonForStop.length > 100 ? arrest.reasonForStop.substring(0, 100) + '...' : arrest.reasonForStop}</span>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function searchDatabase(query) {
+            const loadingState = document.getElementById('loadingState');
+            const searchResults = document.getElementById('searchResults');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsHeader = document.getElementById('resultsHeader');
+
+            // Show loading, hide results
+            loadingState.classList.remove('hidden');
+            searchResults.classList.add('hidden');
+
+            try {
+                const response = await fetch(`/api/arrests-database?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                loadingState.classList.add('hidden');
+
+                if (!data.success) {
+                    showStatus(data.error || 'Search failed', 'error');
+                    return;
+                }
+
+                if (data.suspects.length === 0) {
+                    resultsHeader.textContent = 'No Results Found';
+                    resultsContainer.innerHTML = `
+                        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-8 border border-white/20 text-center">
+                            <svg class="w-16 h-16 text-white/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <h3 class="text-xl font-semibold text-white/70 mb-2">No suspects found</h3>
+                            <p class="text-white/50">No arrest records match your search for "${query}".</p>
+                            <p class="text-white/50 mt-2">Try searching with a different name or CIV ID.</p>
+                        </div>
+                    `;
+                } else {
+                    resultsHeader.textContent = `Search Results (${data.totalResults} suspect${data.totalResults > 1 ? 's' : ''} found)`;
+                    resultsContainer.innerHTML = data.suspects.map(suspect => renderSuspectCard(suspect)).join('');
+                }
+
+                searchResults.classList.remove('hidden');
+            } catch (error) {
+                console.error('Search error:', error);
+                loadingState.classList.add('hidden');
+                showStatus('Failed to search database. Please try again.', 'error');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                showStatus('Please enter a name or CIV ID to search', 'error');
+                return;
+            }
+            searchDatabase(query);
+        });
+
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = e.target.value.trim();
+                if (!query) {
+                    showStatus('Please enter a name or CIV ID to search', 'error');
+                    return;
+                }
+                searchDatabase(query);
+            }
+        });
+
+        document.getElementById('clearResultsBtn').addEventListener('click', () => {
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('searchInput').value = '';
+        });
+
+        // Initialize
+        validateSessionAndPermissions();
+    </script>
+</Layout>

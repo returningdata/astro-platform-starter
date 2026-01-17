@@ -1,0 +1,236 @@
+---
+// AdminInactivityTimeout component
+// Tracks user inactivity and automatically logs out after 5 minutes
+// Shows a warning popup after 30 seconds of inactivity with a countdown
+---
+
+<!-- Inactivity Warning Popup -->
+<div id="inactivity-warning-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[10000] hidden flex items-center justify-center cursor-pointer transition-opacity duration-300" style="opacity: 0;">
+    <div class="bg-gradient-to-br from-red-900/95 to-orange-900/95 border-2 border-red-500 rounded-2xl p-8 max-w-md mx-4 shadow-2xl shadow-red-500/30 text-center transform transition-transform duration-300" style="transform: scale(0.9);">
+        <!-- Warning Icon -->
+        <div class="w-20 h-20 mx-auto mb-6 relative">
+            <div class="absolute inset-0 bg-red-500/30 rounded-full animate-ping"></div>
+            <div class="relative w-full h-full bg-red-600 rounded-full flex items-center justify-center">
+                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+        </div>
+
+        <!-- Title -->
+        <h2 class="text-3xl font-bold text-white mb-2">Attention</h2>
+
+        <!-- Warning Message -->
+        <p class="text-white/90 text-lg mb-4">You will be logged out in</p>
+
+        <!-- Countdown Timer -->
+        <div id="inactivity-countdown" class="text-6xl font-bold text-red-400 mb-6 tabular-nums">
+            4:30
+        </div>
+
+        <!-- Instruction -->
+        <p class="text-white/70 text-sm">Click anywhere to continue</p>
+
+        <!-- Progress Bar -->
+        <div class="mt-6 w-full h-2 bg-white/20 rounded-full overflow-hidden">
+            <div id="inactivity-progress-bar" class="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full transition-all duration-1000 ease-linear" style="width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Inactivity Timeout Configuration
+    const INACTIVITY_WARNING_DELAY = 30 * 1000; // 30 seconds before showing warning
+    const TOTAL_TIMEOUT = 5 * 60 * 1000; // 5 minutes total before logout
+    const WARNING_DURATION = TOTAL_TIMEOUT - INACTIVITY_WARNING_DELAY; // Time from warning to logout (4:30)
+
+    let lastActivityTime = Date.now();
+    let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+    let countdownInterval: ReturnType<typeof setInterval> | null = null;
+    let isWarningShown = false;
+
+    // Activity events to track
+    const activityEvents = [
+        'mousedown', 'mousemove', 'keydown', 'keypress', 'keyup',
+        'touchstart', 'touchmove', 'scroll', 'wheel', 'click'
+    ];
+
+    // Get DOM elements
+    function getElements() {
+        return {
+            overlay: document.getElementById('inactivity-warning-overlay'),
+            countdown: document.getElementById('inactivity-countdown'),
+            progressBar: document.getElementById('inactivity-progress-bar')
+        };
+    }
+
+    // Format remaining time as M:SS
+    function formatTime(ms: number): string {
+        const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // Show warning popup
+    function showWarning() {
+        const { overlay } = getElements();
+        if (!overlay || isWarningShown) return;
+
+        isWarningShown = true;
+        overlay.classList.remove('hidden');
+
+        // Trigger animation
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            const dialog = overlay.querySelector('div');
+            if (dialog) {
+                (dialog as HTMLElement).style.transform = 'scale(1)';
+            }
+        });
+
+        // Start countdown
+        startCountdown();
+    }
+
+    // Hide warning popup
+    function hideWarning() {
+        const { overlay } = getElements();
+        if (!overlay || !isWarningShown) return;
+
+        // Animate out
+        overlay.style.opacity = '0';
+        const dialog = overlay.querySelector('div');
+        if (dialog) {
+            (dialog as HTMLElement).style.transform = 'scale(0.9)';
+        }
+
+        // Hide after animation
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+        }, 300);
+
+        isWarningShown = false;
+
+        // Stop countdown
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+    }
+
+    // Start countdown timer
+    function startCountdown() {
+        const { countdown, progressBar } = getElements();
+        if (!countdown || !progressBar) return;
+
+        const warningStartTime = Date.now();
+
+        // Update countdown every 100ms for smooth progress bar
+        countdownInterval = setInterval(() => {
+            const elapsed = Date.now() - warningStartTime;
+            const remaining = WARNING_DURATION - elapsed;
+
+            if (remaining <= 0) {
+                // Time's up - logout
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                performLogout();
+                return;
+            }
+
+            // Update countdown text
+            countdown.textContent = formatTime(remaining);
+
+            // Update progress bar
+            const progressPercent = (remaining / WARNING_DURATION) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+        }, 100);
+    }
+
+    // Perform logout
+    async function performLogout() {
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include'
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+        window.location.href = '/admin/login?reason=inactivity';
+    }
+
+    // Reset inactivity timer
+    function resetInactivityTimer() {
+        lastActivityTime = Date.now();
+
+        // If warning is shown, hide it and reset
+        if (isWarningShown) {
+            hideWarning();
+        }
+
+        // Clear existing timer
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+        }
+
+        // Set new timer to show warning after 30 seconds
+        inactivityTimer = setTimeout(() => {
+            showWarning();
+        }, INACTIVITY_WARNING_DELAY);
+    }
+
+    // Handle user activity
+    function handleActivity(event: Event) {
+        // Ignore if the click is on the warning overlay (will be handled separately)
+        const overlay = document.getElementById('inactivity-warning-overlay');
+        if (overlay && overlay.contains(event.target as Node)) {
+            return;
+        }
+
+        resetInactivityTimer();
+    }
+
+    // Initialize inactivity tracking
+    function initInactivityTracking() {
+        // Add event listeners for all activity events
+        activityEvents.forEach(eventType => {
+            document.addEventListener(eventType, handleActivity, { passive: true });
+        });
+
+        // Handle clicks on the warning overlay to dismiss it
+        const overlay = document.getElementById('inactivity-warning-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', () => {
+                resetInactivityTimer();
+            });
+        }
+
+        // Start the initial timer
+        resetInactivityTimer();
+
+        // Handle visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                // Check if we should have logged out while page was hidden
+                const timeSinceActivity = Date.now() - lastActivityTime;
+                if (timeSinceActivity >= TOTAL_TIMEOUT) {
+                    performLogout();
+                } else if (timeSinceActivity >= INACTIVITY_WARNING_DELAY) {
+                    // Show warning immediately
+                    showWarning();
+                }
+            }
+        });
+    }
+
+    // Start tracking when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initInactivityTracking);
+    } else {
+        initInactivityTracking();
+    }
+</script>

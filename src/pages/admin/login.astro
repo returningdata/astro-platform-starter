@@ -100,14 +100,22 @@ import Layout from '../../layouts/Layout.astro';
             'not_member': 'You must be a member of the DPPD Discord server to log in.',
             'no_role': 'You do not have the required Discord role to access the admin panel.',
             'callback_failed': 'Discord authentication failed. Please try again.',
-            'server_config': 'Server configuration error. Please contact an administrator.'
+            'server_config': 'Server configuration error. Please contact an administrator.',
+            'inactivity': 'You have been logged out due to inactivity. Please sign in again.'
         };
 
-        // Check for OAuth error in URL
+        // Check for OAuth error or reason in URL
         function checkOAuthError() {
             const params = new URLSearchParams(window.location.search);
             const error = params.get('error');
-            if (error && errorMessages[error]) {
+            const reason = params.get('reason');
+
+            if (reason && errorMessages[reason]) {
+                errorMessage.textContent = errorMessages[reason];
+                errorAlert.classList.remove('hidden');
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else if (error && errorMessages[error]) {
                 errorMessage.textContent = errorMessages[error];
                 errorAlert.classList.remove('hidden');
                 // Clean up URL

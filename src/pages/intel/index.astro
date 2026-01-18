@@ -226,7 +226,8 @@ export const prerender = false;
                     <!-- Post input -->
                     <div class="mt-4 flex gap-2 items-end border-t border-slate-700 pt-4">
                         <div class="flex-1 relative">
-                            <button class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60">
+                            <input type="file" id="attachmentFileInput" accept="image/*" class="hidden" />
+                            <button id="attachmentBtn" type="button" class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors" title="Attach an image">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                                 </svg>
@@ -1574,6 +1575,83 @@ export const prerender = false;
         document.addEventListener('click', (e) => {
             if (!messageInput.contains(e.target) && !commandSuggestions.contains(e.target)) {
                 commandSuggestions.classList.add('hidden');
+            }
+        });
+
+        // ===== Attachment (Clip Icon) Handler =====
+        const attachmentBtn = document.getElementById('attachmentBtn');
+        const attachmentFileInput = document.getElementById('attachmentFileInput');
+
+        // When the clip icon is clicked, trigger the file input
+        attachmentBtn.addEventListener('click', () => {
+            attachmentFileInput.click();
+        });
+
+        // Handle file selection
+        attachmentFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Invalid file type. Please select an image (JPEG, PNG, GIF, WebP, or SVG).');
+                attachmentFileInput.value = '';
+                return;
+            }
+
+            // Validate file size (max 10MB)
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('File too large. Maximum size is 10MB.');
+                attachmentFileInput.value = '';
+                return;
+            }
+
+            // Show loading state on button
+            attachmentBtn.disabled = true;
+            attachmentBtn.innerHTML = `
+                <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            `;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/api/images', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to upload image');
+                }
+
+                // Insert the image URL into the message input
+                const imageUrl = data.urls.raw;
+                const currentValue = messageInput.value;
+                messageInput.value = currentValue + (currentValue ? ' ' : '') + imageUrl;
+                messageInput.focus();
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Failed to upload image: ' + error.message);
+            } finally {
+                // Reset button
+                attachmentBtn.disabled = false;
+                attachmentBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                `;
+                // Reset file input
+                attachmentFileInput.value = '';
             }
         });
 

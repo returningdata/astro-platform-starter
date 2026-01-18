@@ -6,6 +6,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import AdminInactivityTimeout from '../components/AdminInactivityTimeout.astro';
 import { getStore } from '@netlify/blobs';
+import { extractUserFromSession } from '../utils/discord-webhook';
 
 interface Props {
     title: string;
@@ -19,6 +20,16 @@ interface ThemeSettings {
     halloweenMusic: string;
     defaultMusic: string;
     newYearMusic: string;
+}
+
+interface SiteInfo {
+    name: string;
+    shortName: string;
+    version: string;
+    owner: string;
+    siteUrl: string;
+    color: number;
+    maintenanceMode?: boolean;
 }
 
 const defaultThemeSettings: ThemeSettings = {
@@ -44,7 +55,48 @@ async function getThemeSettings(): Promise<ThemeSettings> {
     }
 }
 
+// Fetch site info for maintenance mode check
+async function getSiteInfo(): Promise<SiteInfo | null> {
+    try {
+        const store = getStore({ name: 'site-info', consistency: 'strong' });
+        const data = await store.get('settings', { type: 'json' });
+        if (data) {
+            return data as SiteInfo;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching site info:', error);
+        return null;
+    }
+}
+
 const { title, description = 'Del Perro Police Department - Officer Resources and Information', isAdmin = false } = Astro.props;
+
+// Check maintenance mode and user authentication
+const siteInfo = await getSiteInfo();
+const isMaintenanceMode = siteInfo?.maintenanceMode || false;
+
+// Check if user is logged in (admin)
+let isUserAdmin = false;
+if (isMaintenanceMode) {
+    try {
+        const user = await extractUserFromSession(Astro.request);
+        isUserAdmin = !!user;
+    } catch {
+        isUserAdmin = false;
+    }
+}
+
+// Redirect to maintenance page if in maintenance mode and user is not admin
+// Skip redirect for admin pages (login, etc.) and the maintenance page itself
+const currentPath = new URL(Astro.request.url).pathname;
+const isMaintenancePage = currentPath === '/maintenance';
+const isAdminPath = currentPath.startsWith('/admin');
+const isApiPath = currentPath.startsWith('/api');
+
+if (isMaintenanceMode && !isUserAdmin && !isMaintenancePage && !isAdminPath && !isApiPath) {
+    return Astro.redirect('/maintenance');
+}
 
 // Get the site URL for OG tags
 const siteUrl = Astro.url.origin || 'https://delperro.netlify.app';

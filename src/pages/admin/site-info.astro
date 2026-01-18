@@ -68,6 +68,34 @@ import Layout from '../../layouts/Layout.astro';
                 </div>
             </div>
 
+            <!-- Maintenance Mode Section -->
+            <div class="bg-amber-500/10 backdrop-blur-sm rounded-lg p-6 border border-amber-500/30">
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    Maintenance Mode
+                </h2>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-white/80 mb-1">Enable Maintenance Mode</p>
+                        <p class="text-sm text-white/50">When enabled, only users who login via Discord (site admins) can access the full site. Non-authenticated visitors will see a maintenance page.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="maintenanceMode" class="sr-only peer">
+                        <div class="w-14 h-7 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-amber-500"></div>
+                    </label>
+                </div>
+                <div id="maintenanceWarning" class="hidden mt-4 p-3 bg-amber-500/20 border border-amber-500/40 rounded-lg">
+                    <p class="text-amber-200 text-sm flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <strong>Warning:</strong> Maintenance mode will restrict site access to Discord-authenticated admins only. Regular visitors will see a maintenance page.
+                    </p>
+                </div>
+            </div>
+
             <!-- Discord Settings Section -->
             <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
                 <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
@@ -174,7 +202,8 @@ import Layout from '../../layouts/Layout.astro';
             version: '7.32.3',
             owner: '<@1000470631688712243>',
             siteUrl: 'https://delperro.netlify.app',
-            color: 0x1e40af
+            color: 0x1e40af,
+            maintenanceMode: false
         };
 
         async function loadSiteInfo() {
@@ -237,6 +266,21 @@ import Layout from '../../layouts/Layout.astro';
             const colorHex = hexToColor(siteInfo.color);
             document.getElementById('colorPicker').value = colorHex;
             document.getElementById('color').value = '0x' + colorHex.slice(1);
+
+            // Set maintenance mode toggle
+            const maintenanceToggle = document.getElementById('maintenanceMode');
+            maintenanceToggle.checked = siteInfo.maintenanceMode || false;
+            updateMaintenanceWarning();
+        }
+
+        function updateMaintenanceWarning() {
+            const maintenanceToggle = document.getElementById('maintenanceMode');
+            const warningEl = document.getElementById('maintenanceWarning');
+            if (maintenanceToggle.checked) {
+                warningEl.classList.remove('hidden');
+            } else {
+                warningEl.classList.add('hidden');
+            }
         }
 
         function collectFormData() {
@@ -246,6 +290,7 @@ import Layout from '../../layouts/Layout.astro';
             siteInfo.siteUrl = document.getElementById('siteUrl').value.trim();
             siteInfo.owner = document.getElementById('owner').value.trim();
             siteInfo.color = colorToHex(document.getElementById('colorPicker').value);
+            siteInfo.maintenanceMode = document.getElementById('maintenanceMode').checked;
         }
 
         function escapeHtml(text) {
@@ -304,6 +349,9 @@ import Layout from '../../layouts/Layout.astro';
         ['version', 'shortName', 'name', 'siteUrl', 'owner'].forEach(id => {
             document.getElementById(id).addEventListener('input', updatePreview);
         });
+
+        // Maintenance mode toggle listener
+        document.getElementById('maintenanceMode').addEventListener('change', updateMaintenanceWarning);
 
         // Save changes
         document.getElementById('saveBtn').addEventListener('click', async () => {

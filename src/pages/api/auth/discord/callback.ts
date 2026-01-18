@@ -15,6 +15,7 @@ export const prerender = false;
 // Cookie names for OAuth state and PKCE
 const STATE_COOKIE_NAME = 'discord_oauth_state';
 const PKCE_COOKIE_NAME = 'discord_oauth_pkce';
+const RETURN_TO_COOKIE_NAME = 'discord_oauth_return_to';
 
 /**
  * Parse cookies from request header
@@ -36,7 +37,20 @@ function createClearCookies(): string[] {
     return [
         `${STATE_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`,
         `${PKCE_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`,
+        `${RETURN_TO_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`,
     ];
+}
+
+/**
+ * Validate returnTo path to prevent open redirect vulnerabilities
+ */
+function isValidReturnPath(path: string): boolean {
+    if (!path || typeof path !== 'string') return false;
+    // Only allow internal paths (starting with /)
+    if (!path.startsWith('/')) return false;
+    // Prevent protocol-relative URLs and path traversal
+    if (path.includes('//') || path.includes('..')) return false;
+    return true;
 }
 
 export const GET: APIRoute = async ({ request }) => {
@@ -162,9 +176,23 @@ export const GET: APIRoute = async ({ request }) => {
         // Clear OAuth cookies and set session cookie
         const clearCookies = createClearCookies();
 
-        // Redirect to admin dashboard with cookies
+        // Determine redirect location - use returnTo cookie if valid, otherwise default to /admin
+        const returnToEncoded = cookies[RETURN_TO_COOKIE_NAME];
+        let redirectLocation = '/admin';
+        if (returnToEncoded) {
+            try {
+                const returnTo = decodeURIComponent(returnToEncoded);
+                if (isValidReturnPath(returnTo)) {
+                    redirectLocation = returnTo;
+                }
+            } catch {
+                // Invalid encoding, use default
+            }
+        }
+
+        // Redirect with cookies
         const headers = new Headers();
-        headers.set('Location', '/admin');
+        headers.set('Location', redirectLocation);
         for (const clearCookie of clearCookies) {
             headers.append('Set-Cookie', clearCookie);
         }

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
+import { validateSession } from '../../utils/session';
 
 export const prerender = false;
 
@@ -217,9 +218,18 @@ export const POST: APIRoute = async ({ request }) => {
     }
 };
 
-// DELETE - Delete an image
+// DELETE - Delete an image (Admin only)
 export const DELETE: APIRoute = async ({ request }) => {
     try {
+        // Verify admin authentication
+        const user = await validateSession(request);
+        if (!user) {
+            return new Response(JSON.stringify({ error: 'Unauthorized. Admin access required.' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         const { id } = await request.json();
 
         if (!id) {

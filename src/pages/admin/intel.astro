@@ -104,6 +104,8 @@ export const prerender = false;
                             <option value="gang">Gang</option>
                             <option value="cartel">Cartel</option>
                             <option value="militia">Militia</option>
+                            <option value="crime_family">Crime Family</option>
+                            <option value="motorcycle_club">Motorcycle Club</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
@@ -144,7 +146,7 @@ export const prerender = false;
 
     <!-- Thread Detail Modal -->
     <div id="threadDetailModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 overflow-y-auto">
-        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-3xl mx-4 my-8">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-4xl mx-4 my-8">
             <div class="flex justify-between items-start mb-4">
                 <div>
                     <h3 id="detailThreadTitle" class="text-xl font-bold"></h3>
@@ -156,12 +158,27 @@ export const prerender = false;
                     </svg>
                 </button>
             </div>
-            <p id="detailThreadDescription" class="text-white/80 mb-6"></p>
+            <p id="detailThreadDescription" class="text-white/80 mb-4"></p>
 
-            <!-- Posts Section -->
-            <div class="border-t border-slate-700 pt-4">
-                <h4 class="font-semibold mb-4">Posts</h4>
-                <div id="postsList" class="space-y-4 mb-4">
+            <!-- Sub-tabs for Posts, People, Locations, Vehicles -->
+            <div class="flex border-b border-slate-700 mb-4">
+                <button id="detailPostsTab" class="detail-tab px-4 py-2 font-semibold border-b-2 border-primary text-primary">
+                    Posts
+                </button>
+                <button id="detailPeopleTab" class="detail-tab px-4 py-2 font-semibold border-b-2 border-transparent text-white/60 hover:text-white/80">
+                    People
+                </button>
+                <button id="detailLocationsTab" class="detail-tab px-4 py-2 font-semibold border-b-2 border-transparent text-white/60 hover:text-white/80">
+                    Locations
+                </button>
+                <button id="detailVehiclesTab" class="detail-tab px-4 py-2 font-semibold border-b-2 border-transparent text-white/60 hover:text-white/80">
+                    Vehicles
+                </button>
+            </div>
+
+            <!-- Posts Panel -->
+            <div id="detailPostsPanel">
+                <div id="postsList" class="space-y-4 mb-4 max-h-96 overflow-y-auto">
                     <!-- Posts will be loaded here -->
                 </div>
 
@@ -177,6 +194,296 @@ export const prerender = false;
                     </div>
                 </div>
             </div>
+
+            <!-- People Panel -->
+            <div id="detailPeoplePanel" class="hidden">
+                <div class="flex justify-end mb-4">
+                    <button id="addPersonBtn" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg transition-colors font-semibold text-sm">
+                        + Add Person
+                    </button>
+                </div>
+                <div id="peopleList" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                    <!-- People will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Locations Panel -->
+            <div id="detailLocationsPanel" class="hidden">
+                <div class="flex justify-end mb-4">
+                    <button id="addLocationBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors font-semibold text-sm">
+                        + Add Location
+                    </button>
+                </div>
+                <div id="locationsList" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                    <!-- Locations will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Vehicles Panel -->
+            <div id="detailVehiclesPanel" class="hidden">
+                <div class="flex justify-end mb-4">
+                    <button id="addVehicleBtn" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors font-semibold text-sm">
+                        + Add Vehicle
+                    </button>
+                </div>
+                <div id="vehiclesList" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                    <!-- Vehicles will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Person Modal -->
+    <div id="personModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 id="personModalTitle" class="text-xl font-bold mb-4">Add Person</h3>
+            <form id="personForm" class="space-y-4">
+                <input type="hidden" id="personId" />
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Name *</label>
+                    <input type="text" id="personName" required
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Aliases (comma-separated)</label>
+                    <input type="text" id="personAliases" placeholder="e.g., Big Mike, Mikey D"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Photo URL</label>
+                    <input type="text" id="personPhoto" placeholder="https://..."
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Role</label>
+                        <input type="text" id="personRole" placeholder="e.g., Leader, Lieutenant"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Status</label>
+                        <select id="personStatus"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="unknown">Unknown</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="incarcerated">Incarcerated</option>
+                            <option value="deceased">Deceased</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Last Known Location</label>
+                    <input type="text" id="personLocation"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Description</label>
+                    <textarea id="personDescription" rows="2"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Notes</label>
+                    <textarea id="personNotes" rows="2"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+                <div class="flex justify-end gap-4 pt-4">
+                    <button type="button" id="cancelPersonBtn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Location Modal -->
+    <div id="locationModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 id="locationModalTitle" class="text-xl font-bold mb-4">Add Location</h3>
+            <form id="locationForm" class="space-y-4">
+                <input type="hidden" id="locationId" />
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Name *</label>
+                    <input type="text" id="locationName" required
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Type</label>
+                        <select id="locationType"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="other">Other</option>
+                            <option value="headquarters">Headquarters</option>
+                            <option value="safehouse">Safehouse</option>
+                            <option value="meetup">Meetup Point</option>
+                            <option value="stash">Stash House</option>
+                            <option value="business">Business Front</option>
+                            <option value="residence">Residence</option>
+                            <option value="territory">Territory</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Status</label>
+                        <select id="locationStatus"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="unknown">Unknown</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="under_surveillance">Under Surveillance</option>
+                            <option value="raided">Raided</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Address</label>
+                    <input type="text" id="locationAddress"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Photo URL</label>
+                    <input type="text" id="locationPhoto" placeholder="https://..."
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Description</label>
+                    <textarea id="locationDescription" rows="2"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Notes</label>
+                    <textarea id="locationNotes" rows="2"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+                <div class="flex justify-end gap-4 pt-4">
+                    <button type="button" id="cancelLocationBtn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Vehicle Modal -->
+    <div id="vehicleModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <h3 id="vehicleModalTitle" class="text-xl font-bold mb-4">Add Vehicle</h3>
+            <form id="vehicleForm" class="space-y-4">
+                <input type="hidden" id="vehicleId" />
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Make</label>
+                        <input type="text" id="vehicleMake" placeholder="e.g., Ford"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Model</label>
+                        <input type="text" id="vehicleModel" placeholder="e.g., Mustang"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Year</label>
+                        <input type="text" id="vehicleYear" placeholder="e.g., 2023"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Color</label>
+                        <input type="text" id="vehicleColor" placeholder="e.g., Black"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">License Plate</label>
+                        <input type="text" id="vehiclePlate" placeholder="e.g., ABC 123"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Type</label>
+                        <select id="vehicleType"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="car">Car</option>
+                            <option value="truck">Truck</option>
+                            <option value="suv">SUV</option>
+                            <option value="van">Van</option>
+                            <option value="motorcycle">Motorcycle</option>
+                            <option value="boat">Boat</option>
+                            <option value="aircraft">Aircraft</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Status</label>
+                        <select id="vehicleStatus"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="unknown">Unknown</option>
+                            <option value="active">Active</option>
+                            <option value="impounded">Impounded</option>
+                            <option value="stolen">Stolen</option>
+                            <option value="destroyed">Destroyed</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">VIN</label>
+                    <input type="text" id="vehicleVin" placeholder="Vehicle Identification Number"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Registered Owner</label>
+                        <input type="text" id="vehicleOwner"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Associated Person</label>
+                        <input type="text" id="vehicleAssociatedPerson"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Last Seen Location</label>
+                        <input type="text" id="vehicleLastLocation"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Last Seen Date</label>
+                        <input type="date" id="vehicleLastDate"
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Photo URL</label>
+                    <input type="text" id="vehiclePhoto" placeholder="https://..."
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Description</label>
+                    <textarea id="vehicleDescription" rows="2"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Notes</label>
+                    <textarea id="vehicleNotes" rows="2"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+                <div class="flex justify-end gap-4 pt-4">
+                    <button type="button" id="cancelVehicleBtn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                        Save
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -268,6 +575,8 @@ export const prerender = false;
                 gang: 'bg-red-500/20 text-red-300',
                 cartel: 'bg-orange-500/20 text-orange-300',
                 militia: 'bg-yellow-500/20 text-yellow-300',
+                crime_family: 'bg-purple-500/20 text-purple-300',
+                motorcycle_club: 'bg-blue-500/20 text-blue-300',
                 other: 'bg-gray-500/20 text-gray-300',
             };
 
@@ -411,6 +720,41 @@ export const prerender = false;
 
         // Thread Detail Modal
         let currentDetailThread = null;
+        let currentDetailTab = 'posts';
+
+        // Detail tab management
+        const detailTabs = {
+            posts: { tab: document.getElementById('detailPostsTab'), panel: document.getElementById('detailPostsPanel') },
+            people: { tab: document.getElementById('detailPeopleTab'), panel: document.getElementById('detailPeoplePanel') },
+            locations: { tab: document.getElementById('detailLocationsTab'), panel: document.getElementById('detailLocationsPanel') },
+            vehicles: { tab: document.getElementById('detailVehiclesTab'), panel: document.getElementById('detailVehiclesPanel') },
+        };
+
+        function switchDetailTab(tabName) {
+            currentDetailTab = tabName;
+            Object.entries(detailTabs).forEach(([name, { tab, panel }]) => {
+                if (name === tabName) {
+                    tab.classList.add('border-primary', 'text-primary');
+                    tab.classList.remove('border-transparent', 'text-white/60');
+                    panel.classList.remove('hidden');
+                } else {
+                    tab.classList.remove('border-primary', 'text-primary');
+                    tab.classList.add('border-transparent', 'text-white/60');
+                    panel.classList.add('hidden');
+                }
+            });
+
+            if (currentDetailThread) {
+                if (tabName === 'people') loadPeople(currentDetailThread.id);
+                if (tabName === 'locations') loadLocations(currentDetailThread.id);
+                if (tabName === 'vehicles') loadVehicles(currentDetailThread.id);
+            }
+        }
+
+        detailTabs.posts.tab.addEventListener('click', () => switchDetailTab('posts'));
+        detailTabs.people.tab.addEventListener('click', () => switchDetailTab('people'));
+        detailTabs.locations.tab.addEventListener('click', () => switchDetailTab('locations'));
+        detailTabs.vehicles.tab.addEventListener('click', () => switchDetailTab('vehicles'));
 
         window.viewThread = async function(id) {
             currentDetailThread = currentThreads.find(t => t.id === id);
@@ -422,6 +766,9 @@ export const prerender = false;
 
             // Show/hide add post form based on locked status
             document.getElementById('addPostForm').classList.toggle('hidden', currentDetailThread.isLocked);
+
+            // Reset to posts tab
+            switchDetailTab('posts');
 
             await loadPosts(id);
             document.getElementById('threadDetailModal').classList.remove('hidden');
@@ -517,6 +864,468 @@ export const prerender = false;
                 alert('Error deleting post: ' + error.message);
             }
         };
+
+        // People management
+        const statusColors = {
+            active: 'bg-green-500/20 text-green-300',
+            inactive: 'bg-gray-500/20 text-gray-300',
+            incarcerated: 'bg-orange-500/20 text-orange-300',
+            deceased: 'bg-red-500/20 text-red-300',
+            unknown: 'bg-slate-500/20 text-slate-300',
+        };
+
+        async function loadPeople(threadId) {
+            const container = document.getElementById('peopleList');
+            container.innerHTML = '<p class="text-white/60 text-center col-span-2">Loading people...</p>';
+
+            try {
+                const response = await fetch(`/api/intel/people?threadId=${threadId}`, { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const people = data.people || [];
+
+                if (people.length === 0) {
+                    container.innerHTML = '<p class="text-white/60 text-center col-span-2">No people added yet. Click "+ Add Person" to add someone.</p>';
+                    return;
+                }
+
+                container.innerHTML = people.map(person => `
+                    <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                        <div class="flex gap-3">
+                            ${person.photo ? `<img src="${person.photo}" alt="${person.name}" class="w-16 h-16 rounded-lg object-cover shrink-0" />` : '<div class="w-16 h-16 bg-slate-600 rounded-lg flex items-center justify-center text-2xl font-bold shrink-0">' + person.name.charAt(0).toUpperCase() + '</div>'}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <h4 class="font-semibold truncate">${person.name}</h4>
+                                    <div class="flex gap-1 shrink-0">
+                                        <button onclick="editPerson('${person.id}')" class="p-1 text-yellow-400 hover:text-yellow-300" title="Edit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                        </button>
+                                        <button onclick="deletePerson('${person.id}')" class="p-1 text-red-400 hover:text-red-300" title="Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                ${person.aliases?.length ? `<p class="text-white/50 text-xs mb-1">AKA: ${person.aliases.join(', ')}</p>` : ''}
+                                ${person.role ? `<p class="text-white/70 text-sm">${person.role}</p>` : ''}
+                                <span class="inline-block px-2 py-0.5 rounded text-xs font-medium mt-1 ${statusColors[person.status] || statusColors.unknown}">${person.status || 'unknown'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-400 text-center col-span-2">Error loading people: ${error.message}</p>`;
+            }
+        }
+
+        let currentPeople = [];
+
+        document.getElementById('addPersonBtn').addEventListener('click', () => {
+            document.getElementById('personModalTitle').textContent = 'Add Person';
+            document.getElementById('personId').value = '';
+            document.getElementById('personForm').reset();
+            document.getElementById('personModal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancelPersonBtn').addEventListener('click', () => {
+            document.getElementById('personModal').classList.add('hidden');
+        });
+
+        window.editPerson = async function(id) {
+            try {
+                const response = await fetch(`/api/intel/people?threadId=${currentDetailThread.id}`, { credentials: 'include' });
+                const data = await response.json();
+                const person = data.people?.find(p => p.id === id);
+                if (!person) return;
+
+                document.getElementById('personModalTitle').textContent = 'Edit Person';
+                document.getElementById('personId').value = person.id;
+                document.getElementById('personName').value = person.name || '';
+                document.getElementById('personAliases').value = person.aliases?.join(', ') || '';
+                document.getElementById('personPhoto').value = person.photo || '';
+                document.getElementById('personRole').value = person.role || '';
+                document.getElementById('personStatus').value = person.status || 'unknown';
+                document.getElementById('personLocation').value = person.lastKnownLocation || '';
+                document.getElementById('personDescription').value = person.description || '';
+                document.getElementById('personNotes').value = person.notes || '';
+                document.getElementById('personModal').classList.remove('hidden');
+            } catch (error) {
+                alert('Error loading person: ' + error.message);
+            }
+        };
+
+        window.deletePerson = async function(id) {
+            if (!confirm('Are you sure you want to delete this person?')) return;
+
+            try {
+                const response = await fetch(`/api/intel/people?id=${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                await loadPeople(currentDetailThread.id);
+            } catch (error) {
+                alert('Error deleting person: ' + error.message);
+            }
+        };
+
+        document.getElementById('personForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('personId').value;
+            const aliasesStr = document.getElementById('personAliases').value;
+            const aliases = aliasesStr ? aliasesStr.split(',').map(a => a.trim()).filter(a => a) : [];
+
+            const payload = {
+                id: id || undefined,
+                threadId: currentDetailThread.id,
+                name: document.getElementById('personName').value,
+                aliases,
+                photo: document.getElementById('personPhoto').value,
+                role: document.getElementById('personRole').value,
+                status: document.getElementById('personStatus').value,
+                lastKnownLocation: document.getElementById('personLocation').value,
+                description: document.getElementById('personDescription').value,
+                notes: document.getElementById('personNotes').value,
+            };
+
+            try {
+                const response = await fetch('/api/intel/people', {
+                    method: id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                document.getElementById('personModal').classList.add('hidden');
+                await loadPeople(currentDetailThread.id);
+            } catch (error) {
+                alert('Error saving person: ' + error.message);
+            }
+        });
+
+        // Locations management
+        const locationTypeColors = {
+            headquarters: 'bg-red-500/20 text-red-300',
+            safehouse: 'bg-yellow-500/20 text-yellow-300',
+            meetup: 'bg-blue-500/20 text-blue-300',
+            stash: 'bg-orange-500/20 text-orange-300',
+            business: 'bg-green-500/20 text-green-300',
+            residence: 'bg-purple-500/20 text-purple-300',
+            territory: 'bg-pink-500/20 text-pink-300',
+            other: 'bg-gray-500/20 text-gray-300',
+        };
+
+        const locationStatusColors = {
+            active: 'bg-green-500/20 text-green-300',
+            inactive: 'bg-gray-500/20 text-gray-300',
+            under_surveillance: 'bg-yellow-500/20 text-yellow-300',
+            raided: 'bg-red-500/20 text-red-300',
+            unknown: 'bg-slate-500/20 text-slate-300',
+        };
+
+        async function loadLocations(threadId) {
+            const container = document.getElementById('locationsList');
+            container.innerHTML = '<p class="text-white/60 text-center col-span-2">Loading locations...</p>';
+
+            try {
+                const response = await fetch(`/api/intel/locations?threadId=${threadId}`, { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const locations = data.locations || [];
+
+                if (locations.length === 0) {
+                    container.innerHTML = '<p class="text-white/60 text-center col-span-2">No locations added yet. Click "+ Add Location" to add one.</p>';
+                    return;
+                }
+
+                container.innerHTML = locations.map(location => `
+                    <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                        <div class="flex gap-3">
+                            ${location.photo ? `<img src="${location.photo}" alt="${location.name}" class="w-16 h-16 rounded-lg object-cover shrink-0" />` : '<div class="w-16 h-16 bg-slate-600 rounded-lg flex items-center justify-center shrink-0"><svg class="w-8 h-8 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>'}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <h4 class="font-semibold truncate">${location.name}</h4>
+                                    <div class="flex gap-1 shrink-0">
+                                        <button onclick="editLocation('${location.id}')" class="p-1 text-yellow-400 hover:text-yellow-300" title="Edit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                        </button>
+                                        <button onclick="deleteLocation('${location.id}')" class="p-1 text-red-400 hover:text-red-300" title="Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                ${location.address ? `<p class="text-white/50 text-xs mb-1">${location.address}</p>` : ''}
+                                <div class="flex gap-2 flex-wrap mt-1">
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium ${locationTypeColors[location.type] || locationTypeColors.other}">${location.type || 'other'}</span>
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium ${locationStatusColors[location.status] || locationStatusColors.unknown}">${(location.status || 'unknown').replace('_', ' ')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-400 text-center col-span-2">Error loading locations: ${error.message}</p>`;
+            }
+        }
+
+        document.getElementById('addLocationBtn').addEventListener('click', () => {
+            document.getElementById('locationModalTitle').textContent = 'Add Location';
+            document.getElementById('locationId').value = '';
+            document.getElementById('locationForm').reset();
+            document.getElementById('locationModal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancelLocationBtn').addEventListener('click', () => {
+            document.getElementById('locationModal').classList.add('hidden');
+        });
+
+        window.editLocation = async function(id) {
+            try {
+                const response = await fetch(`/api/intel/locations?threadId=${currentDetailThread.id}`, { credentials: 'include' });
+                const data = await response.json();
+                const location = data.locations?.find(l => l.id === id);
+                if (!location) return;
+
+                document.getElementById('locationModalTitle').textContent = 'Edit Location';
+                document.getElementById('locationId').value = location.id;
+                document.getElementById('locationName').value = location.name || '';
+                document.getElementById('locationType').value = location.type || 'other';
+                document.getElementById('locationStatus').value = location.status || 'unknown';
+                document.getElementById('locationAddress').value = location.address || '';
+                document.getElementById('locationPhoto').value = location.photo || '';
+                document.getElementById('locationDescription').value = location.description || '';
+                document.getElementById('locationNotes').value = location.notes || '';
+                document.getElementById('locationModal').classList.remove('hidden');
+            } catch (error) {
+                alert('Error loading location: ' + error.message);
+            }
+        };
+
+        window.deleteLocation = async function(id) {
+            if (!confirm('Are you sure you want to delete this location?')) return;
+
+            try {
+                const response = await fetch(`/api/intel/locations?id=${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                await loadLocations(currentDetailThread.id);
+            } catch (error) {
+                alert('Error deleting location: ' + error.message);
+            }
+        };
+
+        document.getElementById('locationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('locationId').value;
+
+            const payload = {
+                id: id || undefined,
+                threadId: currentDetailThread.id,
+                name: document.getElementById('locationName').value,
+                type: document.getElementById('locationType').value,
+                status: document.getElementById('locationStatus').value,
+                address: document.getElementById('locationAddress').value,
+                photo: document.getElementById('locationPhoto').value,
+                description: document.getElementById('locationDescription').value,
+                notes: document.getElementById('locationNotes').value,
+            };
+
+            try {
+                const response = await fetch('/api/intel/locations', {
+                    method: id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                document.getElementById('locationModal').classList.add('hidden');
+                await loadLocations(currentDetailThread.id);
+            } catch (error) {
+                alert('Error saving location: ' + error.message);
+            }
+        });
+
+        // Vehicles management
+        const vehicleTypeColors = {
+            car: 'bg-blue-500/20 text-blue-300',
+            truck: 'bg-orange-500/20 text-orange-300',
+            suv: 'bg-green-500/20 text-green-300',
+            van: 'bg-yellow-500/20 text-yellow-300',
+            motorcycle: 'bg-red-500/20 text-red-300',
+            boat: 'bg-cyan-500/20 text-cyan-300',
+            aircraft: 'bg-purple-500/20 text-purple-300',
+            other: 'bg-gray-500/20 text-gray-300',
+        };
+
+        const vehicleStatusColors = {
+            active: 'bg-green-500/20 text-green-300',
+            impounded: 'bg-orange-500/20 text-orange-300',
+            stolen: 'bg-red-500/20 text-red-300',
+            destroyed: 'bg-gray-500/20 text-gray-300',
+            unknown: 'bg-slate-500/20 text-slate-300',
+        };
+
+        async function loadVehicles(threadId) {
+            const container = document.getElementById('vehiclesList');
+            container.innerHTML = '<p class="text-white/60 text-center col-span-2">Loading vehicles...</p>';
+
+            try {
+                const response = await fetch(`/api/intel/vehicles?threadId=${threadId}`, { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const vehicles = data.vehicles || [];
+
+                if (vehicles.length === 0) {
+                    container.innerHTML = '<p class="text-white/60 text-center col-span-2">No vehicles added yet. Click "+ Add Vehicle" to add one.</p>';
+                    return;
+                }
+
+                container.innerHTML = vehicles.map(vehicle => {
+                    const displayName = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ') || 'Unknown Vehicle';
+                    return `
+                    <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                        <div class="flex gap-3">
+                            ${vehicle.photo ? `<img src="${vehicle.photo}" alt="${displayName}" class="w-16 h-16 rounded-lg object-cover shrink-0" />` : '<div class="w-16 h-16 bg-slate-600 rounded-lg flex items-center justify-center shrink-0"><svg class="w-8 h-8 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg></div>'}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <h4 class="font-semibold truncate">${displayName}</h4>
+                                    <div class="flex gap-1 shrink-0">
+                                        <button onclick="editVehicle('${vehicle.id}')" class="p-1 text-yellow-400 hover:text-yellow-300" title="Edit">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                        </button>
+                                        <button onclick="deleteVehicle('${vehicle.id}')" class="p-1 text-red-400 hover:text-red-300" title="Delete">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                ${vehicle.color ? `<p class="text-white/70 text-sm">Color: ${vehicle.color}</p>` : ''}
+                                ${vehicle.licensePlate ? `<p class="text-white/50 text-xs">Plate: ${vehicle.licensePlate}</p>` : ''}
+                                <div class="flex gap-2 flex-wrap mt-1">
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium ${vehicleTypeColors[vehicle.type] || vehicleTypeColors.other}">${vehicle.type || 'other'}</span>
+                                    <span class="px-2 py-0.5 rounded text-xs font-medium ${vehicleStatusColors[vehicle.status] || vehicleStatusColors.unknown}">${vehicle.status || 'unknown'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;}).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-400 text-center col-span-2">Error loading vehicles: ${error.message}</p>`;
+            }
+        }
+
+        document.getElementById('addVehicleBtn').addEventListener('click', () => {
+            document.getElementById('vehicleModalTitle').textContent = 'Add Vehicle';
+            document.getElementById('vehicleId').value = '';
+            document.getElementById('vehicleForm').reset();
+            document.getElementById('vehicleModal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancelVehicleBtn').addEventListener('click', () => {
+            document.getElementById('vehicleModal').classList.add('hidden');
+        });
+
+        window.editVehicle = async function(id) {
+            try {
+                const response = await fetch(`/api/intel/vehicles?threadId=${currentDetailThread.id}`, { credentials: 'include' });
+                const data = await response.json();
+                const vehicle = data.vehicles?.find(v => v.id === id);
+                if (!vehicle) return;
+
+                document.getElementById('vehicleModalTitle').textContent = 'Edit Vehicle';
+                document.getElementById('vehicleId').value = vehicle.id;
+                document.getElementById('vehicleMake').value = vehicle.make || '';
+                document.getElementById('vehicleModel').value = vehicle.model || '';
+                document.getElementById('vehicleYear').value = vehicle.year || '';
+                document.getElementById('vehicleColor').value = vehicle.color || '';
+                document.getElementById('vehiclePlate').value = vehicle.licensePlate || '';
+                document.getElementById('vehicleType').value = vehicle.type || 'car';
+                document.getElementById('vehicleStatus').value = vehicle.status || 'unknown';
+                document.getElementById('vehicleVin').value = vehicle.vin || '';
+                document.getElementById('vehicleOwner').value = vehicle.registeredOwner || '';
+                document.getElementById('vehicleAssociatedPerson').value = vehicle.associatedPerson || '';
+                document.getElementById('vehicleLastLocation').value = vehicle.lastSeenLocation || '';
+                document.getElementById('vehicleLastDate').value = vehicle.lastSeenDate || '';
+                document.getElementById('vehiclePhoto').value = vehicle.photo || '';
+                document.getElementById('vehicleDescription').value = vehicle.description || '';
+                document.getElementById('vehicleNotes').value = vehicle.notes || '';
+                document.getElementById('vehicleModal').classList.remove('hidden');
+            } catch (error) {
+                alert('Error loading vehicle: ' + error.message);
+            }
+        };
+
+        window.deleteVehicle = async function(id) {
+            if (!confirm('Are you sure you want to delete this vehicle?')) return;
+
+            try {
+                const response = await fetch(`/api/intel/vehicles?id=${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                await loadVehicles(currentDetailThread.id);
+            } catch (error) {
+                alert('Error deleting vehicle: ' + error.message);
+            }
+        };
+
+        document.getElementById('vehicleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('vehicleId').value;
+
+            const payload = {
+                id: id || undefined,
+                threadId: currentDetailThread.id,
+                make: document.getElementById('vehicleMake').value,
+                model: document.getElementById('vehicleModel').value,
+                year: document.getElementById('vehicleYear').value,
+                color: document.getElementById('vehicleColor').value,
+                licensePlate: document.getElementById('vehiclePlate').value,
+                type: document.getElementById('vehicleType').value,
+                status: document.getElementById('vehicleStatus').value,
+                vin: document.getElementById('vehicleVin').value,
+                registeredOwner: document.getElementById('vehicleOwner').value,
+                associatedPerson: document.getElementById('vehicleAssociatedPerson').value,
+                lastSeenLocation: document.getElementById('vehicleLastLocation').value,
+                lastSeenDate: document.getElementById('vehicleLastDate').value,
+                photo: document.getElementById('vehiclePhoto').value,
+                description: document.getElementById('vehicleDescription').value,
+                notes: document.getElementById('vehicleNotes').value,
+            };
+
+            try {
+                const response = await fetch('/api/intel/vehicles', {
+                    method: id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                document.getElementById('vehicleModal').classList.add('hidden');
+                await loadVehicles(currentDetailThread.id);
+            } catch (error) {
+                alert('Error saving vehicle: ' + error.message);
+            }
+        });
 
         // Users management
         let currentUsers = [];
@@ -665,7 +1474,6 @@ export const prerender = false;
                                 <th class="text-left py-2 px-4">User</th>
                                 <th class="text-left py-2 px-4">Email</th>
                                 <th class="text-left py-2 px-4">Clearance</th>
-                                <th class="text-left py-2 px-4">IP</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -675,7 +1483,6 @@ export const prerender = false;
                                     <td class="py-2 px-4">${log.name}</td>
                                     <td class="py-2 px-4 text-white/70">${log.email}</td>
                                     <td class="py-2 px-4">${log.clearanceLevel.replace('_', ' ')}</td>
-                                    <td class="py-2 px-4 text-white/50 font-mono text-xs">${log.ip || 'N/A'}</td>
                                 </tr>
                             `).join('')}
                         </tbody>

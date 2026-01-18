@@ -433,10 +433,6 @@ export async function logIntelLogin(user: IntelUser, request: Request): Promise<
         name: user.name,
         clearanceLevel: user.clearanceLevel,
         timestamp: Date.now(),
-        ip: request.headers.get('x-nf-client-connection-ip') ||
-            request.headers.get('x-real-ip') ||
-            request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-            'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown',
     };
 

@@ -3,11 +3,17 @@ import { getStore } from '@netlify/blobs';
 import { getIntelSession, hasRequiredClearance, CLEARANCE_DISPLAY_NAMES, CLEARANCE_SHORT_CODES, type ClearanceLevel } from '../../../utils/google-oauth';
 import type { IntelThread } from './threads';
 import type { IntelPost } from './posts';
+import type { IntelPerson } from './people';
+import type { IntelLocation } from './locations';
+import type { IntelVehicle } from './vehicles';
 
 export const prerender = false;
 
 const INTEL_THREADS_STORE = 'intel-threads';
 const INTEL_POSTS_STORE = 'intel-posts';
+const INTEL_PEOPLE_STORE = 'intel-people';
+const INTEL_LOCATIONS_STORE = 'intel-locations';
+const INTEL_VEHICLES_STORE = 'intel-vehicles';
 
 // GET - List threads visible to the user based on their clearance
 export const GET: APIRoute = async ({ request }) => {
@@ -77,7 +83,52 @@ export const GET: APIRoute = async ({ request }) => {
             // Sort by creation date (oldest first)
             posts.sort((a, b) => a.createdAt - b.createdAt);
 
-            return new Response(JSON.stringify({ thread, posts }), {
+            // Get people for this thread
+            const peopleStore = getStore({ name: INTEL_PEOPLE_STORE, consistency: 'strong' });
+            const { blobs: peopleBlobs } = await peopleStore.list({ prefix: `${threadId}-` });
+
+            const people: IntelPerson[] = [];
+            for (const blob of peopleBlobs) {
+                const person = await peopleStore.get(blob.key, { type: 'json' }) as IntelPerson;
+                if (person) {
+                    people.push(person);
+                }
+            }
+
+            // Sort people by creation date (newest first)
+            people.sort((a, b) => b.createdAt - a.createdAt);
+
+            // Get locations for this thread
+            const locationsStore = getStore({ name: INTEL_LOCATIONS_STORE, consistency: 'strong' });
+            const { blobs: locationsBlobs } = await locationsStore.list({ prefix: `${threadId}-` });
+
+            const locations: IntelLocation[] = [];
+            for (const blob of locationsBlobs) {
+                const location = await locationsStore.get(blob.key, { type: 'json' }) as IntelLocation;
+                if (location) {
+                    locations.push(location);
+                }
+            }
+
+            // Sort locations by creation date (newest first)
+            locations.sort((a, b) => b.createdAt - a.createdAt);
+
+            // Get vehicles for this thread
+            const vehiclesStore = getStore({ name: INTEL_VEHICLES_STORE, consistency: 'strong' });
+            const { blobs: vehiclesBlobs } = await vehiclesStore.list({ prefix: `${threadId}-` });
+
+            const vehicles: IntelVehicle[] = [];
+            for (const blob of vehiclesBlobs) {
+                const vehicle = await vehiclesStore.get(blob.key, { type: 'json' }) as IntelVehicle;
+                if (vehicle) {
+                    vehicles.push(vehicle);
+                }
+            }
+
+            // Sort vehicles by creation date (newest first)
+            vehicles.sort((a, b) => b.createdAt - a.createdAt);
+
+            return new Response(JSON.stringify({ thread, posts, people, locations, vehicles }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
             });

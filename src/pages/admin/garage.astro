@@ -2,17 +2,17 @@
 import Layout from '../../layouts/Layout.astro';
 ---
 
-<Layout title="Admin - Warehouse Management" isAdmin={true}>
+<Layout title="Admin - Garage Management" isAdmin={true}>
     <div class="space-y-8">
         <!-- Header -->
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
-                <h1 class="text-4xl md:text-5xl font-bold mb-2">Warehouse Management</h1>
-                <p class="text-white/70">Edit warehouse vehicles and equipment</p>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Garage Management</h1>
+                <p class="text-white/70">Edit garage vehicles and equipment</p>
             </div>
             <div class="flex gap-4">
-                <a href="/warehouse" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
-                    View Warehouse
+                <a href="/garage" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    View Garage
                 </a>
                 <button id="saveBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
                     Save Changes
@@ -48,7 +48,7 @@ import Layout from '../../layouts/Layout.astro';
         <!-- Vehicles List -->
         <div id="categoriesList" class="space-y-6">
             <div class="text-center py-12 text-white/60">
-                Loading warehouse data...
+                Loading garage data...
             </div>
         </div>
     </div>
@@ -106,23 +106,23 @@ import Layout from '../../layouts/Layout.astro';
         const MAX_FLAGS = 10;
         const MAX_IMAGES = 10;
 
-        let warehouseData = [];
+        let garageData = [];
         let groupOrder = [...defaultVehicleGroups];
         let draggedGroupIndex = null;
 
-        // Load warehouse data
-        async function loadWarehouse() {
+        // Load garage data
+        async function loadGarage() {
             try {
-                const response = await fetch('/api/warehouse');
+                const response = await fetch('/api/garage');
                 const data = await response.json();
-                warehouseData = data.warehouse || [];
+                garageData = data.garage || [];
                 groupOrder = data.groupOrder || [...defaultVehicleGroups];
                 renderGroupOrder();
                 renderCategories();
             } catch (error) {
-                console.error('Failed to load warehouse:', error);
-                showStatus('Failed to load warehouse data', 'error');
-                warehouseData = [];
+                console.error('Failed to load garage:', error);
+                showStatus('Failed to load garage data', 'error');
+                garageData = [];
                 groupOrder = [...defaultVehicleGroups];
                 renderGroupOrder();
                 renderCategories();
@@ -182,7 +182,7 @@ import Layout from '../../layouts/Layout.astro';
                     if (newName && newName !== oldName) {
                         groupOrder[index] = newName;
                         // Update any vehicles that had the old group name
-                        warehouseData.forEach(vehicle => {
+                        garageData.forEach(vehicle => {
                             if (vehicle.group === oldName) {
                                 vehicle.group = newName;
                             }
@@ -202,7 +202,7 @@ import Layout from '../../layouts/Layout.astro';
                     const groupName = groupOrder[index];
 
                     // Count vehicles in this group
-                    const vehiclesInGroup = warehouseData.filter(v => v.group === groupName).length;
+                    const vehiclesInGroup = garageData.filter(v => v.group === groupName).length;
 
                     let confirmMsg = `Are you sure you want to delete the "${groupName}" group?`;
                     if (vehiclesInGroup > 0) {
@@ -213,7 +213,7 @@ import Layout from '../../layouts/Layout.astro';
                         // Remove from group order
                         groupOrder.splice(index, 1);
                         // Clear group from vehicles
-                        warehouseData.forEach(vehicle => {
+                        garageData.forEach(vehicle => {
                             if (vehicle.group === groupName) {
                                 vehicle.group = undefined;
                             }
@@ -276,7 +276,7 @@ import Layout from '../../layouts/Layout.astro';
         function renderCategories() {
             const container = document.getElementById('categoriesList');
 
-            if (warehouseData.length === 0) {
+            if (garageData.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-12 text-white/60">
                         No vehicles found. Add your first vehicle above.
@@ -285,7 +285,7 @@ import Layout from '../../layouts/Layout.astro';
                 return;
             }
 
-            container.innerHTML = warehouseData.map((vehicle, catIndex) => {
+            container.innerHTML = garageData.map((vehicle, catIndex) => {
                 const imageUrls = vehicle.imageUrls || [];
                 const flags = vehicle.flags || [];
                 const canAddMoreFlags = flags.length < MAX_FLAGS;
@@ -421,8 +421,8 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.category-name').forEach(input => {
                 input.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
-                    warehouseData[index].name = e.target.value;
-                    warehouseData[index].id = generateId(e.target.value);
+                    garageData[index].name = e.target.value;
+                    garageData[index].id = generateId(e.target.value);
                 });
             });
 
@@ -430,7 +430,7 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.category-icon').forEach(select => {
                 select.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
-                    warehouseData[index].icon = e.target.value;
+                    garageData[index].icon = e.target.value;
                 });
             });
 
@@ -438,7 +438,7 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.vehicle-group').forEach(select => {
                 select.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
-                    warehouseData[index].group = e.target.value || undefined;
+                    garageData[index].group = e.target.value || undefined;
                 });
             });
 
@@ -446,7 +446,7 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.vehicle-description').forEach(textarea => {
                 textarea.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
-                    warehouseData[index].description = e.target.value;
+                    garageData[index].description = e.target.value;
                 });
             });
 
@@ -454,7 +454,7 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.spawn-code').forEach(input => {
                 input.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
-                    warehouseData[index].spawnCode = e.target.value;
+                    garageData[index].spawnCode = e.target.value;
                 });
             });
 
@@ -462,7 +462,7 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.spawn-by-model').forEach(input => {
                 input.addEventListener('change', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
-                    warehouseData[index].spawnByModel = e.target.value;
+                    garageData[index].spawnByModel = e.target.value;
                 });
             });
 
@@ -471,8 +471,8 @@ import Layout from '../../layouts/Layout.astro';
                 input.addEventListener('change', (e) => {
                     const catIndex = parseInt(e.target.dataset.categoryIndex);
                     const flagIndex = parseInt(e.target.dataset.flagIndex);
-                    if (!warehouseData[catIndex].flags) warehouseData[catIndex].flags = [];
-                    warehouseData[catIndex].flags[flagIndex].name = e.target.value;
+                    if (!garageData[catIndex].flags) garageData[catIndex].flags = [];
+                    garageData[catIndex].flags[flagIndex].name = e.target.value;
                 });
             });
 
@@ -481,8 +481,8 @@ import Layout from '../../layouts/Layout.astro';
                 select.addEventListener('change', (e) => {
                     const catIndex = parseInt(e.target.dataset.categoryIndex);
                     const flagIndex = parseInt(e.target.dataset.flagIndex);
-                    if (!warehouseData[catIndex].flags) warehouseData[catIndex].flags = [];
-                    warehouseData[catIndex].flags[flagIndex].color = e.target.value;
+                    if (!garageData[catIndex].flags) garageData[catIndex].flags = [];
+                    garageData[catIndex].flags[flagIndex].color = e.target.value;
                 });
             });
 
@@ -490,9 +490,9 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.add-flag').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const catIndex = parseInt(e.target.dataset.categoryIndex);
-                    if (!warehouseData[catIndex].flags) warehouseData[catIndex].flags = [];
-                    if (warehouseData[catIndex].flags.length < MAX_FLAGS) {
-                        warehouseData[catIndex].flags.push({ name: '', color: 'blue' });
+                    if (!garageData[catIndex].flags) garageData[catIndex].flags = [];
+                    if (garageData[catIndex].flags.length < MAX_FLAGS) {
+                        garageData[catIndex].flags.push({ name: '', color: 'blue' });
                         renderCategories();
                     }
                 });
@@ -503,8 +503,8 @@ import Layout from '../../layouts/Layout.astro';
                 btn.addEventListener('click', (e) => {
                     const catIndex = parseInt(e.target.closest('[data-category-index]').dataset.categoryIndex);
                     const flagIndex = parseInt(e.target.closest('[data-flag-index]').dataset.flagIndex);
-                    if (warehouseData[catIndex].flags) {
-                        warehouseData[catIndex].flags.splice(flagIndex, 1);
+                    if (garageData[catIndex].flags) {
+                        garageData[catIndex].flags.splice(flagIndex, 1);
                         renderCategories();
                     }
                 });
@@ -515,7 +515,7 @@ import Layout from '../../layouts/Layout.astro';
                 btn.addEventListener('click', (e) => {
                     const index = parseInt(e.target.dataset.categoryIndex);
                     if (confirm('Are you sure you want to delete this vehicle?')) {
-                        warehouseData.splice(index, 1);
+                        garageData.splice(index, 1);
                         renderCategories();
                     }
                 });
@@ -526,10 +526,10 @@ import Layout from '../../layouts/Layout.astro';
                 input.addEventListener('change', (e) => {
                     const catIndex = parseInt(e.target.dataset.categoryIndex);
                     const urlIndex = parseInt(e.target.dataset.urlIndex);
-                    if (!warehouseData[catIndex].imageUrls) {
-                        warehouseData[catIndex].imageUrls = [];
+                    if (!garageData[catIndex].imageUrls) {
+                        garageData[catIndex].imageUrls = [];
                     }
-                    warehouseData[catIndex].imageUrls[urlIndex] = e.target.value.trim();
+                    garageData[catIndex].imageUrls[urlIndex] = e.target.value.trim();
                     renderCategories();
                 });
             });
@@ -538,11 +538,11 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.add-image-url').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const catIndex = parseInt(e.target.dataset.categoryIndex);
-                    if (!warehouseData[catIndex].imageUrls) {
-                        warehouseData[catIndex].imageUrls = [];
+                    if (!garageData[catIndex].imageUrls) {
+                        garageData[catIndex].imageUrls = [];
                     }
-                    if (warehouseData[catIndex].imageUrls.length < MAX_IMAGES) {
-                        warehouseData[catIndex].imageUrls.push('');
+                    if (garageData[catIndex].imageUrls.length < MAX_IMAGES) {
+                        garageData[catIndex].imageUrls.push('');
                         renderCategories();
                     }
                 });
@@ -553,8 +553,8 @@ import Layout from '../../layouts/Layout.astro';
                 btn.addEventListener('click', (e) => {
                     const catIndex = parseInt(e.target.closest('[data-category-index]').dataset.categoryIndex);
                     const urlIndex = parseInt(e.target.closest('[data-url-index]').dataset.urlIndex);
-                    if (warehouseData[catIndex].imageUrls) {
-                        warehouseData[catIndex].imageUrls.splice(urlIndex, 1);
+                    if (garageData[catIndex].imageUrls) {
+                        garageData[catIndex].imageUrls.splice(urlIndex, 1);
                         renderCategories();
                     }
                 });
@@ -574,7 +574,7 @@ import Layout from '../../layouts/Layout.astro';
                 items: [],
                 imageUrls: []
             };
-            warehouseData.push(newVehicle);
+            garageData.push(newVehicle);
             renderCategories();
         });
 
@@ -602,12 +602,12 @@ import Layout from '../../layouts/Layout.astro';
             saveBtn.textContent = 'Saving...';
 
             try {
-                const response = await fetch('/api/warehouse', {
+                const response = await fetch('/api/garage', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ warehouse: warehouseData, groupOrder: groupOrder }),
+                    body: JSON.stringify({ garage: garageData, groupOrder: groupOrder }),
                     credentials: 'include'
                 });
 
@@ -630,7 +630,7 @@ import Layout from '../../layouts/Layout.astro';
         // Initialize - validate session first
         validateSessionAndPermissions().then(valid => {
             if (valid) {
-                loadWarehouse();
+                loadGarage();
             }
         });
     </script>

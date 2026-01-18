@@ -2,12 +2,12 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="DPPD Warehouse - Del Perro Police Department" description="View department vehicles and equipment inventory">
+<Layout title="DPPD Garage - Del Perro Police Department" description="View department vehicles and equipment inventory">
     <div class="space-y-8">
         <!-- Header -->
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
-                <h1 class="text-4xl md:text-5xl font-bold mb-2">DPPD Warehouse</h1>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">DPPD Garage</h1>
                 <p class="text-white/70">View department vehicles and equipment</p>
             </div>
         </div>
@@ -23,11 +23,11 @@ import Layout from '../layouts/Layout.astro';
         </div>
 
         <!-- Vehicle Grid -->
-        <div id="warehouseGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div id="garageGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <!-- Loading state -->
             <div class="col-span-full text-center py-12 text-white/60">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-                <p>Loading warehouse vehicles...</p>
+                <p>Loading garage vehicles...</p>
             </div>
         </div>
     </div>
@@ -100,29 +100,29 @@ import Layout from '../layouts/Layout.astro';
         const DEFAULT_VEHICLE_GROUPS = ['Training', 'Patrol', 'Heat', 'Air-1/Air-Tac', 'Transport', 'Supervisor/Command', 'S.W.A.T.', 'Other'];
         let VEHICLE_GROUPS = [...DEFAULT_VEHICLE_GROUPS];
 
-        let warehouseData = [];
+        let garageData = [];
         let filteredData = [];
         let currentVehicle = null;
         let currentImageIndex = 0;
 
-        async function loadWarehouse() {
+        async function loadGarage() {
             try {
-                const response = await fetch('/api/warehouse');
+                const response = await fetch('/api/garage');
                 const data = await response.json();
-                warehouseData = data.warehouse || [];
+                garageData = data.garage || [];
                 VEHICLE_GROUPS = data.groupOrder || [...DEFAULT_VEHICLE_GROUPS];
-                filteredData = [...warehouseData];
-                renderWarehouse();
+                filteredData = [...garageData];
+                renderGarage();
                 setupModal();
                 setupSearch();
             } catch (error) {
-                console.error('Failed to load warehouse:', error);
-                document.getElementById('warehouseGrid').innerHTML = `
+                console.error('Failed to load garage:', error);
+                document.getElementById('garageGrid').innerHTML = `
                     <div class="col-span-full text-center py-12 text-red-400">
                         <svg class="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
-                        <p>Failed to load warehouse inventory. Please refresh the page.</p>
+                        <p>Failed to load garage inventory. Please refresh the page.</p>
                     </div>
                 `;
             }
@@ -133,9 +133,9 @@ import Layout from '../layouts/Layout.astro';
             searchInput.addEventListener('input', (e) => {
                 const query = e.target.value.toLowerCase().trim();
                 if (query === '') {
-                    filteredData = [...warehouseData];
+                    filteredData = [...garageData];
                 } else {
-                    filteredData = warehouseData.filter(vehicle =>
+                    filteredData = garageData.filter(vehicle =>
                         vehicle.name.toLowerCase().includes(query) ||
                         (vehicle.description && vehicle.description.toLowerCase().includes(query)) ||
                         (vehicle.spawnCode && vehicle.spawnCode.toLowerCase().includes(query)) ||
@@ -143,12 +143,12 @@ import Layout from '../layouts/Layout.astro';
                         (vehicle.flags && vehicle.flags.some(f => f.name.toLowerCase().includes(query)))
                     );
                 }
-                renderWarehouse();
+                renderGarage();
             });
         }
 
-        function renderWarehouse() {
-            const grid = document.getElementById('warehouseGrid');
+        function renderGarage() {
+            const grid = document.getElementById('garageGrid');
 
             if (filteredData.length === 0) {
                 grid.innerHTML = `
@@ -439,6 +439,6 @@ import Layout from '../layouts/Layout.astro';
             document.getElementById('modalImageCounter').textContent = `${currentImageIndex + 1} / ${images.length}`;
         }
 
-        loadWarehouse();
+        loadGarage();
     </script>
 </Layout>

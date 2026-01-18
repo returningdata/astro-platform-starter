@@ -4,7 +4,7 @@ import { logArrayDataChange, extractUserFromSession, checkPermission } from '../
 
 export const prerender = false;
 
-export interface WarehouseItem {
+export interface GarageItem {
     name: string;
     status: 'available' | 'limited' | 'out';
 }
@@ -33,7 +33,7 @@ export const DEFAULT_VEHICLE_GROUPS: string[] = [
 // For backwards compatibility
 export const VEHICLE_GROUPS = DEFAULT_VEHICLE_GROUPS;
 
-export interface WarehouseCategory {
+export interface GarageCategory {
     id: string;
     name: string;
     icon: string;
@@ -42,12 +42,12 @@ export interface WarehouseCategory {
     spawnCode?: string; // Spawn code for the vehicle
     spawnByModel?: string; // Spawn by model code
     flags?: VehicleFlag[]; // Special permission flags (up to 10)
-    items: WarehouseItem[];
+    items: GarageItem[];
     imageUrls?: string[]; // Array of image URLs (Discord CDN or Imgur links)
 }
 
-// Helper to get the warehouse store
-function getWarehouseStore() {
+// Helper to get the garage store (uses same store name for data continuity)
+function getGarageStore() {
     return getStore({ name: 'warehouse', consistency: 'strong' });
 }
 
@@ -55,7 +55,7 @@ function getWarehouseStore() {
 // Groups are now fully dynamic - no auto-adding of defaults
 async function getGroupOrder(): Promise<string[]> {
     try {
-        const store = getWarehouseStore();
+        const store = getGarageStore();
         const data = await store.get('groupOrder', { type: 'json' });
         if (data && Array.isArray(data) && data.length > 0) {
             return data as string[];
@@ -68,7 +68,7 @@ async function getGroupOrder(): Promise<string[]> {
 }
 
 // Sorted by category: Training - Patrol - Heat - Air-1/Air-Tac - Transport - Supervisor/Command
-const defaultWarehouseData: WarehouseCategory[] = [
+const defaultGarageData: GarageCategory[] = [
     // TRAINING
     {
         id: "2010-trainee-vehicle",
@@ -220,34 +220,34 @@ const defaultWarehouseData: WarehouseCategory[] = [
     }
 ];
 
-async function getWarehouseData(): Promise<WarehouseCategory[]> {
+async function getGarageData(): Promise<GarageCategory[]> {
     try {
-        const store = getWarehouseStore();
+        const store = getGarageStore();
         const data = await store.get('categories', { type: 'json' });
         if (data && Array.isArray(data)) {
             return data;
         }
-        return defaultWarehouseData;
+        return defaultGarageData;
     } catch (error) {
-        console.error('Error fetching warehouse data:', error);
-        return defaultWarehouseData;
+        console.error('Error fetching garage data:', error);
+        return defaultGarageData;
     }
 }
 
 export const GET: APIRoute = async ({ url }) => {
-    // Return warehouse data and group order
+    // Return garage data and group order
     try {
-        const [warehouseData, groupOrder] = await Promise.all([
-            getWarehouseData(),
+        const [garageData, groupOrder] = await Promise.all([
+            getGarageData(),
             getGroupOrder()
         ]);
-        return new Response(JSON.stringify({ warehouse: warehouseData, groupOrder }), {
+        return new Response(JSON.stringify({ garage: garageData, groupOrder }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
-        console.error('Error fetching warehouse data:', error);
-        return new Response(JSON.stringify({ warehouse: defaultWarehouseData, groupOrder: DEFAULT_VEHICLE_GROUPS }), {
+        console.error('Error fetching garage data:', error);
+        return new Response(JSON.stringify({ garage: defaultGarageData, groupOrder: DEFAULT_VEHICLE_GROUPS }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         });
@@ -265,7 +265,7 @@ export const POST: APIRoute = async ({ request }) => {
         });
     }
 
-    // Check if user has warehouse permission
+    // Check if user has garage permission (uses same permission name for continuity)
     if (!checkPermission(user, 'warehouse')) {
         return new Response(JSON.stringify({ error: 'Forbidden' }), {
             status: 403,
@@ -275,10 +275,10 @@ export const POST: APIRoute = async ({ request }) => {
 
     try {
         const data = await request.json();
-        const warehouseStore = getWarehouseStore();
+        const garageStore = getGarageStore();
 
         // Get current data for comparison
-        const oldData = await getWarehouseData();
+        const oldData = await getGarageData();
 
         // Handle group order update if provided
         // Groups are now fully dynamic - allow any string values
@@ -290,15 +290,15 @@ export const POST: APIRoute = async ({ request }) => {
 
             // Only save if there's at least one group
             if (validGroupOrder.length > 0) {
-                await warehouseStore.setJSON('groupOrder', validGroupOrder);
+                await garageStore.setJSON('groupOrder', validGroupOrder);
             }
         }
 
         // Process each category - now using image URLs instead of blob storage
-        const categoriesToSave: WarehouseCategory[] = [];
+        const categoriesToSave: GarageCategory[] = [];
 
-        for (const category of data.warehouse) {
-            const categoryToSave: WarehouseCategory = {
+        for (const category of data.garage) {
+            const categoryToSave: GarageCategory = {
                 id: category.id,
                 name: category.name,
                 icon: category.icon,
@@ -351,11 +351,11 @@ export const POST: APIRoute = async ({ request }) => {
             categoriesToSave.push(categoryToSave);
         }
 
-        await warehouseStore.setJSON('categories', categoriesToSave);
+        await garageStore.setJSON('categories', categoriesToSave);
 
         // Log the change to Discord
         await logArrayDataChange(
-            'WAREHOUSE',
+            'GARAGE',
             user,
             oldData,
             categoriesToSave,
@@ -369,21 +369,21 @@ export const POST: APIRoute = async ({ request }) => {
             headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
-        console.error('Error saving warehouse data:', error);
+        console.error('Error saving garage data:', error);
 
         // Log the failed attempt
         await logArrayDataChange(
-            'WAREHOUSE',
+            'GARAGE',
             user,
             [],
             [],
             'id',
             'name',
             false,
-            'Failed to save warehouse data'
+            'Failed to save garage data'
         );
 
-        return new Response(JSON.stringify({ success: false, error: 'Failed to save warehouse data' }), {
+        return new Response(JSON.stringify({ success: false, error: 'Failed to save garage data' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });

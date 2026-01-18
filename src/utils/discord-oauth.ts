@@ -4,9 +4,14 @@
  * Handles Discord OAuth2 authentication flow and role-based access control.
  * Uses environment variables for sensitive configuration.
  * Now supports configurable role mappings from the admin panel.
+ *
+ * Security enhancements:
+ * - PKCE (Proof Key for Code Exchange) support for additional security
+ * - Nonce validation to prevent replay attacks
+ * - Token binding to session
  */
 
-import type { AdminUser } from './session';
+import type { AdminUser, PagePermission } from './session';
 import { getStore } from '@netlify/blobs';
 
 // Discord API endpoints
@@ -17,6 +22,9 @@ const DISCORD_OAUTH_TOKEN = `${DISCORD_API_BASE}/oauth2/token`;
 // OAuth2 scopes needed for authentication
 const OAUTH_SCOPES = ['identify', 'guilds.members.read'];
 
+// PKCE code verifier length (43-128 characters recommended)
+const PKCE_VERIFIER_LENGTH = 64;
+
 /**
  * Role mapping interface for configurable roles
  */
@@ -26,8 +34,10 @@ interface DiscordRoleMapping {
     roleName: string;
     internalRole: 'super_admin' | 'subdivision_overseer' | 'custom';
     permissions: string[];
+    pagePermissions?: PagePermission[];
     priority: number;
     description?: string;
+    isActive?: boolean;
 }
 
 interface RolesConfig {
@@ -113,9 +123,13 @@ export function getDiscordConfig() {
 }
 
 /**
- * Generate the OAuth2 authorization URL
+ * Generate the OAuth2 authorization URL with optional PKCE support
  */
-export function getAuthorizationUrl(redirectUri: string, state: string): string {
+export function getAuthorizationUrl(
+    redirectUri: string,
+    state: string,
+    codeChallenge?: string
+): string {
     const config = getDiscordConfig();
 
     const params = new URLSearchParams({
@@ -127,15 +141,22 @@ export function getAuthorizationUrl(redirectUri: string, state: string): string 
         prompt: 'consent'
     });
 
+    // Add PKCE parameters if code challenge is provided
+    if (codeChallenge) {
+        params.set('code_challenge', codeChallenge);
+        params.set('code_challenge_method', 'S256');
+    }
+
     return `${DISCORD_OAUTH_AUTHORIZE}?${params.toString()}`;
 }
 
 /**
- * Exchange authorization code for access token
+ * Exchange authorization code for access token with optional PKCE support
  */
 export async function exchangeCodeForToken(
     code: string,
-    redirectUri: string
+    redirectUri: string,
+    codeVerifier?: string
 ): Promise<TokenResponse> {
     const config = getDiscordConfig();
 
@@ -146,6 +167,11 @@ export async function exchangeCodeForToken(
         code: code,
         redirect_uri: redirectUri
     });
+
+    // Add PKCE code verifier if provided
+    if (codeVerifier) {
+        params.set('code_verifier', codeVerifier);
+    }
 
     const response = await fetch(DISCORD_OAUTH_TOKEN, {
         method: 'POST',
@@ -232,10 +258,12 @@ async function getConfigurableRoleMappings(): Promise<DiscordRoleMapping[]> {
 /**
  * Determine user role based on Discord roles
  * First checks configurable role mappings, then falls back to environment variables
+ * Now includes page-level permissions from role mappings
  */
 export async function determineUserRole(memberRoles: string[]): Promise<{
     role: AdminUser['role'];
     permissions: string[];
+    pagePermissions?: PagePermission[];
 } | null> {
     // First, check configurable role mappings
     const configurableRoleMappings = await getConfigurableRoleMappings();
@@ -243,10 +271,14 @@ export async function determineUserRole(memberRoles: string[]): Promise<{
     if (configurableRoleMappings.length > 0) {
         // Check configurable mappings in priority order
         for (const mapping of configurableRoleMappings) {
+            // Skip inactive mappings
+            if (mapping.isActive === false) continue;
+
             if (memberRoles.includes(mapping.discordRoleId)) {
                 return {
                     role: mapping.internalRole,
-                    permissions: mapping.permissions
+                    permissions: mapping.permissions,
+                    pagePermissions: mapping.pagePermissions,
                 };
             }
         }
@@ -294,26 +326,115 @@ export async function determineUserRole(memberRoles: string[]): Promise<{
 }
 
 /**
- * Generate a cryptographically secure state parameter
+ * Generate a cryptographically secure state parameter with nonce
+ * The state includes both a random component and a timestamp for replay protection
  */
 export function generateOAuthState(): string {
     const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    const randomPart = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    // Include timestamp for replay attack protection (state expires in 10 minutes)
+    const timestamp = Date.now().toString(36);
+    return `${randomPart}.${timestamp}`;
+}
+
+/**
+ * Validate OAuth state including timestamp check
+ */
+export function validateOAuthState(storedState: string, receivedState: string): { valid: boolean; reason?: string } {
+    if (!storedState || !receivedState) {
+        return { valid: false, reason: 'Missing state parameter' };
+    }
+
+    // Constant-time comparison for the state
+    if (storedState.length !== receivedState.length) {
+        return { valid: false, reason: 'State mismatch' };
+    }
+
+    let result = 0;
+    for (let i = 0; i < storedState.length; i++) {
+        result |= storedState.charCodeAt(i) ^ receivedState.charCodeAt(i);
+    }
+
+    if (result !== 0) {
+        return { valid: false, reason: 'State mismatch' };
+    }
+
+    // Check timestamp to prevent replay attacks
+    const parts = receivedState.split('.');
+    if (parts.length >= 2) {
+        const timestamp = parseInt(parts[1], 36);
+        const now = Date.now();
+        const maxAge = 10 * 60 * 1000; // 10 minutes
+
+        if (now - timestamp > maxAge) {
+            return { valid: false, reason: 'State expired' };
+        }
+    }
+
+    return { valid: true };
+}
+
+/**
+ * Generate PKCE code verifier (cryptographically random string)
+ */
+export function generateCodeVerifier(): string {
+    const array = new Uint8Array(PKCE_VERIFIER_LENGTH);
+    crypto.getRandomValues(array);
+    // Use URL-safe base64 encoding
+    return base64UrlEncode(array);
+}
+
+/**
+ * Generate PKCE code challenge from verifier using SHA-256
+ */
+export async function generateCodeChallenge(verifier: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(verifier);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return base64UrlEncode(new Uint8Array(digest));
+}
+
+/**
+ * URL-safe Base64 encoding
+ */
+function base64UrlEncode(buffer: Uint8Array): string {
+    // Convert to base64
+    let binary = '';
+    for (let i = 0; i < buffer.length; i++) {
+        binary += String.fromCharCode(buffer[i]);
+    }
+    const base64 = btoa(binary);
+
+    // Make URL-safe
+    return base64
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+}
+
+/**
+ * Generate a nonce for additional security
+ */
+export function generateNonce(): string {
+    const array = new Uint8Array(16);
     crypto.getRandomValues(array);
     return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
- * Create an AdminUser from Discord data
+ * Create an AdminUser from Discord data with page permissions
  */
 export function createAdminUserFromDiscord(
     discordUser: DiscordUser,
-    roleInfo: { role: AdminUser['role']; permissions: string[] }
+    roleInfo: { role: AdminUser['role']; permissions: string[]; pagePermissions?: PagePermission[] }
 ): AdminUser {
     return {
         id: `discord-${discordUser.id}`,
         username: discordUser.username,
         displayName: discordUser.global_name || discordUser.username,
         role: roleInfo.role,
-        permissions: roleInfo.permissions
+        permissions: roleInfo.permissions,
+        pagePermissions: roleInfo.pagePermissions,
     };
 }

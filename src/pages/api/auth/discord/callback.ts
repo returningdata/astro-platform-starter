@@ -4,15 +4,17 @@ import {
     getDiscordUser,
     getGuildMember,
     determineUserRole,
-    createAdminUserFromDiscord
+    createAdminUserFromDiscord,
+    validateOAuthState,
 } from '../../../../utils/discord-oauth';
 import { createSession, isSessionSecretConfigured } from '../../../../utils/session';
 import { logLogin } from '../../../../utils/discord-webhook';
 
 export const prerender = false;
 
-// Cookie name for OAuth state
+// Cookie names for OAuth state and PKCE
 const STATE_COOKIE_NAME = 'discord_oauth_state';
+const PKCE_COOKIE_NAME = 'discord_oauth_pkce';
 
 /**
  * Parse cookies from request header
@@ -25,6 +27,16 @@ function parseCookies(cookieHeader: string | null): Record<string, string> {
             return [key, value.join('=')];
         })
     );
+}
+
+/**
+ * Create clear cookies for cleanup
+ */
+function createClearCookies(): string[] {
+    return [
+        `${STATE_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`,
+        `${PKCE_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`,
+    ];
 }
 
 export const GET: APIRoute = async ({ request }) => {
@@ -67,23 +79,26 @@ export const GET: APIRoute = async ({ request }) => {
             });
         }
 
-        // Verify state parameter (CSRF protection)
+        // Parse cookies
         const cookies = parseCookies(request.headers.get('cookie'));
         const storedState = cookies[STATE_COOKIE_NAME];
+        const codeVerifier = cookies[PKCE_COOKIE_NAME];
 
-        if (!storedState || storedState !== state) {
-            console.error('State mismatch:', { storedState, receivedState: state });
+        // Verify state parameter with enhanced validation (includes timestamp check)
+        const stateValidation = validateOAuthState(storedState, state);
+        if (!stateValidation.valid) {
+            console.error('State validation failed:', stateValidation.reason);
             return new Response(null, {
                 status: 302,
                 headers: {
-                    'Location': '/admin/login?error=state_mismatch'
+                    'Location': `/admin/login?error=state_${stateValidation.reason?.toLowerCase().replace(/\s+/g, '_') || 'invalid'}`
                 }
             });
         }
 
-        // Exchange code for token
+        // Exchange code for token with PKCE verifier
         const redirectUri = `${url.origin}/api/auth/discord/callback`;
-        const tokenData = await exchangeCodeForToken(code, redirectUri);
+        const tokenData = await exchangeCodeForToken(code, redirectUri, codeVerifier);
 
         // Get Discord user information
         const discordUser = await getDiscordUser(tokenData.access_token);
@@ -107,7 +122,7 @@ export const GET: APIRoute = async ({ request }) => {
             });
         }
 
-        // Determine user role based on Discord roles
+        // Determine user role based on Discord roles (now includes pagePermissions)
         const roleInfo = await determineUserRole(guildMember.roles);
 
         if (!roleInfo) {
@@ -126,7 +141,7 @@ export const GET: APIRoute = async ({ request }) => {
             });
         }
 
-        // Create admin user from Discord data
+        // Create admin user from Discord data (with page permissions)
         const adminUser = createAdminUserFromDiscord(discordUser, roleInfo);
 
         // Log successful login
@@ -138,20 +153,21 @@ export const GET: APIRoute = async ({ request }) => {
                 role: adminUser.role
             },
             true,
-            'Discord OAuth'
+            'Discord OAuth (PKCE)'
         );
 
-        // Create session
-        const { cookie: sessionCookie } = await createSession(adminUser);
+        // Create session with request binding
+        const { cookie: sessionCookie } = await createSession(adminUser, request);
 
-        // Clear the state cookie and set the session cookie
-        const clearStateCookie = `${STATE_COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
+        // Clear OAuth cookies and set session cookie
+        const clearCookies = createClearCookies();
 
-        // Redirect to admin dashboard with session cookie
-        // Use Headers object to properly set multiple Set-Cookie headers
+        // Redirect to admin dashboard with cookies
         const headers = new Headers();
         headers.set('Location', '/admin');
-        headers.append('Set-Cookie', clearStateCookie);
+        for (const clearCookie of clearCookies) {
+            headers.append('Set-Cookie', clearCookie);
+        }
         headers.append('Set-Cookie', sessionCookie);
 
         return new Response(null, {

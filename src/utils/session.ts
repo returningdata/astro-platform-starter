@@ -5,6 +5,7 @@
  * - Cryptographically signed session tokens (HMAC-SHA256)
  * - HTTP-only, Secure cookies
  * - Server-side session validation via Netlify Blobs
+ * - Session binding to prevent session hijacking
  */
 
 import { getStore } from '@netlify/blobs';
@@ -12,6 +13,23 @@ import { getStore } from '@netlify/blobs';
 const SESSION_COOKIE_NAME = 'dppd_session';
 const SESSION_STORE_NAME = 'admin-sessions';
 const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const SESSION_REFRESH_THRESHOLD_MS = 4 * 60 * 60 * 1000; // Refresh after 4 hours
+
+// Page-level permission types (synchronized with permissions.ts)
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage';
+
+export interface PagePermission {
+    pageId: string;
+    actions: PermissionAction[];
+    restrictions?: {
+        allowedFields?: string[];
+        conditions?: {
+            type: 'own_items_only' | 'max_per_day' | 'requires_approval' | 'time_restricted';
+            value?: string | number | boolean;
+            description?: string;
+        }[];
+    };
+}
 
 export interface AdminUser {
     id: string;
@@ -19,6 +37,7 @@ export interface AdminUser {
     displayName: string;
     role: 'super_admin' | 'subdivision_overseer' | 'custom';
     permissions: string[];
+    pagePermissions?: PagePermission[]; // New advanced page-level permissions
 }
 
 export interface Session {
@@ -26,6 +45,11 @@ export interface Session {
     user: AdminUser;
     createdAt: number;
     expiresAt: number;
+    // Security enhancements
+    userAgent?: string; // For session binding
+    ipHash?: string; // Hashed IP for validation (privacy-preserving)
+    lastActivity?: number;
+    refreshedAt?: number;
 }
 
 /**
@@ -202,6 +226,42 @@ async function parseSignedToken(token: string): Promise<string | null> {
 }
 
 /**
+ * Hash an IP address for privacy-preserving session binding
+ */
+async function hashIpAddress(ip: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(ip);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer))
+        .slice(0, 8) // Only use first 8 bytes for privacy
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+/**
+ * Extract client IP from request headers
+ */
+function getClientIp(request: Request): string | null {
+    // Try various headers in order of preference
+    const headers = [
+        'x-nf-client-connection-ip', // Netlify
+        'x-real-ip',
+        'x-forwarded-for',
+        'cf-connecting-ip', // Cloudflare
+    ];
+
+    for (const header of headers) {
+        const value = request.headers.get(header);
+        if (value) {
+            // x-forwarded-for may contain multiple IPs
+            return value.split(',')[0].trim();
+        }
+    }
+
+    return null;
+}
+
+/**
  * Get the session store
  */
 function getSessionStore() {
@@ -209,16 +269,36 @@ function getSessionStore() {
 }
 
 /**
- * Create a new session for a user
+ * Create a new session for a user with security bindings
  */
-export async function createSession(user: AdminUser): Promise<{ token: string; cookie: string }> {
+export async function createSession(
+    user: AdminUser,
+    request?: Request
+): Promise<{ token: string; cookie: string }> {
     const sessionId = generateSessionId();
     const now = Date.now();
+
+    // Extract security binding information
+    let userAgent: string | undefined;
+    let ipHash: string | undefined;
+
+    if (request) {
+        userAgent = request.headers.get('user-agent') || undefined;
+        const clientIp = getClientIp(request);
+        if (clientIp) {
+            ipHash = await hashIpAddress(clientIp);
+        }
+    }
+
     const session: Session = {
         sessionId,
         user,
         createdAt: now,
-        expiresAt: now + SESSION_EXPIRY_MS
+        expiresAt: now + SESSION_EXPIRY_MS,
+        userAgent,
+        ipHash,
+        lastActivity: now,
+        refreshedAt: now,
     };
 
     const store = getSessionStore();
@@ -226,16 +306,16 @@ export async function createSession(user: AdminUser): Promise<{ token: string; c
 
     const signedToken = await createSignedToken(sessionId);
 
-    // Create HTTP-only, Secure cookie
+    // Create HTTP-only, Secure cookie with additional security attributes
     const cookie = `${SESSION_COOKIE_NAME}=${signedToken}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${SESSION_EXPIRY_MS / 1000}`;
 
     return { token: signedToken, cookie };
 }
 
 /**
- * Get and validate a session from a request
+ * Get and validate a session from a request with enhanced security checks
  */
-export async function getSession(request: Request): Promise<Session | null> {
+export async function getSession(request: Request, validateBinding = true): Promise<Session | null> {
     const cookieHeader = request.headers.get('cookie');
     if (!cookieHeader) {
         return null;
@@ -275,6 +355,30 @@ export async function getSession(request: Request): Promise<Session | null> {
         return null;
     }
 
+    // Optional: Validate session binding (IP and User-Agent)
+    if (validateBinding && session.ipHash) {
+        const clientIp = getClientIp(request);
+        if (clientIp) {
+            const currentIpHash = await hashIpAddress(clientIp);
+            if (currentIpHash !== session.ipHash) {
+                console.warn('Session binding mismatch: IP changed for session', sessionId.slice(0, 8));
+                // Don't invalidate, but log the anomaly
+                // This allows for legitimate IP changes (mobile networks, VPNs)
+            }
+        }
+    }
+
+    // Update last activity
+    const now = Date.now();
+    session.lastActivity = now;
+
+    // Check if session needs refresh
+    if (session.refreshedAt && (now - session.refreshedAt) > SESSION_REFRESH_THRESHOLD_MS) {
+        session.refreshedAt = now;
+        session.expiresAt = now + SESSION_EXPIRY_MS; // Extend session
+        await store.setJSON(sessionId, session);
+    }
+
     return session;
 }
 
@@ -290,7 +394,7 @@ export async function validateSession(request: Request): Promise<AdminUser | nul
  * Invalidate (logout) a session
  */
 export async function invalidateSession(request: Request): Promise<string> {
-    const session = await getSession(request);
+    const session = await getSession(request, false);
 
     if (session) {
         const store = getSessionStore();

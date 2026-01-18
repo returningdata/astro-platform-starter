@@ -286,13 +286,24 @@ const DEFAULT_SITE_CONFIG = {
     owner: '<@1000470631688712243>',
     siteUrl: 'https://delperro.netlify.app',
     color: 0x1e40af,
+    maintenanceMode: false,
 };
 
+interface SiteConfig {
+    name: string;
+    shortName: string;
+    version: string;
+    owner: string;
+    siteUrl: string;
+    color: number;
+    maintenanceMode?: boolean;
+}
+
 // Fetch site configuration from blob store
-async function getSiteConfig(): Promise<typeof DEFAULT_SITE_CONFIG> {
+async function getSiteConfig(): Promise<SiteConfig> {
     try {
         const store = getStore({ name: 'site-info', consistency: 'strong' });
-        const data = await store.get('settings', { type: 'json' }) as typeof DEFAULT_SITE_CONFIG | null;
+        const data = await store.get('settings', { type: 'json' }) as SiteConfig | null;
         if (data) {
             return { ...DEFAULT_SITE_CONFIG, ...data };
         }
@@ -308,6 +319,19 @@ interface SiteStats {
     warehouse: { totalVehicles: number; };
     subdivisions: { total: number; open: number; tryouts: number; handpicked: number; closed: number; };
     personnel: { commandPositions: number; filledCommandPositions: number; totalRanks: number; totalPersonnel: number; subdivisionLeaders: number; };
+    arrestReports: {
+        total: number;
+        open: number;
+        closed: number;
+        unresolved: number;
+        mostRecent: {
+            id: string;
+            suspectName: string;
+            officerName: string;
+            caseStatus: string;
+            createdAt: string;
+        } | null;
+    };
     adminUsers: number;
     resources: number;
     activeUsers: number;
@@ -319,6 +343,7 @@ async function fetchSiteStats(): Promise<SiteStats> {
         warehouse: { totalVehicles: 0 },
         subdivisions: { total: 0, open: 0, tryouts: 0, handpicked: 0, closed: 0 },
         personnel: { commandPositions: 0, filledCommandPositions: 0, totalRanks: 0, totalPersonnel: 0, subdivisionLeaders: 0 },
+        arrestReports: { total: 0, open: 0, closed: 0, unresolved: 0, mostRecent: null },
         adminUsers: 0,
         resources: 0,
         activeUsers: 0
@@ -418,6 +443,30 @@ async function fetchSiteStats(): Promise<SiteStats> {
         }
     } catch (error) { console.error('Error fetching active users:', error); }
 
+    // Fetch arrest reports statistics
+    try {
+        const arrestReportsStore = getStore({ name: 'arrest-reports', consistency: 'strong' });
+        const arrestReportsData = await arrestReportsStore.get('reports', { type: 'json' }) as any[] | null;
+        if (arrestReportsData && Array.isArray(arrestReportsData)) {
+            stats.arrestReports.total = arrestReportsData.length;
+            stats.arrestReports.open = arrestReportsData.filter(r => r.caseStatus === 'open').length;
+            stats.arrestReports.closed = arrestReportsData.filter(r => r.caseStatus === 'closed').length;
+            stats.arrestReports.unresolved = arrestReportsData.filter(r => r.caseStatus === 'unresolved').length;
+
+            // Get the most recent arrest report (first in array since they're unshifted)
+            if (arrestReportsData.length > 0) {
+                const mostRecent = arrestReportsData[0];
+                stats.arrestReports.mostRecent = {
+                    id: mostRecent.id || 'N/A',
+                    suspectName: mostRecent.suspectName || 'N/A',
+                    officerName: mostRecent.officerName || 'N/A',
+                    caseStatus: mostRecent.caseStatus || 'N/A',
+                    createdAt: mostRecent.createdAt || ''
+                };
+            }
+        }
+    } catch (error) { console.error('Error fetching arrest reports:', error); }
+
     return stats;
 }
 
@@ -426,13 +475,19 @@ function getDiscordTimestamp(): string {
     return `<t:${unix}:R>`;
 }
 
-function buildSiteStatusEmbed(stats: SiteStats, siteConfig: typeof DEFAULT_SITE_CONFIG): any {
+function buildSiteStatusEmbed(stats: SiteStats, siteConfig: SiteConfig): any {
     const timestamp = new Date().toISOString();
+
+    // Determine system status based on maintenance mode
+    const systemStatus = siteConfig.maintenanceMode
+        ? '🔧 **Status:** Maintenance Mode'
+        : '✅ **Status:** Operational';
+
     return {
         embeds: [{
             title: `📊 ${siteConfig.shortName} Site Status`,
-            description: `Real-time status and statistics for the **${siteConfig.name}** website.`,
-            color: siteConfig.color,
+            description: `Real-time status and statistics for the **${siteConfig.name}** website.${siteConfig.maintenanceMode ? '\n\n⚠️ **Site is currently in Maintenance Mode** - Only admins can access the full site.' : ''}`,
+            color: siteConfig.maintenanceMode ? 0xf59e0b : siteConfig.color, // Amber color when in maintenance
             timestamp,
             thumbnail: { url: 'https://cdn-icons-png.flaticon.com/512/1828/1828490.png' },
             fields: [
@@ -448,7 +503,7 @@ function buildSiteStatusEmbed(stats: SiteStats, siteConfig: typeof DEFAULT_SITE_
                 {
                     name: '🖥️ System Status',
                     value: [
-                        `✅ **Status:** Operational`,
+                        systemStatus,
                         `📈 **Uptime:** 99.9%`,
                         `👥 **Visitors Online:** ${stats.activeUsers}`,
                         `🕐 **Last Update:** ${getDiscordTimestamp()}`
@@ -489,6 +544,20 @@ function buildSiteStatusEmbed(stats: SiteStats, siteConfig: typeof DEFAULT_SITE_
                         `🟡 Tryouts: ${stats.subdivisions.tryouts}`,
                         `🟠 Handpicked: ${stats.subdivisions.handpicked}`,
                         `🔴 Closed: ${stats.subdivisions.closed}`
+                    ].join('\n'),
+                    inline: true
+                },
+                {
+                    name: '🚔 Arrest Reports',
+                    value: [
+                        `**Total Reports:** ${stats.arrestReports.total}`,
+                        `🟠 Open: ${stats.arrestReports.open}`,
+                        `🟢 Closed: ${stats.arrestReports.closed}`,
+                        `🔴 Unresolved: ${stats.arrestReports.unresolved}`,
+                        '',
+                        stats.arrestReports.mostRecent
+                            ? `📄 **Most Recent:**\n\`${stats.arrestReports.mostRecent.id}\`\n👤 ${stats.arrestReports.mostRecent.suspectName} | 👮 ${stats.arrestReports.mostRecent.officerName}\n📊 Status: ${stats.arrestReports.mostRecent.caseStatus.toUpperCase()}`
+                            : '📄 **Most Recent:** None'
                     ].join('\n'),
                     inline: true
                 },

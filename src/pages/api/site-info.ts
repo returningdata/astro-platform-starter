@@ -11,6 +11,7 @@ export interface SiteInfo {
     owner: string;
     siteUrl: string;
     color: number;
+    maintenanceMode?: boolean;
 }
 
 // Default site configuration
@@ -21,6 +22,7 @@ const defaultSiteInfo: SiteInfo = {
     owner: '<@1000470631688712243>',
     siteUrl: 'https://delperro.netlify.app',
     color: 0x1e40af,
+    maintenanceMode: false,
 };
 
 const STORE_NAME = 'site-info';

@@ -46,13 +46,24 @@ const DEFAULT_SITE_CONFIG = {
     owner: '<@1000470631688712243>',
     siteUrl: 'https://delperro.netlify.app',
     color: 0x1e40af,
+    maintenanceMode: false,
 };
 
+interface SiteConfig {
+    name: string;
+    shortName: string;
+    version: string;
+    owner: string;
+    siteUrl: string;
+    color: number;
+    maintenanceMode?: boolean;
+}
+
 // Fetch site configuration from blob store
-async function getSiteConfig(): Promise<typeof DEFAULT_SITE_CONFIG> {
+async function getSiteConfig(): Promise<SiteConfig> {
     try {
         const store = getStore({ name: 'site-info', consistency: 'strong' });
-        const data = await store.get('settings', { type: 'json' }) as typeof DEFAULT_SITE_CONFIG | null;
+        const data = await store.get('settings', { type: 'json' }) as SiteConfig | null;
         if (data) {
             return { ...DEFAULT_SITE_CONFIG, ...data };
         }
@@ -296,18 +307,24 @@ function getDiscordTimestamp(): string {
     return `<t:${unix}:R>`;
 }
 
-function buildSiteStatusEmbed(stats: SiteStats, siteConfig: typeof DEFAULT_SITE_CONFIG): any {
+function buildSiteStatusEmbed(stats: SiteStats, siteConfig: SiteConfig): any {
     const timestamp = new Date().toISOString();
+
+    // Determine system status based on maintenance mode
+    const systemStatus = siteConfig.maintenanceMode
+        ? '🔧 **Status:** Maintenance Mode'
+        : '✅ **Status:** Operational';
+
     return {
         embeds: [{
             title: `📊 ${siteConfig.shortName} Site Status`,
-            description: `Real-time status and statistics for the **${siteConfig.name}** website.`,
-            color: siteConfig.color,
+            description: `Real-time status and statistics for the **${siteConfig.name}** website.${siteConfig.maintenanceMode ? '\n\n⚠️ **Site is currently in Maintenance Mode** - Only admins can access the full site.' : ''}`,
+            color: siteConfig.maintenanceMode ? 0xf59e0b : siteConfig.color, // Amber color when in maintenance
             timestamp,
             thumbnail: { url: 'https://cdn-icons-png.flaticon.com/512/1828/1828490.png' },
             fields: [
                 { name: '🌐 Site Information', value: [`**Version:** \`v${siteConfig.version}\``, `**Owner:** ${siteConfig.owner}`, `**URL:** [Visit Site](${siteConfig.siteUrl})`].join('\n'), inline: false },
-                { name: '🖥️ System Status', value: [`✅ **Status:** Operational`, `📈 **Uptime:** 99.9%`, `👥 **Visitors Online:** ${stats.activeUsers}`, `🕐 **Last Update:** ${getDiscordTimestamp()}`].join('\n'), inline: true },
+                { name: '🖥️ System Status', value: [systemStatus, `📈 **Uptime:** 99.9%`, `👥 **Visitors Online:** ${stats.activeUsers}`, `🕐 **Last Update:** ${getDiscordTimestamp()}`].join('\n'), inline: true },
                 { name: '⚡ Quick Stats', value: [`🔑 **Admin Users:** ${stats.adminUsers}`, `📁 **Resources:** ${stats.resources}`, `🏛️ **Subdivisions:** ${stats.subdivisions.total}`].join('\n'), inline: true },
                 { name: '📅 Community Events', value: [`**Total Events:** ${stats.events.total}`, `🔜 Upcoming: ${stats.events.upcoming}`, `🔴 Ongoing: ${stats.events.ongoing}`, `✔️ Completed: ${stats.events.completed}`].join('\n'), inline: true },
                 { name: '🚗 Warehouse', value: [`**Vehicles:** ${stats.warehouse.totalVehicles}`].join('\n'), inline: true },

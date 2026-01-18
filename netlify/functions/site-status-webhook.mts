@@ -9,15 +9,43 @@
 import type { Context, Config } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
 
-// Site configuration
-const SITE_CONFIG = {
+// Default site configuration (used as fallback)
+const DEFAULT_SITE_CONFIG = {
     name: 'Del Perro Police Department',
     shortName: 'DPPD',
     version: '7.32.3',
     owner: '<@1000470631688712243>',
     siteUrl: 'https://delperro.netlify.app',
     color: 0x1e40af, // Professional blue color
+    maintenanceMode: false, // When true, site shows maintenance page to non-admins
 };
+
+interface SiteConfig {
+    name: string;
+    shortName: string;
+    version: string;
+    owner: string;
+    siteUrl: string;
+    color: number;
+    maintenanceMode?: boolean;
+}
+
+/**
+ * Fetch site configuration from blob store
+ */
+async function getSiteConfig(): Promise<SiteConfig> {
+    try {
+        const store = getStore({ name: 'site-info', consistency: 'strong' });
+        const data = await store.get('settings', { type: 'json' }) as SiteConfig | null;
+        if (data) {
+            return { ...DEFAULT_SITE_CONFIG, ...data };
+        }
+        return DEFAULT_SITE_CONFIG;
+    } catch (error) {
+        console.error('Error fetching site config:', error);
+        return DEFAULT_SITE_CONFIG;
+    }
+}
 
 // Google Sheets URL for personnel roster
 const ROSTER_SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1iUCnkFyPlNd5jorr3g2ZH2PLhwuQOcFXvx_DlbKdnI0/export?format=csv&gid=1853319408';
@@ -346,15 +374,20 @@ function getDiscordTimestamp(): string {
 /**
  * Build the Discord embed for site status
  */
-function buildSiteStatusEmbed(stats: SiteStats): any {
+function buildSiteStatusEmbed(stats: SiteStats, siteConfig: SiteConfig): any {
     const timestamp = new Date().toISOString();
+
+    // Determine system status based on maintenance mode
+    const systemStatus = siteConfig.maintenanceMode
+        ? '🔧 **Status:** Maintenance Mode'
+        : '✅ **Status:** Operational';
 
     return {
         embeds: [
             {
-                title: `📊 ${SITE_CONFIG.shortName} Site Status`,
-                description: `Real-time status and statistics for the **${SITE_CONFIG.name}** website.`,
-                color: SITE_CONFIG.color,
+                title: `📊 ${siteConfig.shortName} Site Status`,
+                description: `Real-time status and statistics for the **${siteConfig.name}** website.${siteConfig.maintenanceMode ? '\n\n⚠️ **Site is currently in Maintenance Mode** - Only admins can access the full site.' : ''}`,
+                color: siteConfig.maintenanceMode ? 0xf59e0b : siteConfig.color, // Amber color when in maintenance
                 timestamp: timestamp,
                 thumbnail: {
                     url: 'https://cdn-icons-png.flaticon.com/512/1828/1828490.png'
@@ -364,9 +397,9 @@ function buildSiteStatusEmbed(stats: SiteStats): any {
                     {
                         name: '🌐 Site Information',
                         value: [
-                            `**Version:** \`v${SITE_CONFIG.version}\``,
-                            `**Owner:** ${SITE_CONFIG.owner}`,
-                            `**URL:** [Visit Site](${SITE_CONFIG.siteUrl})`
+                            `**Version:** \`v${siteConfig.version}\``,
+                            `**Owner:** ${siteConfig.owner}`,
+                            `**URL:** [Visit Site](${siteConfig.siteUrl})`
                         ].join('\n'),
                         inline: false
                     },
@@ -374,7 +407,7 @@ function buildSiteStatusEmbed(stats: SiteStats): any {
                     {
                         name: '🖥️ System Status',
                         value: [
-                            `✅ **Status:** Operational`,
+                            systemStatus,
                             `📈 **Uptime:** 99.9%`,
                             `👥 **Visitors Online:** ${stats.activeUsers}`,
                             `🕐 **Last Update:** ${getDiscordTimestamp()}`
@@ -450,7 +483,7 @@ function buildSiteStatusEmbed(stats: SiteStats): any {
                     }
                 ],
                 footer: {
-                    text: `${SITE_CONFIG.name} | Updates every 1 minute`,
+                    text: `${siteConfig.name} | Updates every 1 minute`,
                     icon_url: 'https://cdn-icons-png.flaticon.com/512/6941/6941697.png'
                 }
             }
@@ -545,12 +578,16 @@ export default async (req: Request, context: Context) => {
             });
         }
 
-        // Fetch all site statistics
-        const stats = await fetchSiteStats();
+        // Fetch all site statistics and site config in parallel
+        const [stats, siteConfig] = await Promise.all([
+            fetchSiteStats(),
+            getSiteConfig()
+        ]);
         console.log('Fetched site stats:', JSON.stringify(stats));
+        console.log('Using site config:', JSON.stringify({ ...siteConfig, owner: '[redacted]' }));
 
         // Build the Discord embed
-        const payload = buildSiteStatusEmbed(stats);
+        const payload = buildSiteStatusEmbed(stats, siteConfig);
 
         // Delete old message if exists
         if (settings.lastMessageId) {

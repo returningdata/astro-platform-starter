@@ -1,5 +1,17 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+
+// Get returnTo parameter from URL if present
+const url = new URL(Astro.request.url);
+const returnTo = url.searchParams.get('returnTo');
+
+// Build Discord OAuth URL with returnTo if valid
+let discordOAuthUrl = '/api/auth/discord';
+if (returnTo && returnTo.startsWith('/') && !returnTo.includes('//') && !returnTo.includes('..')) {
+    discordOAuthUrl = `/api/auth/discord?returnTo=${encodeURIComponent(returnTo)}`;
+}
 ---
 
 <Layout title="Admin Login - DPPD">
@@ -22,7 +34,7 @@ import Layout from '../../layouts/Layout.astro';
 
                 <!-- Discord Login Button -->
                 <a
-                    href="/api/auth/discord"
+                    href={discordOAuthUrl}
                     id="discordBtn"
                     class="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#5865F2] focus:ring-offset-2 focus:ring-offset-slate-800 flex items-center justify-center gap-3"
                 >

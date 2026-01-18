@@ -165,7 +165,8 @@ export type EntityType =
     | 'THEME_SETTINGS'
     | 'DEPARTMENT_DATA'
     | 'SUBDIVISIONS'
-    | 'FOOTER';
+    | 'FOOTER'
+    | 'SITE_INFO';
 
 interface UserInfo {
     id?: string;
@@ -222,7 +223,8 @@ const ENTITY_DISPLAY_NAMES: Record<EntityType, string> = {
     THEME_SETTINGS: 'Theme Settings',
     DEPARTMENT_DATA: 'Department Data',
     SUBDIVISIONS: 'Subdivisions',
-    FOOTER: 'Footer'
+    FOOTER: 'Footer',
+    SITE_INFO: 'Site Info'
 };
 
 /**

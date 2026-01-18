@@ -38,8 +38,8 @@ function isValidDiscordId(value: string): boolean {
     return trimmed.length >= 17 && /^\d+$/.test(trimmed);
 }
 
-// Site configuration
-const SITE_CONFIG = {
+// Default site configuration (used as fallback)
+const DEFAULT_SITE_CONFIG = {
     name: 'Del Perro Police Department',
     shortName: 'DPPD',
     version: '7.32.3',
@@ -47,6 +47,21 @@ const SITE_CONFIG = {
     siteUrl: 'https://delperro.netlify.app',
     color: 0x1e40af,
 };
+
+// Fetch site configuration from blob store
+async function getSiteConfig(): Promise<typeof DEFAULT_SITE_CONFIG> {
+    try {
+        const store = getStore({ name: 'site-info', consistency: 'strong' });
+        const data = await store.get('settings', { type: 'json' }) as typeof DEFAULT_SITE_CONFIG | null;
+        if (data) {
+            return { ...DEFAULT_SITE_CONFIG, ...data };
+        }
+        return DEFAULT_SITE_CONFIG;
+    } catch (error) {
+        console.error('Error fetching site config:', error);
+        return DEFAULT_SITE_CONFIG;
+    }
+}
 
 interface WebhookSettings {
     discordWebhookUrl: string;
@@ -281,17 +296,17 @@ function getDiscordTimestamp(): string {
     return `<t:${unix}:R>`;
 }
 
-function buildSiteStatusEmbed(stats: SiteStats): any {
+function buildSiteStatusEmbed(stats: SiteStats, siteConfig: typeof DEFAULT_SITE_CONFIG): any {
     const timestamp = new Date().toISOString();
     return {
         embeds: [{
-            title: `📊 ${SITE_CONFIG.shortName} Site Status`,
-            description: `Real-time status and statistics for the **${SITE_CONFIG.name}** website.`,
-            color: SITE_CONFIG.color,
+            title: `📊 ${siteConfig.shortName} Site Status`,
+            description: `Real-time status and statistics for the **${siteConfig.name}** website.`,
+            color: siteConfig.color,
             timestamp,
             thumbnail: { url: 'https://cdn-icons-png.flaticon.com/512/1828/1828490.png' },
             fields: [
-                { name: '🌐 Site Information', value: [`**Version:** \`v${SITE_CONFIG.version}\``, `**Owner:** ${SITE_CONFIG.owner}`, `**URL:** [Visit Site](${SITE_CONFIG.siteUrl})`].join('\n'), inline: false },
+                { name: '🌐 Site Information', value: [`**Version:** \`v${siteConfig.version}\``, `**Owner:** ${siteConfig.owner}`, `**URL:** [Visit Site](${siteConfig.siteUrl})`].join('\n'), inline: false },
                 { name: '🖥️ System Status', value: [`✅ **Status:** Operational`, `📈 **Uptime:** 99.9%`, `👥 **Visitors Online:** ${stats.activeUsers}`, `🕐 **Last Update:** ${getDiscordTimestamp()}`].join('\n'), inline: true },
                 { name: '⚡ Quick Stats', value: [`🔑 **Admin Users:** ${stats.adminUsers}`, `📁 **Resources:** ${stats.resources}`, `🏛️ **Subdivisions:** ${stats.subdivisions.total}`].join('\n'), inline: true },
                 { name: '📅 Community Events', value: [`**Total Events:** ${stats.events.total}`, `🔜 Upcoming: ${stats.events.upcoming}`, `🔴 Ongoing: ${stats.events.ongoing}`, `✔️ Completed: ${stats.events.completed}`].join('\n'), inline: true },
@@ -300,7 +315,7 @@ function buildSiteStatusEmbed(stats: SiteStats): any {
                 { name: '🚔 Arrest Reports', value: [`**Total Reports:** ${stats.arrestReports.total}`, `🟠 Open: ${stats.arrestReports.open}`, `🟢 Closed: ${stats.arrestReports.closed}`, `🔴 Unresolved: ${stats.arrestReports.unresolved}`].join('\n'), inline: true },
                 { name: '👮 Personnel Overview', value: [`⭐ **Command Staff:** ${stats.personnel.filledCommandPositions}/${stats.personnel.commandPositions}`, `📊 **Rank Categories:** ${stats.personnel.totalRanks}`, `👥 **Active Personnel:** ${stats.personnel.totalPersonnel}`, `🎖️ **Division Leaders:** ${stats.personnel.subdivisionLeaders}`].join('\n'), inline: false }
             ],
-            footer: { text: `${SITE_CONFIG.name} | Updates every 1 minute`, icon_url: 'https://cdn-icons-png.flaticon.com/512/6941/6941697.png' }
+            footer: { text: `${siteConfig.name} | Updates every 1 minute`, icon_url: 'https://cdn-icons-png.flaticon.com/512/6941/6941697.png' }
         }]
     };
 }
@@ -336,8 +351,11 @@ async function sendToDiscord(): Promise<{ success: boolean; message?: string; er
         return { success: false, error: 'No webhook URL configured' };
     }
 
-    const stats = await fetchSiteStats();
-    const payload = buildSiteStatusEmbed(stats);
+    const [stats, siteConfig] = await Promise.all([
+        fetchSiteStats(),
+        getSiteConfig()
+    ]);
+    const payload = buildSiteStatusEmbed(stats, siteConfig);
 
     // Delete old message if exists
     if (settings.lastMessageId) {

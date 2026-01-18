@@ -1,0 +1,349 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Admin - Site Info Settings" isAdmin={true}>
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Site Info Settings</h1>
+                <p class="text-white/70">Manage site version and configuration for Discord webhooks</p>
+            </div>
+            <div class="flex gap-4">
+                <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                    Back to Dashboard
+                </a>
+                <button id="saveBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Site Info Form -->
+        <div class="space-y-6">
+            <!-- Version Section -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    Version Information
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Site Version</label>
+                        <input type="text" id="version" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono" placeholder="7.32.3">
+                        <p class="text-xs text-white/50 mt-1">Version displayed in Discord status webhook (e.g., 7.32.3)</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Short Name</label>
+                        <input type="text" id="shortName" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="DPPD">
+                        <p class="text-xs text-white/50 mt-1">Abbreviation used in webhook titles</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Department Info Section -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Department Information
+                </h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Full Department Name</label>
+                        <input type="text" id="name" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Del Perro Police Department">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Site URL</label>
+                        <input type="url" id="siteUrl" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="https://delperro.netlify.app">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Discord Settings Section -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    Discord Settings
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Owner Discord ID</label>
+                        <input type="text" id="owner" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono" placeholder="<@1000470631688712243>">
+                        <p class="text-xs text-white/50 mt-1">Discord mention format: &lt;@USER_ID&gt;</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Embed Color</label>
+                        <div class="flex gap-2">
+                            <input type="color" id="colorPicker" class="w-12 h-10 rounded cursor-pointer bg-transparent border-0">
+                            <input type="text" id="color" class="flex-1 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-primary focus:border-transparent font-mono" placeholder="0x1e40af">
+                        </div>
+                        <p class="text-xs text-white/50 mt-1">Hex color for Discord embed sidebar</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="bg-slate-800/50 backdrop-blur-sm rounded-lg p-6 border border-white/10">
+                <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Discord Embed Preview
+                </h2>
+                <div id="embedPreview" class="bg-[#36393f] rounded-lg p-4">
+                    <!-- Preview will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-6">
+                <h3 class="text-lg font-bold mb-3 text-blue-300 flex items-center gap-2">
+                    <span class="text-lg">i</span>
+                    How This Works
+                </h3>
+                <ul class="space-y-2 text-white/70 text-sm">
+                    <li>The site version and other settings configured here are used in the Discord site status webhook.</li>
+                    <li>Changes take effect immediately for the next webhook update (which runs every minute).</li>
+                    <li>The version number is displayed in the "Site Information" section of the Discord embed.</li>
+                    <li>You can also manually trigger a webhook update from the Webhook Settings page after saving changes.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        let adminUser = null;
+
+        async function validateSessionAndPermissions() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+
+                adminUser = data.user;
+
+                if (!hasPermission()) {
+                    document.body.innerHTML = `
+                        <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                            <div class="text-center p-8">
+                                <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                                <p class="text-white/70 mb-4">You don't have permission to access this page.</p>
+                                <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                            </div>
+                        </div>
+                    `;
+                    return false;
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Session validation error:', error);
+                window.location.href = '/admin/login';
+                return false;
+            }
+        }
+
+        function hasPermission() {
+            if (!adminUser) return false;
+            if (adminUser.role === 'super_admin') return true;
+            return adminUser.permissions && adminUser.permissions.includes('site-info');
+        }
+
+        let siteInfo = {
+            name: 'Del Perro Police Department',
+            shortName: 'DPPD',
+            version: '7.32.3',
+            owner: '<@1000470631688712243>',
+            siteUrl: 'https://delperro.netlify.app',
+            color: 0x1e40af
+        };
+
+        async function loadSiteInfo() {
+            try {
+                const response = await fetch('/api/site-info', {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.siteInfo) {
+                    siteInfo = data.siteInfo;
+                }
+                populateForm();
+                updatePreview();
+            } catch (error) {
+                console.error('Failed to load site info:', error);
+                showStatus('Failed to load site info', 'error');
+            }
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        function hexToColor(hex) {
+            // Convert 0x format or # format to #RRGGBB
+            if (typeof hex === 'number') {
+                return '#' + hex.toString(16).padStart(6, '0');
+            }
+            if (typeof hex === 'string') {
+                if (hex.startsWith('0x')) {
+                    return '#' + hex.slice(2).padStart(6, '0');
+                }
+                if (hex.startsWith('#')) {
+                    return hex;
+                }
+                return '#' + hex.padStart(6, '0');
+            }
+            return '#1e40af';
+        }
+
+        function colorToHex(color) {
+            // Convert #RRGGBB to 0xRRGGBB number
+            if (color.startsWith('#')) {
+                return parseInt(color.slice(1), 16);
+            }
+            return parseInt(color, 16);
+        }
+
+        function populateForm() {
+            document.getElementById('version').value = siteInfo.version || '';
+            document.getElementById('shortName').value = siteInfo.shortName || '';
+            document.getElementById('name').value = siteInfo.name || '';
+            document.getElementById('siteUrl').value = siteInfo.siteUrl || '';
+            document.getElementById('owner').value = siteInfo.owner || '';
+
+            const colorHex = hexToColor(siteInfo.color);
+            document.getElementById('colorPicker').value = colorHex;
+            document.getElementById('color').value = '0x' + colorHex.slice(1);
+        }
+
+        function collectFormData() {
+            siteInfo.version = document.getElementById('version').value.trim();
+            siteInfo.shortName = document.getElementById('shortName').value.trim();
+            siteInfo.name = document.getElementById('name').value.trim();
+            siteInfo.siteUrl = document.getElementById('siteUrl').value.trim();
+            siteInfo.owner = document.getElementById('owner').value.trim();
+            siteInfo.color = colorToHex(document.getElementById('colorPicker').value);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updatePreview() {
+            collectFormData();
+            const preview = document.getElementById('embedPreview');
+            const colorHex = hexToColor(siteInfo.color);
+
+            preview.innerHTML = `
+                <div class="flex">
+                    <div class="w-1 rounded-l" style="background-color: ${colorHex}"></div>
+                    <div class="flex-1 pl-4">
+                        <div class="text-white font-bold text-lg mb-2">${escapeHtml(siteInfo.shortName || 'DPPD')} Site Status</div>
+                        <div class="text-gray-400 text-sm mb-4">Real-time status and statistics for the <strong class="text-white">${escapeHtml(siteInfo.name || 'Department')}</strong> website.</div>
+                        <div class="bg-[#2f3136] rounded p-3 mb-3">
+                            <div class="text-gray-400 text-xs font-semibold mb-1">Site Information</div>
+                            <div class="text-gray-300 text-sm">
+                                <div><strong>Version:</strong> <code class="bg-[#202225] px-1 rounded">v${escapeHtml(siteInfo.version || '0.0.0')}</code></div>
+                                <div><strong>Owner:</strong> ${escapeHtml(siteInfo.owner || '<@user>')}</div>
+                                <div><strong>URL:</strong> <a href="${escapeHtml(siteInfo.siteUrl || '#')}" class="text-blue-400 hover:underline">Visit Site</a></div>
+                            </div>
+                        </div>
+                        <div class="text-gray-500 text-xs mt-4 flex items-center gap-2">
+                            <span>${escapeHtml(siteInfo.name || 'Department')} | Updates every 1 minute</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Color picker sync
+        document.getElementById('colorPicker').addEventListener('input', (e) => {
+            document.getElementById('color').value = '0x' + e.target.value.slice(1);
+            updatePreview();
+        });
+
+        document.getElementById('color').addEventListener('input', (e) => {
+            let val = e.target.value;
+            if (val.startsWith('0x')) {
+                val = '#' + val.slice(2);
+            } else if (!val.startsWith('#')) {
+                val = '#' + val;
+            }
+            if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+                document.getElementById('colorPicker').value = val;
+                updatePreview();
+            }
+        });
+
+        // Input change listeners for preview update
+        ['version', 'shortName', 'name', 'siteUrl', 'owner'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updatePreview);
+        });
+
+        // Save changes
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            collectFormData();
+
+            try {
+                const response = await fetch('/api/site-info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ siteInfo })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('Site info saved successfully! Changes will appear in the next webhook update.', 'success');
+                } else {
+                    showStatus(result.error || 'Failed to save changes', 'error');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showStatus('Failed to save changes', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Changes';
+            }
+        });
+
+        // Initialize
+        validateSessionAndPermissions().then(valid => {
+            if (valid) {
+                loadSiteInfo();
+            }
+        });
+    </script>
+</Layout>

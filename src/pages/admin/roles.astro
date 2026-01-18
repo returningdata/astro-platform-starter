@@ -8,7 +8,7 @@ import Layout from '../../layouts/Layout.astro';
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div>
                 <h1 class="text-4xl md:text-5xl font-bold mb-2">Roles & Permissions</h1>
-                <p class="text-white/70">Manage Discord role mappings and permissions</p>
+                <p class="text-white/70">Advanced role configuration with page-level access control</p>
             </div>
             <a href="/admin" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
                 Back to Dashboard
@@ -30,7 +30,7 @@ import Layout from '../../layouts/Layout.astro';
                     </div>
                     <div>
                         <h2 class="text-2xl font-bold text-indigo-400">Discord Role Mappings</h2>
-                        <p class="text-white/60">Map Discord roles to admin permissions</p>
+                        <p class="text-white/60">Map Discord roles to granular page-level permissions</p>
                     </div>
                 </div>
                 <button id="addRoleMappingBtn" class="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors font-semibold flex items-center gap-2">
@@ -51,74 +51,98 @@ import Layout from '../../layouts/Layout.astro';
             </div>
         </div>
 
-        <!-- Information Card -->
+        <!-- Page Permissions Overview -->
         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
             <div class="flex items-center gap-4 mb-6">
-                <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <div class="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold text-blue-400">How It Works</h2>
-                    <p class="text-white/60">Understanding Discord role mappings</p>
+                    <h2 class="text-2xl font-bold text-emerald-400">Available Pages & Actions</h2>
+                    <p class="text-white/60">Pages that can be configured with granular permissions</p>
                 </div>
             </div>
 
-            <div class="space-y-4 text-white/80">
-                <div class="flex items-start gap-3">
-                    <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span class="text-teal-400 text-sm font-bold">1</span>
-                    </div>
-                    <p>When a user logs in via Discord, the system checks their Discord roles against the mappings you configure here.</p>
-                </div>
-                <div class="flex items-start gap-3">
-                    <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span class="text-teal-400 text-sm font-bold">2</span>
-                    </div>
-                    <p><strong>Priority</strong> determines the order roles are checked. Higher priority roles are checked first.</p>
-                </div>
-                <div class="flex items-start gap-3">
-                    <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span class="text-teal-400 text-sm font-bold">3</span>
-                    </div>
-                    <p>The <strong>Internal Role</strong> determines the base behavior: Super Admin has all access, Subdivision Overseer has limited access, Custom uses only assigned permissions.</p>
-                </div>
-                <div class="flex items-start gap-3">
-                    <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span class="text-teal-400 text-sm font-bold">4</span>
-                    </div>
-                    <p>If no mappings are configured, the system falls back to environment variable-based roles (DISCORD_SUPERADMIN_ROLE_ID, etc.)</p>
+            <div id="pageDefinitionsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="text-center py-8 text-white/60 col-span-full">
+                    Loading page definitions...
                 </div>
             </div>
         </div>
 
-        <!-- Discord ID Help Card -->
-        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-            <div class="flex items-center gap-4 mb-6">
-                <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+        <!-- Information Cards -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- How It Works Card -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-blue-400">How It Works</h2>
+                        <p class="text-white/60">Understanding advanced permissions</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 class="text-2xl font-bold text-purple-400">How to Find Discord Role IDs</h2>
-                    <p class="text-white/60">Steps to get a Discord role ID</p>
+
+                <div class="space-y-4 text-white/80 text-sm">
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span class="text-teal-400 text-xs font-bold">1</span>
+                        </div>
+                        <p><strong>Page Permissions:</strong> Control what each role can do on specific pages (view, create, edit, delete)</p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span class="text-teal-400 text-xs font-bold">2</span>
+                        </div>
+                        <p><strong>Field Restrictions:</strong> Limit access to specific fields within a page</p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span class="text-teal-400 text-xs font-bold">3</span>
+                        </div>
+                        <p><strong>Conditions:</strong> Add restrictions like "own items only" or "requires approval"</p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-6 h-6 bg-teal-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span class="text-teal-400 text-xs font-bold">4</span>
+                        </div>
+                        <p><strong>Super Admin</strong> always has full access. <strong>Custom</strong> roles use assigned permissions only.</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="space-y-4 text-white/80">
-                <ol class="list-decimal list-inside space-y-2">
-                    <li>Enable <strong>Developer Mode</strong> in Discord (User Settings > App Settings > Advanced > Developer Mode)</li>
-                    <li>Go to your Discord server's <strong>Server Settings > Roles</strong></li>
-                    <li>Right-click on the role you want to use</li>
-                    <li>Click <strong>"Copy Role ID"</strong></li>
-                    <li>Paste the ID (a long number like <code class="bg-slate-700 px-2 py-0.5 rounded text-cyan-300">123456789012345678</code>) into the Discord Role ID field</li>
-                </ol>
+            <!-- Discord ID Help Card -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-purple-400">Finding Discord Role IDs</h2>
+                        <p class="text-white/60">Get a Discord role ID</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2 text-white/80 text-sm">
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Enable <strong>Developer Mode</strong> in Discord Settings</li>
+                        <li>Go to <strong>Server Settings > Roles</strong></li>
+                        <li>Right-click on the role</li>
+                        <li>Click <strong>"Copy Role ID"</strong></li>
+                    </ol>
+                    <p class="mt-2 text-xs">Example: <code class="bg-slate-700 px-2 py-0.5 rounded text-cyan-300">123456789012345678</code></p>
+                </div>
             </div>
         </div>
 
-        <!-- Available Permissions Section -->
+        <!-- Legacy Permissions Section -->
         <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
             <div class="flex items-center gap-4 mb-6">
                 <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
@@ -127,8 +151,8 @@ import Layout from '../../layouts/Layout.astro';
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold text-green-400">Available Permissions</h2>
-                    <p class="text-white/60">List of all permissions that can be assigned</p>
+                    <h2 class="text-2xl font-bold text-green-400">Legacy Permissions (Backward Compatible)</h2>
+                    <p class="text-white/60">Simple permission toggles for basic access control</p>
                 </div>
             </div>
 
@@ -142,7 +166,7 @@ import Layout from '../../layouts/Layout.astro';
 
     <!-- Add/Edit Role Mapping Modal -->
     <div id="roleMappingModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-600">
+        <div class="bg-slate-800 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-slate-600">
             <div class="flex items-center justify-between mb-6">
                 <h3 id="modalTitle" class="text-2xl font-bold">Add Role Mapping</h3>
                 <button id="closeModalBtn" class="text-white/60 hover:text-white">
@@ -152,59 +176,98 @@ import Layout from '../../layouts/Layout.astro';
                 </button>
             </div>
 
-            <form id="roleMappingForm" class="space-y-4">
+            <form id="roleMappingForm" class="space-y-6">
                 <input type="hidden" id="roleMappingId" value="">
 
-                <div>
-                    <label class="block text-sm font-medium text-white/80 mb-1">Discord Role ID *</label>
-                    <input type="text" id="discordRoleId" required
-                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
-                        placeholder="123456789012345678">
-                    <p class="text-xs text-white/50 mt-1">The 17-19 digit Discord role ID</p>
+                <!-- Basic Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">Discord Role ID *</label>
+                        <input type="text" id="discordRoleId" required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
+                            placeholder="123456789012345678">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">Role Name *</label>
+                        <input type="text" id="roleName" required
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
+                            placeholder="High Command">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">Description</label>
+                        <input type="text" id="roleDescription"
+                            class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
+                            placeholder="Full administrative access">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-white/80 mb-1">Internal Role Type *</label>
+                            <select id="internalRole" required
+                                class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500">
+                                <option value="super_admin">Super Admin</option>
+                                <option value="subdivision_overseer">Subdivision Overseer</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-white/80 mb-1">Priority</label>
+                            <input type="number" id="rolePriority" min="0" max="100"
+                                class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
+                                placeholder="10" value="10">
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-white/80 mb-1">Role Name *</label>
-                    <input type="text" id="roleName" required
-                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
-                        placeholder="High Command">
-                    <p class="text-xs text-white/50 mt-1">A friendly name for this role</p>
+                <!-- Role Active Toggle -->
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="roleActive" checked
+                        class="w-5 h-5 rounded bg-slate-600 border-slate-500 text-indigo-500 focus:ring-indigo-500">
+                    <label for="roleActive" class="text-sm font-medium text-white/80">Role is Active</label>
+                    <span class="text-xs text-white/50">(Inactive roles are ignored during login)</span>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-white/80 mb-1">Description</label>
-                    <input type="text" id="roleDescription"
-                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
-                        placeholder="Full administrative access">
-                </div>
+                <!-- Page Permissions Section -->
+                <div id="pagePermissionsSection" class="border-t border-slate-600 pt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="text-lg font-semibold text-white">Page-Level Permissions</h4>
+                            <p class="text-sm text-white/50">Configure what this role can do on each page</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" id="selectAllPagesBtn" class="text-xs px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded transition-colors">
+                                Select All
+                            </button>
+                            <button type="button" id="clearAllPagesBtn" class="text-xs px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded transition-colors">
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-white/80 mb-1">Internal Role Type *</label>
-                    <select id="internalRole" required
-                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500">
-                        <option value="super_admin">Super Admin (Full Access)</option>
-                        <option value="subdivision_overseer">Subdivision Overseer (Limited)</option>
-                        <option value="custom">Custom (Use Assigned Permissions Only)</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-white/80 mb-1">Priority</label>
-                    <input type="number" id="rolePriority" min="0" max="100"
-                        class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500"
-                        placeholder="10" value="10">
-                    <p class="text-xs text-white/50 mt-1">Higher priority roles are checked first (0-100)</p>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-white/80 mb-2">Permissions</label>
-                    <p class="text-xs text-white/50 mb-2">Super Admin automatically has all permissions. Select permissions for Custom roles.</p>
-                    <div id="permissionsCheckboxes" class="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-900/50 rounded-lg p-3">
+                    <div id="pagePermissionsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto bg-slate-900/30 rounded-lg p-4">
                         <!-- Will be populated by JavaScript -->
                     </div>
                 </div>
 
-                <div class="flex gap-3 pt-4">
+                <!-- Legacy Permissions Section (collapsible) -->
+                <div class="border-t border-slate-600 pt-6">
+                    <button type="button" id="toggleLegacyPerms" class="flex items-center gap-2 text-sm text-white/70 hover:text-white">
+                        <svg id="legacyPermsChevron" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                        Legacy Permissions (for backward compatibility)
+                    </button>
+                    <div id="legacyPermsContainer" class="hidden mt-4">
+                        <div id="permissionsCheckboxes" class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-60 overflow-y-auto bg-slate-900/50 rounded-lg p-3">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t border-slate-600">
                     <button type="submit" id="saveRoleMappingBtn"
                         class="flex-1 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors font-semibold">
                         Save Role Mapping
@@ -222,6 +285,23 @@ import Layout from '../../layouts/Layout.astro';
         let adminUser = null;
         let rolesConfig = null;
 
+        // Action labels and icons
+        const actionLabels = {
+            view: { label: 'View', icon: '👁️', color: 'bg-blue-500/20 text-blue-300' },
+            create: { label: 'Create', icon: '➕', color: 'bg-green-500/20 text-green-300' },
+            edit: { label: 'Edit', icon: '✏️', color: 'bg-yellow-500/20 text-yellow-300' },
+            delete: { label: 'Delete', icon: '🗑️', color: 'bg-red-500/20 text-red-300' },
+            manage: { label: 'Manage', icon: '⚙️', color: 'bg-purple-500/20 text-purple-300' },
+        };
+
+        // Condition labels
+        const conditionLabels = {
+            own_items_only: 'Own items only',
+            max_per_day: 'Max per day limit',
+            requires_approval: 'Requires approval',
+            time_restricted: 'Time restricted',
+        };
+
         async function validateSessionAndPermissions() {
             try {
                 const response = await fetch('/api/auth/session', {
@@ -237,7 +317,6 @@ import Layout from '../../layouts/Layout.astro';
 
                 adminUser = data.user;
 
-                // Only super admins can access this page
                 if (adminUser.role !== 'super_admin') {
                     document.body.innerHTML = `
                         <div class="min-h-screen flex items-center justify-center bg-slate-900">
@@ -275,7 +354,8 @@ import Layout from '../../layouts/Layout.astro';
                 if (data.success) {
                     rolesConfig = data.config;
                     renderRoleMappings();
-                    renderPermissions();
+                    renderPageDefinitions();
+                    renderLegacyPermissions();
                 } else {
                     showStatus(data.error || 'Failed to load roles configuration', 'error');
                 }
@@ -292,17 +372,21 @@ import Layout from '../../layouts/Layout.astro';
                 container.innerHTML = `
                     <div class="text-center py-8 text-white/60">
                         <p>No Discord role mappings configured.</p>
-                        <p class="text-sm mt-2">The system is using environment variable-based roles as a fallback.</p>
+                        <p class="text-sm mt-2">Click "Add Role Mapping" to configure page-level permissions.</p>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = rolesConfig.discordRoleMappings.map(mapping => `
-                <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-600/50" data-id="${mapping.id}">
+            container.innerHTML = rolesConfig.discordRoleMappings.map(mapping => {
+                const pagePermsCount = mapping.pagePermissions?.length || 0;
+                const legacyPermsCount = mapping.permissions?.length || 0;
+
+                return `
+                <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-600/50 ${mapping.isActive === false ? 'opacity-50' : ''}" data-id="${mapping.id}">
                     <div class="flex items-start justify-between gap-4">
                         <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
+                            <div class="flex items-center gap-3 mb-2 flex-wrap">
                                 <h3 class="text-lg font-bold text-white">${mapping.roleName}</h3>
                                 <span class="px-2 py-0.5 text-xs rounded-full ${
                                     mapping.internalRole === 'super_admin' ? 'bg-red-500/20 text-red-300' :
@@ -313,15 +397,41 @@ import Layout from '../../layouts/Layout.astro';
                                       mapping.internalRole === 'subdivision_overseer' ? 'Subdivision Overseer' : 'Custom'}
                                 </span>
                                 <span class="px-2 py-0.5 text-xs bg-slate-600 rounded-full">Priority: ${mapping.priority}</span>
+                                ${mapping.isActive === false ? '<span class="px-2 py-0.5 text-xs bg-red-500/30 text-red-300 rounded-full">Inactive</span>' : ''}
                             </div>
                             <p class="text-sm text-white/60 mb-2">${mapping.description || 'No description'}</p>
-                            <div class="flex flex-wrap gap-2 text-xs">
+                            <div class="flex flex-wrap gap-2 text-xs mb-2">
                                 <span class="text-white/50">Discord Role ID:</span>
                                 <code class="bg-slate-700 px-2 py-0.5 rounded text-cyan-300">${mapping.discordRoleIdMasked || mapping.discordRoleId}</code>
                             </div>
-                            ${mapping.internalRole === 'custom' ? `
+
+                            <!-- Permission summary -->
+                            <div class="flex flex-wrap gap-2 text-xs">
+                                ${pagePermsCount > 0 ? `
+                                    <span class="px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded-full">
+                                        ${pagePermsCount} page permissions
+                                    </span>
+                                ` : ''}
+                                ${legacyPermsCount > 0 ? `
+                                    <span class="px-2 py-1 bg-green-500/20 text-green-300 rounded-full">
+                                        ${legacyPermsCount} legacy permissions
+                                    </span>
+                                ` : ''}
+                                ${pagePermsCount === 0 && legacyPermsCount === 0 && mapping.internalRole !== 'super_admin' ? `
+                                    <span class="px-2 py-1 bg-orange-500/20 text-orange-300 rounded-full">
+                                        No permissions configured
+                                    </span>
+                                ` : ''}
+                            </div>
+
+                            <!-- Show page permissions if any -->
+                            ${mapping.pagePermissions && mapping.pagePermissions.length > 0 ? `
                                 <div class="mt-2 flex flex-wrap gap-1">
-                                    ${mapping.permissions.map(p => `<span class="px-2 py-0.5 text-xs bg-green-500/20 text-green-300 rounded">${p}</span>`).join('')}
+                                    ${mapping.pagePermissions.slice(0, 5).map(pp => {
+                                        const page = rolesConfig.pageDefinitions?.find(p => p.id === pp.pageId);
+                                        return `<span class="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300 rounded">${page?.name || pp.pageId}: ${pp.actions.join(', ')}</span>`;
+                                    }).join('')}
+                                    ${mapping.pagePermissions.length > 5 ? `<span class="px-2 py-0.5 text-xs bg-slate-600 rounded">+${mapping.pagePermissions.length - 5} more</span>` : ''}
                                 </div>
                             ` : ''}
                         </div>
@@ -339,14 +449,116 @@ import Layout from '../../layouts/Layout.astro';
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
-        function renderPermissions() {
+        function renderPageDefinitions() {
+            const container = document.getElementById('pageDefinitionsList');
+            const pageGrid = document.getElementById('pagePermissionsGrid');
+
+            if (!rolesConfig.pageDefinitions || rolesConfig.pageDefinitions.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-white/60 col-span-full">No page definitions available.</div>`;
+                return;
+            }
+
+            // Group by category
+            const categories = {};
+            rolesConfig.pageDefinitions.forEach(page => {
+                if (!categories[page.category]) categories[page.category] = [];
+                categories[page.category].push(page);
+            });
+
+            // Render page definitions overview
+            container.innerHTML = Object.entries(categories).map(([cat, pages]) => `
+                <div class="col-span-full">
+                    <h4 class="text-sm font-semibold text-white/60 uppercase tracking-wide mb-2">${cat}</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mb-4">
+                        ${pages.map(page => `
+                            <div class="bg-slate-800/50 rounded-lg p-3 border border-slate-600/50">
+                                <div class="font-medium text-white text-sm">${page.name}</div>
+                                <div class="text-xs text-white/50 mb-1">${page.description}</div>
+                                <div class="flex flex-wrap gap-1">
+                                    ${page.availableActions.map(action => `
+                                        <span class="px-1.5 py-0.5 text-xs rounded ${actionLabels[action]?.color || 'bg-gray-500/20 text-gray-300'}">${action}</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            // Render page permissions checkboxes for modal
+            pageGrid.innerHTML = rolesConfig.pageDefinitions.map(page => `
+                <div class="bg-slate-800/50 rounded-lg p-3 border border-slate-700" data-page-id="${page.id}">
+                    <div class="flex items-center gap-2 mb-2">
+                        <input type="checkbox" class="page-toggle rounded bg-slate-600" data-page="${page.id}">
+                        <span class="font-medium text-white text-sm">${page.name}</span>
+                    </div>
+                    <div class="page-actions hidden pl-4 space-y-2" data-page="${page.id}">
+                        <div class="flex flex-wrap gap-2">
+                            ${page.availableActions.map(action => `
+                                <label class="flex items-center gap-1 cursor-pointer">
+                                    <input type="checkbox" class="action-checkbox rounded bg-slate-600 w-4 h-4" data-page="${page.id}" data-action="${action}">
+                                    <span class="text-xs ${actionLabels[action]?.color || ''} px-1.5 py-0.5 rounded">${action}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+
+                        ${page.restrictableFields && page.restrictableFields.length > 0 ? `
+                            <div class="mt-2 pt-2 border-t border-slate-700">
+                                <div class="text-xs text-white/50 mb-1">Restrict to fields:</div>
+                                <div class="flex flex-wrap gap-1">
+                                    ${page.restrictableFields.map(field => `
+                                        <label class="flex items-center gap-1 cursor-pointer text-xs">
+                                            <input type="checkbox" class="field-checkbox rounded bg-slate-600 w-3 h-3" data-page="${page.id}" data-field="${field.id}">
+                                            <span class="text-white/70">${field.name}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${page.availableConditions && page.availableConditions.length > 0 ? `
+                            <div class="mt-2 pt-2 border-t border-slate-700">
+                                <div class="text-xs text-white/50 mb-1">Conditions:</div>
+                                <div class="flex flex-wrap gap-1">
+                                    ${page.availableConditions.map(cond => `
+                                        <label class="flex items-center gap-1 cursor-pointer text-xs">
+                                            <input type="checkbox" class="condition-checkbox rounded bg-slate-600 w-3 h-3" data-page="${page.id}" data-condition="${cond}">
+                                            <span class="text-orange-300">${conditionLabels[cond] || cond}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // Add event listeners for page toggles
+            document.querySelectorAll('.page-toggle').forEach(toggle => {
+                toggle.addEventListener('change', (e) => {
+                    const pageId = e.target.dataset.page;
+                    const actionsContainer = document.querySelector(`.page-actions[data-page="${pageId}"]`);
+                    if (e.target.checked) {
+                        actionsContainer.classList.remove('hidden');
+                        // Auto-check "view" action
+                        const viewCheckbox = actionsContainer.querySelector(`input[data-action="view"]`);
+                        if (viewCheckbox) viewCheckbox.checked = true;
+                    } else {
+                        actionsContainer.classList.add('hidden');
+                        // Uncheck all actions
+                        actionsContainer.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    }
+                });
+            });
+        }
+
+        function renderLegacyPermissions() {
             const container = document.getElementById('permissionsList');
             const checkboxContainer = document.getElementById('permissionsCheckboxes');
 
-            // Group permissions by category
             const categories = {
                 content: { name: 'Content Management', items: [] },
                 webhook: { name: 'Webhooks', items: [] },
@@ -354,12 +566,11 @@ import Layout from '../../layouts/Layout.astro';
                 other: { name: 'Other', items: [] }
             };
 
-            rolesConfig.availablePermissions.forEach(perm => {
+            rolesConfig.availablePermissions?.forEach(perm => {
                 const cat = categories[perm.category] || categories.other;
                 cat.items.push(perm);
             });
 
-            // Render permissions list
             container.innerHTML = Object.entries(categories)
                 .filter(([_, cat]) => cat.items.length > 0)
                 .map(([key, cat]) => `
@@ -368,7 +579,7 @@ import Layout from '../../layouts/Layout.astro';
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mb-4">
                             ${cat.items.map(perm => `
                                 <div class="bg-slate-800/50 rounded-lg p-3 border border-slate-600/50">
-                                    <div class="font-medium text-white">${perm.name}</div>
+                                    <div class="font-medium text-white text-sm">${perm.name}</div>
                                     <div class="text-xs text-white/50">${perm.description}</div>
                                     <code class="text-xs text-cyan-300">${perm.id}</code>
                                 </div>
@@ -377,13 +588,80 @@ import Layout from '../../layouts/Layout.astro';
                     </div>
                 `).join('');
 
-            // Render checkboxes for modal
-            checkboxContainer.innerHTML = rolesConfig.availablePermissions.map(perm => `
+            checkboxContainer.innerHTML = rolesConfig.availablePermissions?.map(perm => `
                 <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-800 p-1 rounded">
                     <input type="checkbox" name="permissions" value="${perm.id}" class="rounded bg-slate-600 border-slate-500">
                     <span class="text-sm">${perm.name}</span>
                 </label>
-            `).join('');
+            `).join('') || '';
+        }
+
+        function getPagePermissionsFromForm() {
+            const pagePermissions = [];
+
+            document.querySelectorAll('.page-toggle:checked').forEach(toggle => {
+                const pageId = toggle.dataset.page;
+                const actions = [];
+                const allowedFields = [];
+                const conditions = [];
+
+                document.querySelectorAll(`.action-checkbox[data-page="${pageId}"]:checked`).forEach(cb => {
+                    actions.push(cb.dataset.action);
+                });
+
+                document.querySelectorAll(`.field-checkbox[data-page="${pageId}"]:checked`).forEach(cb => {
+                    allowedFields.push(cb.dataset.field);
+                });
+
+                document.querySelectorAll(`.condition-checkbox[data-page="${pageId}"]:checked`).forEach(cb => {
+                    conditions.push({ type: cb.dataset.condition });
+                });
+
+                if (actions.length > 0) {
+                    const pagePerm = { pageId, actions };
+                    if (allowedFields.length > 0 || conditions.length > 0) {
+                        pagePerm.restrictions = {};
+                        if (allowedFields.length > 0) pagePerm.restrictions.allowedFields = allowedFields;
+                        if (conditions.length > 0) pagePerm.restrictions.conditions = conditions;
+                    }
+                    pagePermissions.push(pagePerm);
+                }
+            });
+
+            return pagePermissions;
+        }
+
+        function setPagePermissionsInForm(pagePermissions) {
+            // Reset all
+            document.querySelectorAll('.page-toggle').forEach(t => t.checked = false);
+            document.querySelectorAll('.page-actions').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.action-checkbox, .field-checkbox, .condition-checkbox').forEach(cb => cb.checked = false);
+
+            if (!pagePermissions) return;
+
+            pagePermissions.forEach(pp => {
+                const toggle = document.querySelector(`.page-toggle[data-page="${pp.pageId}"]`);
+                if (toggle) {
+                    toggle.checked = true;
+                    const actionsContainer = document.querySelector(`.page-actions[data-page="${pp.pageId}"]`);
+                    actionsContainer?.classList.remove('hidden');
+
+                    pp.actions?.forEach(action => {
+                        const cb = document.querySelector(`.action-checkbox[data-page="${pp.pageId}"][data-action="${action}"]`);
+                        if (cb) cb.checked = true;
+                    });
+
+                    pp.restrictions?.allowedFields?.forEach(field => {
+                        const cb = document.querySelector(`.field-checkbox[data-page="${pp.pageId}"][data-field="${field}"]`);
+                        if (cb) cb.checked = true;
+                    });
+
+                    pp.restrictions?.conditions?.forEach(cond => {
+                        const cb = document.querySelector(`.condition-checkbox[data-page="${pp.pageId}"][data-condition="${cond.type}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
+            });
         }
 
         function openModal(isEdit = false, mapping = null) {
@@ -400,16 +678,21 @@ import Layout from '../../layouts/Layout.astro';
                 document.getElementById('roleDescription').value = mapping.description || '';
                 document.getElementById('internalRole').value = mapping.internalRole;
                 document.getElementById('rolePriority').value = mapping.priority;
+                document.getElementById('roleActive').checked = mapping.isActive !== false;
 
-                // Set permissions checkboxes
-                const checkboxes = form.querySelectorAll('input[name="permissions"]');
-                checkboxes.forEach(cb => {
-                    cb.checked = mapping.permissions.includes(cb.value);
+                // Set legacy permissions
+                form.querySelectorAll('input[name="permissions"]').forEach(cb => {
+                    cb.checked = mapping.permissions?.includes(cb.value) || false;
                 });
+
+                // Set page permissions
+                setPagePermissionsInForm(mapping.pagePermissions);
             } else {
                 form.reset();
                 document.getElementById('roleMappingId').value = '';
                 document.getElementById('rolePriority').value = '10';
+                document.getElementById('roleActive').checked = true;
+                setPagePermissionsInForm([]);
             }
 
             modal.classList.remove('hidden');
@@ -462,6 +745,29 @@ import Layout from '../../layouts/Layout.astro';
             if (e.target.id === 'roleMappingModal') closeModal();
         });
 
+        // Toggle legacy permissions section
+        document.getElementById('toggleLegacyPerms').addEventListener('click', () => {
+            const container = document.getElementById('legacyPermsContainer');
+            const chevron = document.getElementById('legacyPermsChevron');
+            container.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-90');
+        });
+
+        // Select/clear all pages
+        document.getElementById('selectAllPagesBtn')?.addEventListener('click', () => {
+            document.querySelectorAll('.page-toggle').forEach(toggle => {
+                toggle.checked = true;
+                toggle.dispatchEvent(new Event('change'));
+            });
+        });
+
+        document.getElementById('clearAllPagesBtn')?.addEventListener('click', () => {
+            document.querySelectorAll('.page-toggle').forEach(toggle => {
+                toggle.checked = false;
+                toggle.dispatchEvent(new Event('change'));
+            });
+        });
+
         document.getElementById('roleMappingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -472,13 +778,17 @@ import Layout from '../../layouts/Layout.astro';
             const selectedPermissions = Array.from(form.querySelectorAll('input[name="permissions"]:checked'))
                 .map(cb => cb.value);
 
+            const pagePermissions = getPagePermissionsFromForm();
+
             const roleMapping = {
                 discordRoleId: document.getElementById('discordRoleId').value.trim(),
                 roleName: document.getElementById('roleName').value.trim(),
                 description: document.getElementById('roleDescription').value.trim(),
                 internalRole: document.getElementById('internalRole').value,
                 priority: parseInt(document.getElementById('rolePriority').value) || 10,
-                permissions: selectedPermissions
+                permissions: selectedPermissions,
+                pagePermissions: pagePermissions,
+                isActive: document.getElementById('roleActive').checked,
             };
 
             try {

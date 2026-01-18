@@ -230,11 +230,14 @@ export const POST: APIRoute = async ({ request }) => {
 
 // Helper function to send the status webhook
 async function sendStatusWebhook(webhookUrl: string, currentSettings: WebhookSettings): Promise<{ success: boolean; message?: string; error?: string }> {
-    // Fetch site stats
-    const stats = await fetchSiteStats();
+    // Fetch site stats and config in parallel
+    const [stats, siteConfig] = await Promise.all([
+        fetchSiteStats(),
+        getSiteConfig()
+    ]);
 
     // Build the embed
-    const payload = buildSiteStatusEmbed(stats);
+    const payload = buildSiteStatusEmbed(stats, siteConfig);
 
     // Delete old message if exists
     if (currentSettings.lastMessageId) {
@@ -275,8 +278,8 @@ async function sendStatusWebhook(webhookUrl: string, currentSettings: WebhookSet
 // Google Sheets URL for personnel roster
 const ROSTER_SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1iUCnkFyPlNd5jorr3g2ZH2PLhwuQOcFXvx_DlbKdnI0/export?format=csv&gid=1853319408';
 
-// Site configuration
-const SITE_CONFIG = {
+// Default site configuration (used as fallback)
+const DEFAULT_SITE_CONFIG = {
     name: 'Del Perro Police Department',
     shortName: 'DPPD',
     version: '7.32.3',
@@ -284,6 +287,21 @@ const SITE_CONFIG = {
     siteUrl: 'https://delperro.netlify.app',
     color: 0x1e40af,
 };
+
+// Fetch site configuration from blob store
+async function getSiteConfig(): Promise<typeof DEFAULT_SITE_CONFIG> {
+    try {
+        const store = getStore({ name: 'site-info', consistency: 'strong' });
+        const data = await store.get('settings', { type: 'json' }) as typeof DEFAULT_SITE_CONFIG | null;
+        if (data) {
+            return { ...DEFAULT_SITE_CONFIG, ...data };
+        }
+        return DEFAULT_SITE_CONFIG;
+    } catch (error) {
+        console.error('Error fetching site config:', error);
+        return DEFAULT_SITE_CONFIG;
+    }
+}
 
 interface SiteStats {
     events: { total: number; upcoming: number; ongoing: number; completed: number; };
@@ -408,22 +426,22 @@ function getDiscordTimestamp(): string {
     return `<t:${unix}:R>`;
 }
 
-function buildSiteStatusEmbed(stats: SiteStats): any {
+function buildSiteStatusEmbed(stats: SiteStats, siteConfig: typeof DEFAULT_SITE_CONFIG): any {
     const timestamp = new Date().toISOString();
     return {
         embeds: [{
-            title: `📊 ${SITE_CONFIG.shortName} Site Status`,
-            description: `Real-time status and statistics for the **${SITE_CONFIG.name}** website.`,
-            color: SITE_CONFIG.color,
+            title: `📊 ${siteConfig.shortName} Site Status`,
+            description: `Real-time status and statistics for the **${siteConfig.name}** website.`,
+            color: siteConfig.color,
             timestamp,
             thumbnail: { url: 'https://cdn-icons-png.flaticon.com/512/1828/1828490.png' },
             fields: [
                 {
                     name: '🌐 Site Information',
                     value: [
-                        `**Version:** \`v${SITE_CONFIG.version}\``,
-                        `**Owner:** ${SITE_CONFIG.owner}`,
-                        `**URL:** [Visit Site](${SITE_CONFIG.siteUrl})`
+                        `**Version:** \`v${siteConfig.version}\``,
+                        `**Owner:** ${siteConfig.owner}`,
+                        `**URL:** [Visit Site](${siteConfig.siteUrl})`
                     ].join('\n'),
                     inline: false
                 },
@@ -485,7 +503,7 @@ function buildSiteStatusEmbed(stats: SiteStats): any {
                     inline: false
                 }
             ],
-            footer: { text: `${SITE_CONFIG.name} | Updates every 1 minute`, icon_url: 'https://cdn-icons-png.flaticon.com/512/6941/6941697.png' }
+            footer: { text: `${siteConfig.name} | Updates every 1 minute`, icon_url: 'https://cdn-icons-png.flaticon.com/512/6941/6941697.png' }
         }]
     };
 }

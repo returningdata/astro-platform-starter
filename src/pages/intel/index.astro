@@ -1,0 +1,795 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+---
+
+<Layout title="Investigations Forum - DPPD">
+    <div id="loadingState" class="py-12 text-center">
+        <div class="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p class="text-white/70">Loading Investigations Forum...</p>
+    </div>
+
+    <div id="pendingState" class="hidden py-12">
+        <div class="max-w-md mx-auto bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
+            <div class="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold mb-2">Access Pending</h2>
+            <p class="text-white/70 mb-4">Your access is pending approval from an administrator. Please check back later.</p>
+            <button onclick="location.reload()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                Refresh Status
+            </button>
+        </div>
+    </div>
+
+    <div id="deniedState" class="hidden py-12">
+        <div class="max-w-md mx-auto bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
+            <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold mb-2 text-red-400">Access Denied</h2>
+            <p class="text-white/70 mb-4">Your access to the Intel Database has been denied. Please contact an administrator if you believe this is an error.</p>
+        </div>
+    </div>
+
+    <div id="mainContent" class="hidden">
+        <div class="flex gap-6 flex-col lg:flex-row">
+            <!-- Main Content Area -->
+            <div class="flex-1 space-y-6">
+                <!-- Header -->
+                <div>
+                    <h1 class="text-4xl md:text-5xl font-bold mb-2">Investigations Forum</h1>
+                    <p class="text-white/70">Classified Intelligence Database</p>
+                </div>
+
+                <!-- Search and Filter Bar -->
+                <div class="flex gap-4 flex-wrap items-center">
+                    <!-- Filters Dropdown -->
+                    <div class="relative">
+                        <button id="filtersBtn" class="flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg hover:bg-slate-700/50 transition-colors">
+                            <span class="font-semibold">Filters</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                            </svg>
+                        </button>
+                        <div id="filtersDropdown" class="hidden absolute top-full left-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-10">
+                            <div class="p-2">
+                                <p class="text-xs text-white/50 uppercase px-2 py-1">Select Category</p>
+                                <button data-category="all" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors text-primary font-medium">All Categories</button>
+                                <button data-category="gang" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Gang</button>
+                                <button data-category="cartel" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Cartel</button>
+                                <button data-category="militia" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Militia</button>
+                                <button data-category="other" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Other</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="flex-1 relative">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="Search investigations..."
+                            class="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+
+                    <!-- Sort -->
+                    <div class="relative">
+                        <button id="sortBtn" class="flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg hover:bg-slate-700/50 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                            </svg>
+                            <span id="sortLabel">Newest First</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div id="sortDropdown" class="hidden absolute top-full right-0 mt-2 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-10">
+                            <div class="p-2">
+                                <button data-sort="newest" class="sort-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors text-primary">Newest First</button>
+                                <button data-sort="oldest" class="sort-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Oldest First</button>
+                                <button data-sort="most_posts" class="sort-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Most Posts</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Threads Grid -->
+                <div id="threadsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <p class="text-white/60 text-center py-8 col-span-full">No investigations available.</p>
+                </div>
+            </div>
+
+            <!-- User Profile Sidebar -->
+            <div class="lg:w-72 shrink-0">
+                <div class="sticky top-4">
+                    <div id="userCard" class="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
+                        <!-- Profile Image -->
+                        <div class="flex justify-center pt-6">
+                            <div class="relative">
+                                <img id="userPicture" src="" alt="Profile"
+                                    class="w-24 h-24 rounded-full border-4 border-primary object-cover" />
+                            </div>
+                        </div>
+                        <!-- User Info -->
+                        <div class="p-4 text-center">
+                            <p id="userCallsignName" class="text-lg font-bold text-yellow-400"></p>
+                            <p id="userDiscordId" class="text-sm text-white/60 font-mono mb-3"></p>
+                            <div class="border-t border-slate-700 pt-3">
+                                <p class="text-xs text-white/50 uppercase tracking-wider mb-2">Clearance Level</p>
+                                <div id="userClearanceBadge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                    <span id="userClearanceCode" class="font-bold"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Actions -->
+                        <div class="px-4 pb-4">
+                            <button id="logoutBtn" class="w-full px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors text-sm">
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thread View Modal -->
+    <div id="threadModal" class="hidden fixed inset-0 bg-black/80 z-50 overflow-y-auto">
+        <div class="min-h-screen py-8 px-4">
+            <div class="max-w-4xl mx-auto bg-slate-900 rounded-lg border border-slate-700">
+                <!-- Header -->
+                <div class="p-6 border-b border-slate-700">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-4">
+                            <button id="backBtn" class="p-2 hover:bg-slate-800 rounded-lg transition-colors">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <div>
+                                <h2 id="modalTitle" class="text-2xl font-bold"></h2>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span id="modalCategory" class="px-2 py-0.5 rounded text-xs font-medium"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <button id="closeModalBtn" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex border-b border-slate-700 px-6">
+                    <button data-tab="operations" class="thread-tab flex items-center gap-2 px-4 py-3 border-b-2 border-primary text-primary font-semibold">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        Operations
+                    </button>
+                    <button data-tab="people" class="thread-tab flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-white/60 hover:text-white/80">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        People
+                    </button>
+                    <button data-tab="locations" class="thread-tab flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-white/60 hover:text-white/80">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Locations
+                    </button>
+                </div>
+
+                <!-- Tab Content -->
+                <div id="tabOperations" class="tab-content p-6">
+                    <!-- Search and filter bar for posts -->
+                    <div class="flex gap-4 mb-4">
+                        <div class="flex-1 relative">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input type="text" id="postsSearchInput" placeholder="Search messages..."
+                                class="w-full pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                        </div>
+                        <select id="postsFilter" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="all">Filter</option>
+                        </select>
+                    </div>
+
+                    <!-- Posts -->
+                    <div id="modalPosts" class="space-y-4 max-h-96 overflow-y-auto">
+                        <p class="text-white/60 text-center">Loading...</p>
+                    </div>
+
+                    <!-- Post input -->
+                    <div class="mt-4 flex gap-2 items-end border-t border-slate-700 pt-4">
+                        <div class="flex-1 relative">
+                            <button class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                            </button>
+                            <input type="text" id="newMessageInput" placeholder="Type a message..."
+                                class="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                        </div>
+                        <select id="postClearanceSelect" class="px-3 py-3 bg-slate-800 border border-slate-700 rounded-lg text-sm">
+                            <option value="public_trust">PT</option>
+                            <option value="confidential">C</option>
+                            <option value="secret">S</option>
+                            <option value="top_secret" selected>TS</option>
+                            <option value="top_secret_sci">TS/SCI</option>
+                            <option value="special_access">SA</option>
+                        </select>
+                        <button id="sendMessageBtn" class="p-3 bg-primary hover:bg-primary/80 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tabPeople" class="tab-content hidden p-6">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="peopleGrid">
+                        <p class="text-white/60 text-center col-span-full">No people information available for this investigation.</p>
+                    </div>
+                </div>
+
+                <div id="tabLocations" class="tab-content hidden p-6">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="locationsGrid">
+                        <p class="text-white/60 text-center col-span-full">No location information available for this investigation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Setup Modal -->
+    <div id="profileModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-md">
+            <div class="p-6 border-b border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">Additional Info Required!</h3>
+                        <p class="text-white/70 text-sm">To continue the Site Admins require the following</p>
+                    </div>
+                </div>
+            </div>
+            <form id="profileForm" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Discord Username</label>
+                    <input type="text" id="discordUsername" required placeholder="e.g., username#1234 or username"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Discord ID</label>
+                    <input type="text" id="discordIdInput" required placeholder="e.g., 123456789012345678"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                    <p class="text-xs text-white/50 mt-1">Right-click your profile in Discord and select "Copy User ID"</p>
+                </div>
+
+                <!-- Auto-filled Officer Info (read-only display after lookup) -->
+                <div id="officerInfoSection" class="hidden space-y-3 p-4 bg-slate-700/30 rounded-lg border border-slate-600">
+                    <p class="text-xs text-white/50 uppercase tracking-wider">Officer Information (from Chain of Command)</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs text-white/50 mb-1">Officer Name</label>
+                            <p id="officerNameDisplay" class="text-white font-medium">-</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-white/50 mb-1">Callsign</label>
+                            <p id="callsignDisplay" class="text-white font-medium">-</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-white/50 mb-1">Badge Number</label>
+                            <p id="badgeNumberDisplay" class="text-white font-medium">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="lookupError" class="hidden p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-yellow-200 text-sm">
+                    <p>Discord ID not found in Chain of Command. Your profile will be submitted for admin review.</p>
+                </div>
+
+                <div class="flex gap-3 pt-4">
+                    <button type="button" id="lookupBtn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                        Lookup Officer
+                    </button>
+                    <button type="submit" id="submitProfileBtn" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                        Submit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        let currentUser = null;
+        let allThreads = [];
+        let currentCategory = 'all';
+        let currentSort = 'newest';
+        let searchQuery = '';
+        let currentThread = null;
+        let currentTab = 'operations';
+
+        // Clearance badge colors
+        const clearanceBadgeColors = {
+            'pending': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+            'public_trust': 'bg-green-500/20 text-green-300 border-green-500/30',
+            'confidential': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+            'secret': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+            'top_secret': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+            'top_secret_sci': 'bg-red-500/20 text-red-300 border-red-500/30',
+            'special_access': 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+            'denied': 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+        };
+
+        const categoryColors = {
+            gang: 'bg-red-500/20 text-red-300 border-red-500/30',
+            cartel: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+            militia: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+            other: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+        };
+
+        // Check session and load data
+        async function init() {
+            try {
+                const response = await fetch('/api/intel/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    window.location.href = '/intel/login';
+                    return;
+                }
+
+                currentUser = data.user;
+                loadIntel();
+            } catch (error) {
+                console.error('Session error:', error);
+                window.location.href = '/intel/login';
+            }
+        }
+
+        async function loadIntel() {
+            try {
+                const response = await fetch('/api/intel/view', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                document.getElementById('loadingState').classList.add('hidden');
+
+                if (data.error === 'Access pending') {
+                    document.getElementById('pendingState').classList.remove('hidden');
+                    return;
+                }
+
+                if (data.error && data.clearanceLevel === 'denied') {
+                    document.getElementById('deniedState').classList.remove('hidden');
+                    return;
+                }
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                currentUser = data.user;
+                allThreads = data.threads || [];
+
+                // Show main content
+                document.getElementById('mainContent').classList.remove('hidden');
+
+                // Update user card
+                updateUserCard();
+
+                // Check if profile needs to be completed
+                checkProfileCompletion();
+
+                renderThreads();
+            } catch (error) {
+                console.error('Error loading intel:', error);
+                document.getElementById('loadingState').innerHTML = `
+                    <div class="text-red-400">
+                        <p>Error loading intel: ${error.message}</p>
+                        <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function updateUserCard() {
+            // Set profile picture
+            const picture = document.getElementById('userPicture');
+            picture.src = currentUser.picture || '/default-avatar.png';
+
+            // Set callsign | name
+            const displayName = currentUser.callsign && currentUser.officerName
+                ? `${currentUser.callsign} | ${currentUser.officerName}`
+                : currentUser.callsign || currentUser.officerName || currentUser.name;
+            document.getElementById('userCallsignName').textContent = displayName;
+
+            // Set Discord ID
+            document.getElementById('userDiscordId').textContent = currentUser.discordId
+                ? `ID: ${currentUser.discordId}`
+                : currentUser.email;
+
+            // Set clearance badge
+            const badgeEl = document.getElementById('userClearanceBadge');
+            const codeEl = document.getElementById('userClearanceCode');
+            const clearanceColors = clearanceBadgeColors[currentUser.clearanceLevel] || clearanceBadgeColors['pending'];
+            badgeEl.className = `inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border ${clearanceColors}`;
+            codeEl.textContent = currentUser.clearanceCode || currentUser.clearanceLevel.toUpperCase();
+        }
+
+        function checkProfileCompletion() {
+            // Check for the needs_profile cookie or if profile is incomplete
+            const needsProfile = document.cookie.includes('intel_needs_profile=true') || !currentUser.profileComplete;
+
+            if (needsProfile) {
+                document.getElementById('profileModal').classList.remove('hidden');
+            }
+        }
+
+        function renderThreads() {
+            const container = document.getElementById('threadsGrid');
+            let filtered = [...allThreads];
+
+            // Apply category filter
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(t => t.category === currentCategory);
+            }
+
+            // Apply search
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                filtered = filtered.filter(t =>
+                    t.title.toLowerCase().includes(query) ||
+                    t.description.toLowerCase().includes(query)
+                );
+            }
+
+            // Apply sort
+            filtered.sort((a, b) => {
+                switch (currentSort) {
+                    case 'oldest':
+                        return a.updatedAt - b.updatedAt;
+                    case 'most_posts':
+                        return (b.postCount || 0) - (a.postCount || 0);
+                    default: // newest
+                        return b.updatedAt - a.updatedAt;
+                }
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-white/60 text-center py-8 col-span-full">No investigations found${currentCategory !== 'all' ? ' in this category' : ''}.</p>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(thread => `
+                <div class="bg-slate-800/50 rounded-lg border ${thread.isPinned ? 'border-yellow-500/50' : 'border-slate-700'} p-5 hover:bg-slate-800/70 transition-colors cursor-pointer" onclick="viewThread('${thread.id}')">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-xs font-medium ${categoryColors[thread.category]}">${thread.category.charAt(0).toUpperCase() + thread.category.slice(1)}</span>
+                    </div>
+                    <h3 class="font-bold mb-2">${thread.title}</h3>
+                    <p class="text-white/70 text-sm mb-4 line-clamp-2">${thread.description}</p>
+                    <div class="flex items-center justify-between text-xs text-white/50">
+                        <span class="flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                            ${thread.postCount || 0} Posts
+                        </span>
+                        <span>Last Activity: ${formatDate(thread.updatedAt)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+
+            if (diff < 60000) return 'just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)} minutes ago`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
+            if (diff < 604800000) return `${Math.floor(diff / 86400000)} days ago`;
+            return date.toLocaleDateString();
+        }
+
+        // Filters dropdown
+        const filtersBtn = document.getElementById('filtersBtn');
+        const filtersDropdown = document.getElementById('filtersDropdown');
+        filtersBtn.addEventListener('click', () => {
+            filtersDropdown.classList.toggle('hidden');
+            sortDropdown.classList.add('hidden');
+        });
+
+        // Sort dropdown
+        const sortBtn = document.getElementById('sortBtn');
+        const sortDropdown = document.getElementById('sortDropdown');
+        sortBtn.addEventListener('click', () => {
+            sortDropdown.classList.toggle('hidden');
+            filtersDropdown.classList.add('hidden');
+        });
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!filtersBtn.contains(e.target) && !filtersDropdown.contains(e.target)) {
+                filtersDropdown.classList.add('hidden');
+            }
+            if (!sortBtn.contains(e.target) && !sortDropdown.contains(e.target)) {
+                sortDropdown.classList.add('hidden');
+            }
+        });
+
+        // Category filter buttons
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.category-btn').forEach(b => {
+                    b.classList.remove('text-primary', 'font-medium');
+                });
+                btn.classList.add('text-primary', 'font-medium');
+                currentCategory = btn.dataset.category;
+                filtersDropdown.classList.add('hidden');
+                renderThreads();
+            });
+        });
+
+        // Sort buttons
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.sort-btn').forEach(b => {
+                    b.classList.remove('text-primary');
+                });
+                btn.classList.add('text-primary');
+                currentSort = btn.dataset.sort;
+                document.getElementById('sortLabel').textContent = btn.textContent;
+                sortDropdown.classList.add('hidden');
+                renderThreads();
+            });
+        });
+
+        // Search
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            renderThreads();
+        });
+
+        // View thread
+        window.viewThread = async function(threadId) {
+            currentThread = allThreads.find(t => t.id === threadId);
+            if (!currentThread) return;
+
+            const modal = document.getElementById('threadModal');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            document.getElementById('modalTitle').textContent = `${currentThread.title} - Operations`;
+            const categoryEl = document.getElementById('modalCategory');
+            categoryEl.textContent = currentThread.category.toUpperCase();
+            categoryEl.className = `px-2 py-0.5 rounded text-xs font-medium ${categoryColors[currentThread.category]}`;
+
+            // Reset to operations tab
+            currentTab = 'operations';
+            updateTabs();
+
+            await loadPosts(threadId);
+        };
+
+        function updateTabs() {
+            document.querySelectorAll('.thread-tab').forEach(tab => {
+                if (tab.dataset.tab === currentTab) {
+                    tab.classList.remove('border-transparent', 'text-white/60');
+                    tab.classList.add('border-primary', 'text-primary');
+                } else {
+                    tab.classList.remove('border-primary', 'text-primary');
+                    tab.classList.add('border-transparent', 'text-white/60');
+                }
+            });
+
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(`tab${currentTab.charAt(0).toUpperCase() + currentTab.slice(1)}`).classList.remove('hidden');
+
+            if (currentThread) {
+                const titleEl = document.getElementById('modalTitle');
+                titleEl.textContent = `${currentThread.title} - ${currentTab.charAt(0).toUpperCase() + currentTab.slice(1)}`;
+            }
+        }
+
+        // Tab clicks
+        document.querySelectorAll('.thread-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                currentTab = tab.dataset.tab;
+                updateTabs();
+            });
+        });
+
+        async function loadPosts(threadId) {
+            const container = document.getElementById('modalPosts');
+            container.innerHTML = '<p class="text-white/60 text-center">Loading...</p>';
+
+            try {
+                const response = await fetch(`/api/intel/view?threadId=${threadId}`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const posts = data.posts || [];
+
+                if (posts.length === 0) {
+                    container.innerHTML = '<p class="text-white/60 text-center py-8">No posts in this investigation yet.</p>';
+                    return;
+                }
+
+                container.innerHTML = posts.map(post => `
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                            ${post.author.charAt(0).toUpperCase()}
+                        </div>
+                        <div class="flex-1 bg-slate-800 rounded-lg p-3">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-semibold text-sm">${post.author}</span>
+                                <span class="text-xs px-2 py-0.5 bg-slate-700 rounded">${post.authorRole}</span>
+                                <span class="text-white/50 text-xs">${new Date(post.createdAt).toLocaleString()}</span>
+                            </div>
+                            <p class="text-white/90 text-sm whitespace-pre-wrap">${post.content}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-400 text-center">Error: ${error.message}</p>`;
+            }
+        }
+
+        // Close modal buttons
+        document.getElementById('closeModalBtn').addEventListener('click', closeThreadModal);
+        document.getElementById('backBtn').addEventListener('click', closeThreadModal);
+
+        function closeThreadModal() {
+            document.getElementById('threadModal').classList.add('hidden');
+            document.body.style.overflow = '';
+            currentThread = null;
+        }
+
+        // Close modal on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeThreadModal();
+            }
+        });
+
+        // Profile form handling
+        const profileForm = document.getElementById('profileForm');
+        const lookupBtn = document.getElementById('lookupBtn');
+        const discordIdInput = document.getElementById('discordIdInput');
+
+        lookupBtn.addEventListener('click', async () => {
+            const discordId = discordIdInput.value.trim();
+            if (!discordId) {
+                alert('Please enter your Discord ID');
+                return;
+            }
+
+            lookupBtn.disabled = true;
+            lookupBtn.textContent = 'Looking up...';
+
+            try {
+                const response = await fetch(`/api/intel/profile?discordId=${encodeURIComponent(discordId)}`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.found && data.officerInfo) {
+                    document.getElementById('officerInfoSection').classList.remove('hidden');
+                    document.getElementById('lookupError').classList.add('hidden');
+                    document.getElementById('officerNameDisplay').textContent = data.officerInfo.officerName || '-';
+                    document.getElementById('callsignDisplay').textContent = data.officerInfo.callsign || '-';
+                    document.getElementById('badgeNumberDisplay').textContent = data.officerInfo.badgeNumber || '-';
+                } else {
+                    document.getElementById('officerInfoSection').classList.add('hidden');
+                    document.getElementById('lookupError').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Lookup error:', error);
+                document.getElementById('officerInfoSection').classList.add('hidden');
+                document.getElementById('lookupError').classList.remove('hidden');
+            } finally {
+                lookupBtn.disabled = false;
+                lookupBtn.textContent = 'Lookup Officer';
+            }
+        });
+
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const discordUsername = document.getElementById('discordUsername').value.trim();
+            const discordId = discordIdInput.value.trim();
+
+            if (!discordUsername || !discordId) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitProfileBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch('/api/intel/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ discordUsername, discordId }),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                // Update current user
+                currentUser = data.user;
+                updateUserCard();
+
+                // Close modal
+                document.getElementById('profileModal').classList.add('hidden');
+
+                // Clear the cookie
+                document.cookie = 'intel_needs_profile=; Path=/; Max-Age=0';
+
+            } catch (error) {
+                alert('Error saving profile: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await fetch('/api/intel/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            window.location.href = '/intel/login';
+        });
+
+        // Initialize
+        init();
+    </script>
+</Layout>

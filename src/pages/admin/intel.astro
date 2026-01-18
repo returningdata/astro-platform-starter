@@ -1,0 +1,694 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+---
+
+<Layout title="Intel Management - DPPD Admin" isAdmin={true}>
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Intel Management</h1>
+                <p class="text-white/70">Manage gang/militia intel threads and user clearances</p>
+            </div>
+            <a href="/admin" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors">
+                &larr; Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-white/20">
+            <button id="threadsTab" class="tab-button px-6 py-3 font-semibold border-b-2 border-primary text-primary">
+                Threads
+            </button>
+            <button id="usersTab" class="tab-button px-6 py-3 font-semibold border-b-2 border-transparent text-white/60 hover:text-white/80">
+                Users & Clearances
+            </button>
+            <button id="logsTab" class="tab-button px-6 py-3 font-semibold border-b-2 border-transparent text-white/60 hover:text-white/80">
+                Login Logs
+            </button>
+        </div>
+
+        <!-- Threads Panel -->
+        <div id="threadsPanel" class="space-y-6">
+            <!-- Create Thread Button -->
+            <div class="flex justify-end">
+                <button id="createThreadBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                    + Create Thread
+                </button>
+            </div>
+
+            <!-- Threads List -->
+            <div id="threadsList" class="space-y-4">
+                <div class="text-center py-12 text-white/60">
+                    <p>Loading threads...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Panel (hidden by default) -->
+        <div id="usersPanel" class="hidden space-y-6">
+            <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                <p class="text-white/70 text-sm">
+                    <strong>Clearance Levels:</strong><br>
+                    <span class="text-yellow-400">Pending</span> - Awaiting approval (no access)<br>
+                    <span class="text-green-400">Public Trust (PT)</span> - Basic intel access<br>
+                    <span class="text-cyan-400">Confidential (C)</span> - Confidential intel access<br>
+                    <span class="text-blue-400">Secret (S)</span> - Secret intel access<br>
+                    <span class="text-orange-400">Top Secret (TS)</span> - Top secret intel access<br>
+                    <span class="text-purple-400">Top Secret/SCI (TS/SCI)</span> - Sensitive compartmented information<br>
+                    <span class="text-pink-400">Special Access (SA)</span> - Full special access<br>
+                    <span class="text-red-400">Denied</span> - Access denied
+                </p>
+            </div>
+
+            <div id="usersList" class="space-y-4">
+                <div class="text-center py-12 text-white/60">
+                    <p>Loading users...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Panel (hidden by default) -->
+        <div id="logsPanel" class="hidden space-y-6">
+            <div id="logsList" class="space-y-2">
+                <div class="text-center py-12 text-white/60">
+                    <p>Loading login logs...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thread Modal -->
+    <div id="threadModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-lg mx-4">
+            <h3 id="threadModalTitle" class="text-xl font-bold mb-4">Create Thread</h3>
+            <form id="threadForm" class="space-y-4">
+                <input type="hidden" id="threadId" />
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Title</label>
+                    <input type="text" id="threadTitle" required
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Description</label>
+                    <textarea id="threadDescription" required rows="3"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Category</label>
+                        <select id="threadCategory" required
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="gang">Gang</option>
+                            <option value="cartel">Cartel</option>
+                            <option value="militia">Militia</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Required Clearance</label>
+                        <select id="threadClearance" required
+                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="public_trust">Public Trust (PT)</option>
+                            <option value="confidential">Confidential (C)</option>
+                            <option value="secret">Secret (S)</option>
+                            <option value="top_secret">Top Secret (TS)</option>
+                            <option value="top_secret_sci">Top Secret/SCI</option>
+                            <option value="special_access">Special Access (SA)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="threadOptions" class="hidden grid grid-cols-2 gap-4">
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" id="threadPinned" class="rounded bg-slate-700 border-slate-600" />
+                        <span class="text-white/70">Pinned</span>
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <input type="checkbox" id="threadLocked" class="rounded bg-slate-700 border-slate-600" />
+                        <span class="text-white/70">Locked</span>
+                    </label>
+                </div>
+                <div class="flex justify-end gap-4 pt-4">
+                    <button type="button" id="cancelThreadBtn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Thread Detail Modal -->
+    <div id="threadDetailModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-3xl mx-4 my-8">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 id="detailThreadTitle" class="text-xl font-bold"></h3>
+                    <p id="detailThreadMeta" class="text-white/60 text-sm"></p>
+                </div>
+                <button id="closeDetailBtn" class="text-white/60 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <p id="detailThreadDescription" class="text-white/80 mb-6"></p>
+
+            <!-- Posts Section -->
+            <div class="border-t border-slate-700 pt-4">
+                <h4 class="font-semibold mb-4">Posts</h4>
+                <div id="postsList" class="space-y-4 mb-4">
+                    <!-- Posts will be loaded here -->
+                </div>
+
+                <!-- Add Post Form -->
+                <div id="addPostForm" class="border-t border-slate-700 pt-4">
+                    <h5 class="font-medium mb-2">Add New Post</h5>
+                    <textarea id="newPostContent" rows="3" placeholder="Enter your intel post content..."
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary mb-2"></textarea>
+                    <div class="flex justify-end">
+                        <button id="submitPostBtn" class="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors text-sm font-semibold">
+                            Post
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Validate session
+        async function validateSession() {
+            try {
+                const response = await fetch('/api/auth/session', { credentials: 'include' });
+                const data = await response.json();
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return null;
+                }
+                // Check permission
+                if (data.user.role !== 'super_admin' && !data.user.permissions?.includes('intel-management')) {
+                    window.location.href = '/admin';
+                    return null;
+                }
+                return data.user;
+            } catch (error) {
+                window.location.href = '/admin/login';
+                return null;
+            }
+        }
+
+        // Tab management
+        const tabs = {
+            threads: { tab: document.getElementById('threadsTab'), panel: document.getElementById('threadsPanel') },
+            users: { tab: document.getElementById('usersTab'), panel: document.getElementById('usersPanel') },
+            logs: { tab: document.getElementById('logsTab'), panel: document.getElementById('logsPanel') },
+        };
+
+        function switchTab(tabName) {
+            Object.entries(tabs).forEach(([name, { tab, panel }]) => {
+                if (name === tabName) {
+                    tab.classList.add('border-primary', 'text-primary');
+                    tab.classList.remove('border-transparent', 'text-white/60');
+                    panel.classList.remove('hidden');
+                } else {
+                    tab.classList.remove('border-primary', 'text-primary');
+                    tab.classList.add('border-transparent', 'text-white/60');
+                    panel.classList.add('hidden');
+                }
+            });
+
+            if (tabName === 'users') loadUsers();
+            if (tabName === 'logs') loadLogs();
+        }
+
+        tabs.threads.tab.addEventListener('click', () => switchTab('threads'));
+        tabs.users.tab.addEventListener('click', () => switchTab('users'));
+        tabs.logs.tab.addEventListener('click', () => switchTab('logs'));
+
+        // Threads management
+        let currentThreads = [];
+
+        async function loadThreads() {
+            try {
+                const response = await fetch('/api/intel/threads', { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                currentThreads = data.threads || [];
+                renderThreads();
+            } catch (error) {
+                console.error('Error loading threads:', error);
+                document.getElementById('threadsList').innerHTML = `
+                    <div class="text-center py-12 text-red-400">
+                        <p>Error loading threads: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderThreads() {
+            const container = document.getElementById('threadsList');
+
+            if (currentThreads.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-white/60">
+                        <p>No threads yet. Create your first intel thread.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const categoryColors = {
+                gang: 'bg-red-500/20 text-red-300',
+                cartel: 'bg-orange-500/20 text-orange-300',
+                militia: 'bg-yellow-500/20 text-yellow-300',
+                other: 'bg-gray-500/20 text-gray-300',
+            };
+
+            const clearanceColors = {
+                public_trust: 'bg-green-500/20 text-green-300',
+                confidential: 'bg-cyan-500/20 text-cyan-300',
+                secret: 'bg-blue-500/20 text-blue-300',
+                top_secret: 'bg-orange-500/20 text-orange-300',
+                top_secret_sci: 'bg-purple-500/20 text-purple-300',
+                special_access: 'bg-pink-500/20 text-pink-300',
+            };
+
+            const clearanceDisplayNames = {
+                public_trust: 'Public Trust',
+                confidential: 'Confidential',
+                secret: 'Secret',
+                top_secret: 'Top Secret',
+                top_secret_sci: 'TS/SCI',
+                special_access: 'Special Access'
+            };
+
+            container.innerHTML = currentThreads.map(thread => `
+                <div class="bg-slate-800/50 rounded-lg border border-slate-700 p-4 hover:bg-slate-800/70 transition-colors">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                ${thread.isPinned ? '<span class="text-yellow-400" title="Pinned">📌</span>' : ''}
+                                ${thread.isLocked ? '<span class="text-red-400" title="Locked">🔒</span>' : ''}
+                                <h3 class="font-semibold text-lg">${thread.title}</h3>
+                            </div>
+                            <p class="text-white/70 text-sm mb-3">${thread.description}</p>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2 py-1 rounded text-xs font-medium ${categoryColors[thread.category] || 'bg-gray-500/20 text-gray-300'}">${thread.category}</span>
+                                <span class="px-2 py-1 rounded text-xs font-medium ${clearanceColors[thread.requiredClearance] || 'bg-gray-500/20 text-gray-300'}">${clearanceDisplayNames[thread.requiredClearance] || thread.requiredClearance}</span>
+                                <span class="text-white/50 text-xs">${thread.postCount || 0} posts</span>
+                                <span class="text-white/50 text-xs">by ${thread.createdBy}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 ml-4">
+                            <button onclick="viewThread('${thread.id}')" class="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors" title="View Posts">
+                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </button>
+                            <button onclick="editThread('${thread.id}')" class="p-2 bg-yellow-500/20 hover:bg-yellow-500/30 rounded-lg transition-colors" title="Edit">
+                                <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button onclick="deleteThread('${thread.id}')" class="p-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors" title="Delete">
+                                <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Thread Modal
+        const threadModal = document.getElementById('threadModal');
+        const threadForm = document.getElementById('threadForm');
+        const threadOptions = document.getElementById('threadOptions');
+
+        document.getElementById('createThreadBtn').addEventListener('click', () => {
+            document.getElementById('threadModalTitle').textContent = 'Create Thread';
+            document.getElementById('threadId').value = '';
+            threadForm.reset();
+            threadOptions.classList.add('hidden');
+            threadModal.classList.remove('hidden');
+        });
+
+        document.getElementById('cancelThreadBtn').addEventListener('click', () => {
+            threadModal.classList.add('hidden');
+        });
+
+        window.editThread = function(id) {
+            const thread = currentThreads.find(t => t.id === id);
+            if (!thread) return;
+
+            document.getElementById('threadModalTitle').textContent = 'Edit Thread';
+            document.getElementById('threadId').value = thread.id;
+            document.getElementById('threadTitle').value = thread.title;
+            document.getElementById('threadDescription').value = thread.description;
+            document.getElementById('threadCategory').value = thread.category;
+            document.getElementById('threadClearance').value = thread.requiredClearance;
+            document.getElementById('threadPinned').checked = thread.isPinned;
+            document.getElementById('threadLocked').checked = thread.isLocked;
+            threadOptions.classList.remove('hidden');
+            threadModal.classList.remove('hidden');
+        };
+
+        window.deleteThread = async function(id) {
+            if (!confirm('Are you sure you want to delete this thread? All posts will be deleted.')) return;
+
+            try {
+                const response = await fetch(`/api/intel/threads?id=${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                loadThreads();
+            } catch (error) {
+                alert('Error deleting thread: ' + error.message);
+            }
+        };
+
+        threadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('threadId').value;
+            const payload = {
+                id: id || undefined,
+                title: document.getElementById('threadTitle').value,
+                description: document.getElementById('threadDescription').value,
+                category: document.getElementById('threadCategory').value,
+                requiredClearance: document.getElementById('threadClearance').value,
+                isPinned: document.getElementById('threadPinned').checked,
+                isLocked: document.getElementById('threadLocked').checked,
+            };
+
+            try {
+                const response = await fetch('/api/intel/threads', {
+                    method: id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                threadModal.classList.add('hidden');
+                loadThreads();
+            } catch (error) {
+                alert('Error saving thread: ' + error.message);
+            }
+        });
+
+        // Thread Detail Modal
+        let currentDetailThread = null;
+
+        window.viewThread = async function(id) {
+            currentDetailThread = currentThreads.find(t => t.id === id);
+            if (!currentDetailThread) return;
+
+            document.getElementById('detailThreadTitle').textContent = currentDetailThread.title;
+            document.getElementById('detailThreadDescription').textContent = currentDetailThread.description;
+            document.getElementById('detailThreadMeta').textContent = `${currentDetailThread.category} | ${currentDetailThread.requiredClearance.replace('_', ' ')} | Created by ${currentDetailThread.createdBy}`;
+
+            // Show/hide add post form based on locked status
+            document.getElementById('addPostForm').classList.toggle('hidden', currentDetailThread.isLocked);
+
+            await loadPosts(id);
+            document.getElementById('threadDetailModal').classList.remove('hidden');
+        };
+
+        document.getElementById('closeDetailBtn').addEventListener('click', () => {
+            document.getElementById('threadDetailModal').classList.add('hidden');
+            currentDetailThread = null;
+        });
+
+        async function loadPosts(threadId) {
+            const container = document.getElementById('postsList');
+            container.innerHTML = '<p class="text-white/60 text-center">Loading posts...</p>';
+
+            try {
+                const response = await fetch(`/api/intel/posts?threadId=${threadId}`, { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const posts = data.posts || [];
+
+                if (posts.length === 0) {
+                    container.innerHTML = '<p class="text-white/60 text-center">No posts yet.</p>';
+                    return;
+                }
+
+                container.innerHTML = posts.map(post => `
+                    <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold">${post.author}</span>
+                                <span class="text-xs px-2 py-0.5 bg-slate-600 rounded">${post.authorRole}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-white/50 text-xs">${new Date(post.createdAt).toLocaleString()}</span>
+                                <button onclick="deletePost('${post.id}')" class="p-1 text-red-400 hover:text-red-300" title="Delete post">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-white/90 whitespace-pre-wrap">${post.content}</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="text-red-400 text-center">Error loading posts: ${error.message}</p>`;
+            }
+        }
+
+        document.getElementById('submitPostBtn').addEventListener('click', async () => {
+            if (!currentDetailThread) return;
+
+            const content = document.getElementById('newPostContent').value.trim();
+            if (!content) {
+                alert('Please enter post content');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/intel/posts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ threadId: currentDetailThread.id, content }),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                document.getElementById('newPostContent').value = '';
+                await loadPosts(currentDetailThread.id);
+                // Update thread post count in local data
+                currentDetailThread.postCount = (currentDetailThread.postCount || 0) + 1;
+            } catch (error) {
+                alert('Error creating post: ' + error.message);
+            }
+        });
+
+        window.deletePost = async function(id) {
+            if (!confirm('Are you sure you want to delete this post?')) return;
+
+            try {
+                const response = await fetch(`/api/intel/posts?id=${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                await loadPosts(currentDetailThread.id);
+                currentDetailThread.postCount = Math.max(0, (currentDetailThread.postCount || 1) - 1);
+            } catch (error) {
+                alert('Error deleting post: ' + error.message);
+            }
+        };
+
+        // Users management
+        let currentUsers = [];
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/intel/users', { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                currentUsers = data.users || [];
+                renderUsers();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersList').innerHTML = `
+                    <div class="text-center py-12 text-red-400">
+                        <p>Error loading users: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderUsers() {
+            const container = document.getElementById('usersList');
+
+            if (currentUsers.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-white/60">
+                        <p>No Intel users yet. Users will appear here when they log in with Google.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const clearanceBadges = {
+                pending: 'bg-yellow-500/20 text-yellow-300',
+                public_trust: 'bg-green-500/20 text-green-300',
+                confidential: 'bg-cyan-500/20 text-cyan-300',
+                secret: 'bg-blue-500/20 text-blue-300',
+                top_secret: 'bg-orange-500/20 text-orange-300',
+                top_secret_sci: 'bg-purple-500/20 text-purple-300',
+                special_access: 'bg-pink-500/20 text-pink-300',
+                denied: 'bg-red-500/20 text-red-300',
+            };
+
+            const clearanceLabelMap = {
+                pending: 'Pending',
+                public_trust: 'PT',
+                confidential: 'C',
+                secret: 'S',
+                top_secret: 'TS',
+                top_secret_sci: 'TS/SCI',
+                special_access: 'SA',
+                denied: 'Denied',
+            };
+
+            container.innerHTML = currentUsers.map(user => `
+                <div class="bg-slate-800/50 rounded-lg border border-slate-700 p-4">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
+                        <div class="flex items-center gap-4">
+                            <img src="${user.picture || ''}" alt="${user.name}" class="w-12 h-12 rounded-full bg-slate-700" />
+                            <div>
+                                <h4 class="font-semibold">${user.callsign && user.officerName ? `${user.callsign} | ${user.officerName}` : user.name}</h4>
+                                <p class="text-white/60 text-sm">${user.email}</p>
+                                ${user.discordId ? `<p class="text-white/50 text-xs">Discord: ${user.discordUsername || ''} (${user.discordId})</p>` : ''}
+                                <p class="text-white/50 text-xs">Last login: ${new Date(user.lastLogin).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="px-3 py-1 rounded-full text-sm font-medium ${clearanceBadges[user.clearanceLevel] || clearanceBadges.pending}">
+                                ${clearanceLabelMap[user.clearanceLevel] || user.clearanceLevel}
+                            </span>
+                            <select onchange="updateClearance('${user.id}', this.value)"
+                                class="px-3 py-1 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value="pending" ${user.clearanceLevel === 'pending' ? 'selected' : ''}>Pending</option>
+                                <option value="public_trust" ${user.clearanceLevel === 'public_trust' ? 'selected' : ''}>Public Trust (PT)</option>
+                                <option value="confidential" ${user.clearanceLevel === 'confidential' ? 'selected' : ''}>Confidential (C)</option>
+                                <option value="secret" ${user.clearanceLevel === 'secret' ? 'selected' : ''}>Secret (S)</option>
+                                <option value="top_secret" ${user.clearanceLevel === 'top_secret' ? 'selected' : ''}>Top Secret (TS)</option>
+                                <option value="top_secret_sci" ${user.clearanceLevel === 'top_secret_sci' ? 'selected' : ''}>Top Secret/SCI</option>
+                                <option value="special_access" ${user.clearanceLevel === 'special_access' ? 'selected' : ''}>Special Access (SA)</option>
+                                <option value="denied" ${user.clearanceLevel === 'denied' ? 'selected' : ''}>Denied</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.updateClearance = async function(userId, clearanceLevel) {
+            try {
+                const response = await fetch('/api/intel/users', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, clearanceLevel }),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                loadUsers();
+            } catch (error) {
+                alert('Error updating clearance: ' + error.message);
+                loadUsers();
+            }
+        };
+
+        // Logs management
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/intel/users?logs=true', { credentials: 'include' });
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const logs = data.logs || [];
+                renderLogs(logs);
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                document.getElementById('logsList').innerHTML = `
+                    <div class="text-center py-12 text-red-400">
+                        <p>Error loading logs: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderLogs(logs) {
+            const container = document.getElementById('logsList');
+
+            if (logs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-white/60">
+                        <p>No login logs yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-700 text-white/60">
+                                <th class="text-left py-2 px-4">Time</th>
+                                <th class="text-left py-2 px-4">User</th>
+                                <th class="text-left py-2 px-4">Email</th>
+                                <th class="text-left py-2 px-4">Clearance</th>
+                                <th class="text-left py-2 px-4">IP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${logs.map(log => `
+                                <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
+                                    <td class="py-2 px-4 text-white/70">${new Date(log.timestamp).toLocaleString()}</td>
+                                    <td class="py-2 px-4">${log.name}</td>
+                                    <td class="py-2 px-4 text-white/70">${log.email}</td>
+                                    <td class="py-2 px-4">${log.clearanceLevel.replace('_', ' ')}</td>
+                                    <td class="py-2 px-4 text-white/50 font-mono text-xs">${log.ip || 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Initialize
+        validateSession().then(user => {
+            if (user) {
+                loadThreads();
+            }
+        });
+    </script>
+</Layout>

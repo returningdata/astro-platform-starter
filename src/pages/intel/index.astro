@@ -64,6 +64,8 @@ export const prerender = false;
                                 <button data-category="gang" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Gang</button>
                                 <button data-category="cartel" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Cartel</button>
                                 <button data-category="militia" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Militia</button>
+                                <button data-category="crime_family" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Crime Family</button>
+                                <button data-category="motorcycle_club" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Motorcycle Club</button>
                                 <button data-category="other" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Other</button>
                             </div>
                         </div>
@@ -191,6 +193,13 @@ export const prerender = false;
                         </svg>
                         Locations
                     </button>
+                    <button data-tab="vehicles" class="thread-tab flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-white/60 hover:text-white/80">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                        </svg>
+                        Vehicles
+                    </button>
                 </div>
 
                 <!-- Tab Content -->
@@ -250,6 +259,12 @@ export const prerender = false;
                 <div id="tabLocations" class="tab-content hidden p-6">
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="locationsGrid">
                         <p class="text-white/60 text-center col-span-full">No location information available for this investigation.</p>
+                    </div>
+                </div>
+
+                <div id="tabVehicles" class="tab-content hidden p-6">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="vehiclesGrid">
+                        <p class="text-white/60 text-center col-span-full">No vehicle information available for this investigation.</p>
                     </div>
                 </div>
             </div>
@@ -345,6 +360,8 @@ export const prerender = false;
             gang: 'bg-red-500/20 text-red-300 border-red-500/30',
             cartel: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
             militia: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+            crime_family: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+            motorcycle_club: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
             other: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
         };
 
@@ -648,27 +665,149 @@ export const prerender = false;
                 if (data.error) throw new Error(data.error);
 
                 const posts = data.posts || [];
+                const people = data.people || [];
+                const locations = data.locations || [];
 
+                // Render posts
                 if (posts.length === 0) {
                     container.innerHTML = '<p class="text-white/60 text-center py-8">No posts in this investigation yet.</p>';
-                    return;
+                } else {
+                    container.innerHTML = posts.map(post => `
+                        <div class="flex gap-3">
+                            <div class="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                                ${post.author.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="flex-1 bg-slate-800 rounded-lg p-3">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-semibold text-sm">${post.author}</span>
+                                    <span class="text-xs px-2 py-0.5 bg-slate-700 rounded">${post.authorRole}</span>
+                                    <span class="text-white/50 text-xs">${new Date(post.createdAt).toLocaleString()}</span>
+                                </div>
+                                <p class="text-white/90 text-sm whitespace-pre-wrap">${post.content}</p>
+                            </div>
+                        </div>
+                    `).join('');
                 }
 
-                container.innerHTML = posts.map(post => `
-                    <div class="flex gap-3">
-                        <div class="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
-                            ${post.author.charAt(0).toUpperCase()}
-                        </div>
-                        <div class="flex-1 bg-slate-800 rounded-lg p-3">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="font-semibold text-sm">${post.author}</span>
-                                <span class="text-xs px-2 py-0.5 bg-slate-700 rounded">${post.authorRole}</span>
-                                <span class="text-white/50 text-xs">${new Date(post.createdAt).toLocaleString()}</span>
+                // Render people
+                const peopleContainer = document.getElementById('peopleGrid');
+                const personStatusColors = {
+                    active: 'bg-green-500/20 text-green-300',
+                    inactive: 'bg-gray-500/20 text-gray-300',
+                    incarcerated: 'bg-orange-500/20 text-orange-300',
+                    deceased: 'bg-red-500/20 text-red-300',
+                    unknown: 'bg-slate-500/20 text-slate-300',
+                };
+
+                if (people.length === 0) {
+                    peopleContainer.innerHTML = '<p class="text-white/60 text-center col-span-full">No people information available for this investigation.</p>';
+                } else {
+                    peopleContainer.innerHTML = people.map(person => `
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                            <div class="flex gap-3">
+                                ${person.photo ? `<img src="${person.photo}" alt="${person.name}" class="w-14 h-14 rounded-lg object-cover shrink-0" />` : `<div class="w-14 h-14 bg-slate-700 rounded-lg flex items-center justify-center text-xl font-bold shrink-0">${person.name.charAt(0).toUpperCase()}</div>`}
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-semibold text-sm truncate">${person.name}</h4>
+                                    ${person.aliases?.length ? `<p class="text-white/50 text-xs">AKA: ${person.aliases.join(', ')}</p>` : ''}
+                                    ${person.role ? `<p class="text-white/70 text-xs mt-1">${person.role}</p>` : ''}
+                                    <span class="inline-block px-2 py-0.5 rounded text-xs font-medium mt-1 ${personStatusColors[person.status] || personStatusColors.unknown}">${person.status || 'unknown'}</span>
+                                </div>
                             </div>
-                            <p class="text-white/90 text-sm whitespace-pre-wrap">${post.content}</p>
+                            ${person.description ? `<p class="text-white/60 text-xs mt-2">${person.description}</p>` : ''}
+                            ${person.lastKnownLocation ? `<p class="text-white/50 text-xs mt-1">Last seen: ${person.lastKnownLocation}</p>` : ''}
                         </div>
-                    </div>
-                `).join('');
+                    `).join('');
+                }
+
+                // Render locations
+                const locationsContainer = document.getElementById('locationsGrid');
+                const locationTypeColors = {
+                    headquarters: 'bg-red-500/20 text-red-300',
+                    safehouse: 'bg-yellow-500/20 text-yellow-300',
+                    meetup: 'bg-blue-500/20 text-blue-300',
+                    stash: 'bg-orange-500/20 text-orange-300',
+                    business: 'bg-green-500/20 text-green-300',
+                    residence: 'bg-purple-500/20 text-purple-300',
+                    territory: 'bg-pink-500/20 text-pink-300',
+                    other: 'bg-gray-500/20 text-gray-300',
+                };
+
+                const locationStatusColors = {
+                    active: 'bg-green-500/20 text-green-300',
+                    inactive: 'bg-gray-500/20 text-gray-300',
+                    under_surveillance: 'bg-yellow-500/20 text-yellow-300',
+                    raided: 'bg-red-500/20 text-red-300',
+                    unknown: 'bg-slate-500/20 text-slate-300',
+                };
+
+                if (locations.length === 0) {
+                    locationsContainer.innerHTML = '<p class="text-white/60 text-center col-span-full">No location information available for this investigation.</p>';
+                } else {
+                    locationsContainer.innerHTML = locations.map(location => `
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                            <div class="flex gap-3">
+                                ${location.photo ? `<img src="${location.photo}" alt="${location.name}" class="w-14 h-14 rounded-lg object-cover shrink-0" />` : `<div class="w-14 h-14 bg-slate-700 rounded-lg flex items-center justify-center shrink-0"><svg class="w-6 h-6 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>`}
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-semibold text-sm truncate">${location.name}</h4>
+                                    ${location.address ? `<p class="text-white/50 text-xs">${location.address}</p>` : ''}
+                                    <div class="flex gap-1 flex-wrap mt-1">
+                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${locationTypeColors[location.type] || locationTypeColors.other}">${location.type || 'other'}</span>
+                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${locationStatusColors[location.status] || locationStatusColors.unknown}">${(location.status || 'unknown').replace('_', ' ')}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            ${location.description ? `<p class="text-white/60 text-xs mt-2">${location.description}</p>` : ''}
+                        </div>
+                    `).join('');
+                }
+
+                // Render vehicles
+                const vehiclesContainer = document.getElementById('vehiclesGrid');
+                const vehicles = data.vehicles || [];
+                const vehicleTypeColors = {
+                    car: 'bg-blue-500/20 text-blue-300',
+                    truck: 'bg-orange-500/20 text-orange-300',
+                    suv: 'bg-green-500/20 text-green-300',
+                    van: 'bg-yellow-500/20 text-yellow-300',
+                    motorcycle: 'bg-red-500/20 text-red-300',
+                    boat: 'bg-cyan-500/20 text-cyan-300',
+                    aircraft: 'bg-purple-500/20 text-purple-300',
+                    other: 'bg-gray-500/20 text-gray-300',
+                };
+
+                const vehicleStatusColors = {
+                    active: 'bg-green-500/20 text-green-300',
+                    impounded: 'bg-orange-500/20 text-orange-300',
+                    stolen: 'bg-red-500/20 text-red-300',
+                    destroyed: 'bg-gray-500/20 text-gray-300',
+                    unknown: 'bg-slate-500/20 text-slate-300',
+                };
+
+                if (vehicles.length === 0) {
+                    vehiclesContainer.innerHTML = '<p class="text-white/60 text-center col-span-full">No vehicle information available for this investigation.</p>';
+                } else {
+                    vehiclesContainer.innerHTML = vehicles.map(vehicle => {
+                        const displayName = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ') || 'Unknown Vehicle';
+                        return `
+                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                            <div class="flex gap-3">
+                                ${vehicle.photo ? `<img src="${vehicle.photo}" alt="${displayName}" class="w-14 h-14 rounded-lg object-cover shrink-0" />` : `<div class="w-14 h-14 bg-slate-700 rounded-lg flex items-center justify-center shrink-0"><svg class="w-6 h-6 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg></div>`}
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-semibold text-sm truncate">${displayName}</h4>
+                                    ${vehicle.color ? `<p class="text-white/70 text-xs">Color: ${vehicle.color}</p>` : ''}
+                                    ${vehicle.licensePlate ? `<p class="text-white/50 text-xs">Plate: ${vehicle.licensePlate}</p>` : ''}
+                                    <div class="flex gap-1 flex-wrap mt-1">
+                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${vehicleTypeColors[vehicle.type] || vehicleTypeColors.other}">${vehicle.type || 'other'}</span>
+                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${vehicleStatusColors[vehicle.status] || vehicleStatusColors.unknown}">${vehicle.status || 'unknown'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            ${vehicle.description ? `<p class="text-white/60 text-xs mt-2">${vehicle.description}</p>` : ''}
+                            ${vehicle.associatedPerson ? `<p class="text-white/50 text-xs mt-1">Associated: ${vehicle.associatedPerson}</p>` : ''}
+                        </div>
+                    `;}).join('');
+                }
+
             } catch (error) {
                 container.innerHTML = `<p class="text-red-400 text-center">Error: ${error.message}</p>`;
             }

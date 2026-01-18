@@ -11,7 +11,7 @@ export interface IntelThread {
     id: string;
     title: string;
     description: string;
-    category: 'gang' | 'militia' | 'cartel' | 'other';
+    category: 'gang' | 'militia' | 'cartel' | 'crime_family' | 'motorcycle_club' | 'other';
     requiredClearance: ClearanceLevel;
     createdBy: string;
     createdAt: number;

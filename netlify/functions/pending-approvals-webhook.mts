@@ -27,6 +27,17 @@ interface WebhookSettings {
     lastCheckedAt: number | null;
 }
 
+/**
+ * This scheduled function acts as a fallback/safety net.
+ *
+ * The primary notification is sent immediately when a user registers
+ * (via notifyNewPendingUser in google-oauth.ts).
+ *
+ * This scheduled function ensures no pending users are missed in case:
+ * - The immediate notification fails
+ * - A user's profile is updated after registration
+ * - Any edge cases where immediate notification didn't fire
+ */
 export default async function handler() {
     try {
         // Get the settings store

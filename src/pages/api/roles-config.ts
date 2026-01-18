@@ -5,24 +5,66 @@ import { extractUserFromSession, checkPermission } from '../../utils/discord-web
 export const prerender = false;
 
 // Available actions for page-level permissions
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'export' | 'import' | 'bulk_edit' | 'archive' | 'restore';
+
+// Sub-action definitions for granular control
+export type SubAction =
+    // View sub-actions
+    | 'view_list' | 'view_details' | 'view_history' | 'view_analytics' | 'view_sensitive'
+    // Create sub-actions
+    | 'create_draft' | 'create_publish' | 'create_template'
+    // Edit sub-actions
+    | 'edit_content' | 'edit_metadata' | 'edit_status' | 'edit_permissions' | 'edit_settings'
+    // Delete sub-actions
+    | 'delete_soft' | 'delete_permanent' | 'delete_bulk'
+    // Manage sub-actions
+    | 'manage_users' | 'manage_settings' | 'manage_integrations' | 'manage_webhooks';
 
 // Page-level permission configuration
 export interface PagePermission {
     pageId: string;
     actions: PermissionAction[];
+    // New: Sub-actions for granular control within each action
+    subActions?: SubAction[];
     restrictions?: {
         // Field-level restrictions (e.g., can only edit certain fields)
         allowedFields?: string[];
+        // Blocked fields (inverse of allowedFields)
+        blockedFields?: string[];
         // Conditional restrictions (e.g., can only edit own items)
         conditions?: PermissionCondition[];
+        // Time-based restrictions
+        timeRestrictions?: TimeRestriction;
+        // Quantity limits
+        limits?: QuantityLimit[];
     };
 }
 
+// Time-based access restrictions
+export interface TimeRestriction {
+    // Days of week allowed (0 = Sunday, 6 = Saturday)
+    allowedDays?: number[];
+    // Time windows (24-hour format, e.g., "09:00-17:00")
+    allowedHours?: { start: string; end: string }[];
+    // Timezone for time calculations
+    timezone?: string;
+}
+
+// Quantity/rate limits
+export interface QuantityLimit {
+    type: 'per_hour' | 'per_day' | 'per_week' | 'per_month' | 'total';
+    action: PermissionAction;
+    limit: number;
+}
+
 export interface PermissionCondition {
-    type: 'own_items_only' | 'max_per_day' | 'requires_approval' | 'time_restricted';
+    type: 'own_items_only' | 'max_per_day' | 'requires_approval' | 'time_restricted' | 'requires_2fa' | 'ip_whitelist' | 'subdivision_only';
     value?: string | number | boolean;
     description?: string;
+    // For ip_whitelist condition
+    allowedIps?: string[];
+    // For subdivision_only condition
+    subdivisionIds?: string[];
 }
 
 // Types for role configuration
@@ -61,14 +103,26 @@ export interface PageDefinition {
     path: string;
     category: 'content' | 'webhook' | 'admin' | 'system';
     availableActions: PermissionAction[];
+    // Sub-actions available for this page
+    availableSubActions?: SubAction[];
     // Fields that can be individually restricted
     restrictableFields?: {
         id: string;
         name: string;
         description: string;
+        // Which actions this field applies to
+        forActions?: PermissionAction[];
+        // Whether this field contains sensitive data
+        sensitive?: boolean;
     }[];
     // Available conditions for this page
     availableConditions?: PermissionCondition['type'][];
+    // Whether this page supports time-based restrictions
+    supportsTimeRestrictions?: boolean;
+    // Whether this page supports quantity limits
+    supportsLimits?: boolean;
+    // Custom permission notes for this page
+    notes?: string;
 }
 
 // Default available permissions (legacy - kept for backward compatibility)
@@ -98,13 +152,17 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Vehicle and image management',
         path: '/admin/garage',
         category: 'content',
-        availableActions: ['view', 'create', 'edit', 'delete'],
+        availableActions: ['view', 'create', 'edit', 'delete', 'export', 'import', 'bulk_edit'],
+        availableSubActions: ['view_list', 'view_details', 'view_history', 'create_draft', 'create_publish', 'edit_content', 'edit_metadata', 'edit_status', 'delete_soft', 'delete_permanent', 'delete_bulk'],
         restrictableFields: [
-            { id: 'categories', name: 'Categories', description: 'Manage vehicle categories' },
-            { id: 'vehicles', name: 'Vehicles', description: 'Manage individual vehicles' },
-            { id: 'images', name: 'Images', description: 'Upload and manage images' },
+            { id: 'categories', name: 'Categories', description: 'Manage vehicle categories', forActions: ['create', 'edit', 'delete'] },
+            { id: 'vehicles', name: 'Vehicles', description: 'Manage individual vehicles', forActions: ['create', 'edit', 'delete'] },
+            { id: 'images', name: 'Images', description: 'Upload and manage images', forActions: ['create', 'edit', 'delete'] },
+            { id: 'pricing', name: 'Pricing Info', description: 'Vehicle pricing details', forActions: ['view', 'edit'], sensitive: true },
         ],
-        availableConditions: ['own_items_only', 'max_per_day'],
+        availableConditions: ['own_items_only', 'max_per_day', 'requires_approval', 'subdivision_only'],
+        supportsTimeRestrictions: true,
+        supportsLimits: true,
     },
     {
         id: 'events',
@@ -112,13 +170,18 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Community events management',
         path: '/admin/events',
         category: 'content',
-        availableActions: ['view', 'create', 'edit', 'delete'],
+        availableActions: ['view', 'create', 'edit', 'delete', 'archive', 'restore'],
+        availableSubActions: ['view_list', 'view_details', 'view_analytics', 'create_draft', 'create_publish', 'edit_content', 'edit_status', 'edit_metadata', 'delete_soft', 'delete_permanent'],
         restrictableFields: [
-            { id: 'event_details', name: 'Event Details', description: 'Basic event information' },
-            { id: 'event_status', name: 'Event Status', description: 'Change event status' },
-            { id: 'event_dates', name: 'Event Dates', description: 'Modify event dates' },
+            { id: 'event_details', name: 'Event Details', description: 'Basic event information', forActions: ['create', 'edit'] },
+            { id: 'event_status', name: 'Event Status', description: 'Change event status', forActions: ['edit'] },
+            { id: 'event_dates', name: 'Event Dates', description: 'Modify event dates', forActions: ['create', 'edit'] },
+            { id: 'event_capacity', name: 'Event Capacity', description: 'Attendee limits', forActions: ['create', 'edit'] },
+            { id: 'event_location', name: 'Event Location', description: 'Location details', forActions: ['create', 'edit'] },
         ],
-        availableConditions: ['own_items_only', 'requires_approval'],
+        availableConditions: ['own_items_only', 'requires_approval', 'time_restricted'],
+        supportsTimeRestrictions: true,
+        supportsLimits: true,
     },
     {
         id: 'resources',
@@ -126,8 +189,15 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Department resources and documents',
         path: '/admin/resources',
         category: 'content',
-        availableActions: ['view', 'create', 'edit', 'delete'],
-        availableConditions: ['own_items_only'],
+        availableActions: ['view', 'create', 'edit', 'delete', 'export'],
+        availableSubActions: ['view_list', 'view_details', 'view_sensitive', 'create_draft', 'create_publish', 'edit_content', 'edit_metadata', 'delete_soft', 'delete_permanent'],
+        restrictableFields: [
+            { id: 'public_resources', name: 'Public Resources', description: 'Publicly accessible resources', forActions: ['create', 'edit', 'delete'] },
+            { id: 'restricted_resources', name: 'Restricted Resources', description: 'Internal-only resources', forActions: ['view', 'create', 'edit', 'delete'], sensitive: true },
+            { id: 'categories', name: 'Resource Categories', description: 'Organize resources', forActions: ['create', 'edit', 'delete'] },
+        ],
+        availableConditions: ['own_items_only', 'subdivision_only'],
+        supportsLimits: true,
     },
     {
         id: 'uniforms',
@@ -135,13 +205,16 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Uniform inventory management',
         path: '/admin/uniforms',
         category: 'content',
-        availableActions: ['view', 'create', 'edit', 'delete'],
+        availableActions: ['view', 'create', 'edit', 'delete', 'bulk_edit', 'export', 'import'],
+        availableSubActions: ['view_list', 'view_details', 'create_draft', 'create_publish', 'edit_content', 'edit_status', 'edit_metadata', 'delete_soft', 'delete_bulk'],
         restrictableFields: [
-            { id: 'categories', name: 'Categories', description: 'Manage uniform categories' },
-            { id: 'items', name: 'Items', description: 'Manage uniform items' },
-            { id: 'availability', name: 'Availability', description: 'Change availability status' },
+            { id: 'categories', name: 'Categories', description: 'Manage uniform categories', forActions: ['create', 'edit', 'delete'] },
+            { id: 'items', name: 'Items', description: 'Manage uniform items', forActions: ['create', 'edit', 'delete'] },
+            { id: 'availability', name: 'Availability', description: 'Change availability status', forActions: ['edit'] },
+            { id: 'inventory_count', name: 'Inventory Count', description: 'Stock quantities', forActions: ['view', 'edit'], sensitive: true },
         ],
-        availableConditions: ['own_items_only'],
+        availableConditions: ['own_items_only', 'requires_approval'],
+        supportsLimits: true,
     },
     {
         id: 'theme-settings',
@@ -150,11 +223,15 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         path: '/admin/theme-settings',
         category: 'content',
         availableActions: ['view', 'edit'],
+        availableSubActions: ['view_details', 'edit_settings'],
         restrictableFields: [
-            { id: 'theme', name: 'Theme Selection', description: 'Change site theme' },
-            { id: 'effects', name: 'Visual Effects', description: 'Configure visual effects' },
-            { id: 'music', name: 'Music Settings', description: 'Configure background music' },
+            { id: 'theme', name: 'Theme Selection', description: 'Change site theme', forActions: ['edit'] },
+            { id: 'effects', name: 'Visual Effects', description: 'Configure visual effects', forActions: ['edit'] },
+            { id: 'music', name: 'Music Settings', description: 'Configure background music', forActions: ['edit'] },
+            { id: 'colors', name: 'Color Scheme', description: 'Custom color settings', forActions: ['edit'] },
         ],
+        availableConditions: ['requires_approval'],
+        notes: 'Theme changes affect all site visitors immediately',
     },
     {
         id: 'department-data',
@@ -162,13 +239,17 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Awards and Chain of Command',
         path: '/admin/department-data',
         category: 'content',
-        availableActions: ['view', 'create', 'edit', 'delete'],
+        availableActions: ['view', 'create', 'edit', 'delete', 'export'],
+        availableSubActions: ['view_list', 'view_details', 'view_history', 'create_draft', 'create_publish', 'edit_content', 'edit_status', 'edit_metadata', 'delete_soft', 'delete_permanent'],
         restrictableFields: [
-            { id: 'awards', name: 'Awards', description: 'Manage awards and recipients' },
-            { id: 'chain_of_command', name: 'Chain of Command', description: 'Manage command structure' },
-            { id: 'subdivision_leadership', name: 'Subdivision Leadership', description: 'Manage subdivision leaders' },
+            { id: 'awards', name: 'Awards', description: 'Manage awards and recipients', forActions: ['create', 'edit', 'delete'] },
+            { id: 'chain_of_command', name: 'Chain of Command', description: 'Manage command structure', forActions: ['create', 'edit', 'delete'] },
+            { id: 'subdivision_leadership', name: 'Subdivision Leadership', description: 'Manage subdivision leaders', forActions: ['create', 'edit', 'delete'] },
+            { id: 'personnel_records', name: 'Personnel Records', description: 'Officer personnel data', forActions: ['view', 'edit'], sensitive: true },
+            { id: 'rank_structure', name: 'Rank Structure', description: 'Department rank hierarchy', forActions: ['view', 'edit'] },
         ],
-        availableConditions: ['requires_approval'],
+        availableConditions: ['requires_approval', 'subdivision_only'],
+        supportsTimeRestrictions: true,
     },
     {
         id: 'subdivisions',
@@ -177,10 +258,14 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         path: '/admin/subdivisions',
         category: 'content',
         availableActions: ['view', 'edit'],
+        availableSubActions: ['view_list', 'view_details', 'view_analytics', 'edit_content', 'edit_status', 'edit_settings'],
         restrictableFields: [
-            { id: 'availability', name: 'Availability Status', description: 'Change subdivision availability' },
-            { id: 'details', name: 'Subdivision Details', description: 'Edit subdivision information' },
+            { id: 'availability', name: 'Availability Status', description: 'Change subdivision availability', forActions: ['edit'] },
+            { id: 'details', name: 'Subdivision Details', description: 'Edit subdivision information', forActions: ['edit'] },
+            { id: 'roster', name: 'Subdivision Roster', description: 'Member assignments', forActions: ['view', 'edit'] },
+            { id: 'requirements', name: 'Requirements', description: 'Joining requirements', forActions: ['view', 'edit'] },
         ],
+        availableConditions: ['subdivision_only', 'requires_approval'],
     },
     {
         id: 'footer',
@@ -189,11 +274,14 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         path: '/admin/footer',
         category: 'content',
         availableActions: ['view', 'edit'],
+        availableSubActions: ['view_details', 'edit_content', 'edit_settings'],
         restrictableFields: [
-            { id: 'contact_info', name: 'Contact Information', description: 'Emergency and contact numbers' },
-            { id: 'links', name: 'Quick Links', description: 'Footer navigation links' },
-            { id: 'copyright', name: 'Copyright Text', description: 'Copyright and legal text' },
+            { id: 'contact_info', name: 'Contact Information', description: 'Emergency and contact numbers', forActions: ['edit'] },
+            { id: 'links', name: 'Quick Links', description: 'Footer navigation links', forActions: ['edit'] },
+            { id: 'copyright', name: 'Copyright Text', description: 'Copyright and legal text', forActions: ['edit'] },
+            { id: 'social_media', name: 'Social Media', description: 'Social media links', forActions: ['edit'] },
         ],
+        availableConditions: ['requires_approval'],
     },
     {
         id: 'user-management',
@@ -202,13 +290,18 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         path: '/admin/users',
         category: 'admin',
         availableActions: ['view', 'create', 'edit', 'delete', 'manage'],
+        availableSubActions: ['view_list', 'view_details', 'view_history', 'view_sensitive', 'create_publish', 'edit_content', 'edit_permissions', 'edit_status', 'delete_soft', 'delete_permanent', 'manage_users'],
         restrictableFields: [
-            { id: 'basic_info', name: 'Basic Info', description: 'Username and display name' },
-            { id: 'password', name: 'Password', description: 'Reset user passwords' },
-            { id: 'role', name: 'Role Assignment', description: 'Assign user roles' },
-            { id: 'permissions', name: 'Permissions', description: 'Assign individual permissions' },
+            { id: 'basic_info', name: 'Basic Info', description: 'Username and display name', forActions: ['create', 'edit'] },
+            { id: 'password', name: 'Password', description: 'Reset user passwords', forActions: ['edit'], sensitive: true },
+            { id: 'role', name: 'Role Assignment', description: 'Assign user roles', forActions: ['create', 'edit'] },
+            { id: 'permissions', name: 'Permissions', description: 'Assign individual permissions', forActions: ['create', 'edit'] },
+            { id: 'page_permissions', name: 'Page Permissions', description: 'Granular page access', forActions: ['create', 'edit'] },
+            { id: 'activity_log', name: 'Activity Log', description: 'User activity history', forActions: ['view'], sensitive: true },
         ],
-        availableConditions: ['requires_approval'],
+        availableConditions: ['requires_approval', 'requires_2fa'],
+        supportsLimits: true,
+        notes: 'Changes to user permissions take effect immediately',
     },
     {
         id: 'roles-management',
@@ -216,7 +309,15 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Role configuration and permission management',
         path: '/admin/roles',
         category: 'admin',
-        availableActions: ['view', 'create', 'edit', 'delete', 'manage'],
+        availableActions: ['view', 'create', 'edit', 'delete', 'manage', 'export', 'import'],
+        availableSubActions: ['view_list', 'view_details', 'view_history', 'create_publish', 'create_template', 'edit_content', 'edit_permissions', 'edit_settings', 'delete_permanent', 'manage_settings'],
+        restrictableFields: [
+            { id: 'role_mappings', name: 'Role Mappings', description: 'Discord to internal role mappings', forActions: ['create', 'edit', 'delete'] },
+            { id: 'page_definitions', name: 'Page Definitions', description: 'Available pages and actions', forActions: ['view', 'edit'] },
+            { id: 'permission_templates', name: 'Permission Templates', description: 'Saved permission configurations', forActions: ['create', 'edit', 'delete'] },
+        ],
+        availableConditions: ['requires_2fa'],
+        notes: 'Super Admin only - Changes affect all role assignments',
     },
     {
         id: 'webhook-settings',
@@ -224,11 +325,14 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Discord webhook configuration',
         path: '/admin/webhook-settings',
         category: 'webhook',
-        availableActions: ['view', 'edit'],
+        availableActions: ['view', 'edit', 'manage'],
+        availableSubActions: ['view_details', 'view_sensitive', 'edit_settings', 'manage_webhooks', 'manage_integrations'],
         restrictableFields: [
-            { id: 'webhook_url', name: 'Webhook URL', description: 'Configure webhook endpoint' },
-            { id: 'send_messages', name: 'Send Messages', description: 'Trigger webhook messages' },
+            { id: 'webhook_url', name: 'Webhook URL', description: 'Configure webhook endpoint', forActions: ['view', 'edit'], sensitive: true },
+            { id: 'send_messages', name: 'Send Messages', description: 'Trigger webhook messages', forActions: ['manage'] },
+            { id: 'message_templates', name: 'Message Templates', description: 'Webhook message formats', forActions: ['view', 'edit'] },
         ],
+        availableConditions: ['requires_approval', 'ip_whitelist'],
     },
     {
         id: 'chain-of-command-webhook',
@@ -237,10 +341,14 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         path: '/admin/chain-of-command-webhook',
         category: 'webhook',
         availableActions: ['view', 'edit', 'manage'],
+        availableSubActions: ['view_details', 'view_history', 'edit_settings', 'manage_webhooks'],
         restrictableFields: [
-            { id: 'webhook_config', name: 'Webhook Configuration', description: 'Configure webhook settings' },
-            { id: 'manual_post', name: 'Manual Post', description: 'Trigger manual webhook post' },
+            { id: 'webhook_config', name: 'Webhook Configuration', description: 'Configure webhook settings', forActions: ['edit'], sensitive: true },
+            { id: 'manual_post', name: 'Manual Post', description: 'Trigger manual webhook post', forActions: ['manage'] },
+            { id: 'schedule', name: 'Post Schedule', description: 'Automated posting schedule', forActions: ['view', 'edit'] },
         ],
+        availableConditions: ['requires_approval'],
+        supportsTimeRestrictions: true,
     },
     {
         id: 'subdivision-leadership-webhook',
@@ -249,6 +357,12 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         path: '/admin/subdivision-leadership-webhook',
         category: 'webhook',
         availableActions: ['view', 'edit', 'manage'],
+        availableSubActions: ['view_details', 'view_history', 'edit_settings', 'manage_webhooks'],
+        restrictableFields: [
+            { id: 'webhook_config', name: 'Webhook Configuration', description: 'Configure webhook settings', forActions: ['edit'], sensitive: true },
+            { id: 'manual_post', name: 'Manual Post', description: 'Trigger manual posting', forActions: ['manage'] },
+        ],
+        availableConditions: ['subdivision_only', 'requires_approval'],
     },
     {
         id: 'form-builder',
@@ -256,13 +370,16 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Custom form creation and management',
         path: '/admin/form-builder',
         category: 'content',
-        availableActions: ['view', 'create', 'edit', 'delete'],
+        availableActions: ['view', 'create', 'edit', 'delete', 'export', 'import'],
+        availableSubActions: ['view_list', 'view_details', 'view_analytics', 'create_draft', 'create_publish', 'create_template', 'edit_content', 'edit_settings', 'delete_soft', 'delete_permanent'],
         restrictableFields: [
-            { id: 'forms', name: 'Forms', description: 'Create and edit forms' },
-            { id: 'submissions', name: 'Submissions', description: 'View form submissions' },
-            { id: 'webhooks', name: 'Form Webhooks', description: 'Configure form webhooks' },
+            { id: 'forms', name: 'Forms', description: 'Create and edit forms', forActions: ['create', 'edit', 'delete'] },
+            { id: 'submissions', name: 'Submissions', description: 'View form submissions', forActions: ['view', 'delete'], sensitive: true },
+            { id: 'webhooks', name: 'Form Webhooks', description: 'Configure form webhooks', forActions: ['create', 'edit', 'delete'] },
+            { id: 'templates', name: 'Form Templates', description: 'Saved form templates', forActions: ['create', 'edit', 'delete'] },
         ],
-        availableConditions: ['own_items_only'],
+        availableConditions: ['own_items_only', 'requires_approval'],
+        supportsLimits: true,
     },
     {
         id: 'arrest-reports',
@@ -270,12 +387,16 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Case status management',
         path: '/admin/arrest-reports',
         category: 'content',
-        availableActions: ['view', 'edit'],
+        availableActions: ['view', 'edit', 'export'],
+        availableSubActions: ['view_list', 'view_details', 'view_history', 'view_sensitive', 'edit_content', 'edit_status'],
         restrictableFields: [
-            { id: 'case_status', name: 'Case Status', description: 'Update case statuses' },
-            { id: 'case_notes', name: 'Case Notes', description: 'Add notes to cases' },
+            { id: 'case_status', name: 'Case Status', description: 'Update case statuses', forActions: ['edit'] },
+            { id: 'case_notes', name: 'Case Notes', description: 'Add notes to cases', forActions: ['view', 'edit'] },
+            { id: 'suspect_info', name: 'Suspect Information', description: 'Suspect personal data', forActions: ['view'], sensitive: true },
+            { id: 'officer_notes', name: 'Officer Notes', description: 'Internal officer notes', forActions: ['view', 'edit'], sensitive: true },
         ],
-        availableConditions: ['own_items_only'],
+        availableConditions: ['own_items_only', 'subdivision_only'],
+        supportsTimeRestrictions: true,
     },
     {
         id: 'arrests-database',
@@ -283,7 +404,13 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Suspect records search',
         path: '/admin/arrests-database',
         category: 'content',
-        availableActions: ['view'],
+        availableActions: ['view', 'export'],
+        availableSubActions: ['view_list', 'view_details', 'view_sensitive', 'view_history'],
+        restrictableFields: [
+            { id: 'basic_info', name: 'Basic Info', description: 'Basic arrest records', forActions: ['view'] },
+            { id: 'detailed_records', name: 'Detailed Records', description: 'Full arrest details', forActions: ['view'], sensitive: true },
+        ],
+        availableConditions: ['subdivision_only'],
     },
     {
         id: 'images',
@@ -291,8 +418,33 @@ export const DEFAULT_PAGE_DEFINITIONS: PageDefinition[] = [
         description: 'Image hosting management',
         path: '/admin/images',
         category: 'content',
-        availableActions: ['view', 'create', 'delete'],
+        availableActions: ['view', 'create', 'delete', 'bulk_edit'],
+        availableSubActions: ['view_list', 'view_details', 'create_publish', 'delete_soft', 'delete_permanent', 'delete_bulk'],
+        restrictableFields: [
+            { id: 'upload', name: 'Upload Images', description: 'Upload new images', forActions: ['create'] },
+            { id: 'organize', name: 'Organize', description: 'Organize and tag images', forActions: ['edit'] },
+            { id: 'delete', name: 'Delete Images', description: 'Remove images', forActions: ['delete'] },
+        ],
         availableConditions: ['own_items_only', 'max_per_day'],
+        supportsLimits: true,
+        notes: 'Daily upload limits may apply',
+    },
+    {
+        id: 'site-info',
+        name: 'Site Information',
+        description: 'Site settings and maintenance mode',
+        path: '/admin/site-info',
+        category: 'system',
+        availableActions: ['view', 'edit', 'manage'],
+        availableSubActions: ['view_details', 'edit_settings', 'manage_settings'],
+        restrictableFields: [
+            { id: 'site_name', name: 'Site Name', description: 'Site title and branding', forActions: ['edit'] },
+            { id: 'maintenance_mode', name: 'Maintenance Mode', description: 'Enable/disable maintenance', forActions: ['edit', 'manage'] },
+            { id: 'version', name: 'Version Info', description: 'Site version information', forActions: ['view', 'edit'] },
+            { id: 'advanced_settings', name: 'Advanced Settings', description: 'Advanced configuration', forActions: ['edit'], sensitive: true },
+        ],
+        availableConditions: ['requires_2fa'],
+        notes: 'Maintenance mode blocks all non-admin access',
     },
 ];
 

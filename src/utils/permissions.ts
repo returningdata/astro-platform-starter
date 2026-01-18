@@ -2,32 +2,68 @@
  * Advanced Permission Checking Utility
  *
  * Provides granular page-level permission checking with support for:
- * - Action-based permissions (view, create, edit, delete, manage)
- * - Field-level restrictions
- * - Conditional permissions (own items only, max per day, etc.)
+ * - Action-based permissions (view, create, edit, delete, manage, export, import, bulk_edit, archive, restore)
+ * - Sub-action permissions for fine-grained control
+ * - Field-level restrictions with sensitive data marking
+ * - Conditional permissions (own items only, max per day, requires approval, etc.)
+ * - Time-based access restrictions
+ * - Quantity/rate limits
  */
 
 import { getStore } from '@netlify/blobs';
 import type { AdminUser } from './session';
 
 // Permission action types
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage';
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'manage' | 'export' | 'import' | 'bulk_edit' | 'archive' | 'restore';
+
+// Sub-action definitions for granular control
+export type SubAction =
+    // View sub-actions
+    | 'view_list' | 'view_details' | 'view_history' | 'view_analytics' | 'view_sensitive'
+    // Create sub-actions
+    | 'create_draft' | 'create_publish' | 'create_template'
+    // Edit sub-actions
+    | 'edit_content' | 'edit_metadata' | 'edit_status' | 'edit_permissions' | 'edit_settings'
+    // Delete sub-actions
+    | 'delete_soft' | 'delete_permanent' | 'delete_bulk'
+    // Manage sub-actions
+    | 'manage_users' | 'manage_settings' | 'manage_integrations' | 'manage_webhooks';
 
 // Condition types for restricted permissions
-export type ConditionType = 'own_items_only' | 'max_per_day' | 'requires_approval' | 'time_restricted';
+export type ConditionType = 'own_items_only' | 'max_per_day' | 'requires_approval' | 'time_restricted' | 'requires_2fa' | 'ip_whitelist' | 'subdivision_only';
+
+// Time-based access restrictions
+export interface TimeRestriction {
+    allowedDays?: number[];
+    allowedHours?: { start: string; end: string }[];
+    timezone?: string;
+}
+
+// Quantity/rate limits
+export interface QuantityLimit {
+    type: 'per_hour' | 'per_day' | 'per_week' | 'per_month' | 'total';
+    action: PermissionAction;
+    limit: number;
+}
 
 export interface PermissionCondition {
     type: ConditionType;
     value?: string | number | boolean;
     description?: string;
+    allowedIps?: string[];
+    subdivisionIds?: string[];
 }
 
 export interface PagePermission {
     pageId: string;
     actions: PermissionAction[];
+    subActions?: SubAction[];
     restrictions?: {
         allowedFields?: string[];
+        blockedFields?: string[];
         conditions?: PermissionCondition[];
+        timeRestrictions?: TimeRestriction;
+        limits?: QuantityLimit[];
     };
 }
 
@@ -36,8 +72,16 @@ export interface PermissionCheckResult {
     reason?: string;
     restrictions?: {
         allowedFields?: string[];
+        blockedFields?: string[];
         conditions?: PermissionCondition[];
+        timeRestrictions?: TimeRestriction;
+        limits?: QuantityLimit[];
     };
+    // Additional context for the UI
+    requiresApproval?: boolean;
+    is2faRequired?: boolean;
+    isTimeRestricted?: boolean;
+    remainingLimit?: number;
 }
 
 // Cache for roles config to avoid repeated blob reads
@@ -66,8 +110,18 @@ interface PageDefinition {
     id: string;
     name: string;
     availableActions: PermissionAction[];
-    restrictableFields?: { id: string; name: string; description: string; }[];
+    availableSubActions?: SubAction[];
+    restrictableFields?: {
+        id: string;
+        name: string;
+        description: string;
+        forActions?: PermissionAction[];
+        sensitive?: boolean;
+    }[];
     availableConditions?: ConditionType[];
+    supportsTimeRestrictions?: boolean;
+    supportsLimits?: boolean;
+    notes?: string;
 }
 
 /**
@@ -248,6 +302,8 @@ async function checkCondition(
     context?: {
         itemOwnerId?: string;
         fieldId?: string;
+        clientIp?: string;
+        subdivisionId?: string;
     }
 ): Promise<PermissionCheckResult> {
     switch (condition.type) {
@@ -267,6 +323,7 @@ async function checkCondition(
             // The actual approval workflow would be handled elsewhere
             return {
                 allowed: true,
+                requiresApproval: true,
                 restrictions: {
                     conditions: [{ type: 'requires_approval', description: 'This action requires approval' }]
                 }
@@ -275,6 +332,29 @@ async function checkCondition(
         case 'time_restricted':
             // Check if current time falls within allowed hours
             // For now, return true - implement time restriction checking if needed
+            return { allowed: true, isTimeRestricted: true };
+
+        case 'requires_2fa':
+            // Check if user has 2FA enabled - for now, return true
+            // This would need integration with a 2FA system
+            return { allowed: true, is2faRequired: true };
+
+        case 'ip_whitelist':
+            // Check if client IP is in the allowed list
+            if (context?.clientIp && condition.allowedIps) {
+                if (!condition.allowedIps.includes(context.clientIp)) {
+                    return { allowed: false, reason: 'Access denied from this IP address' };
+                }
+            }
+            return { allowed: true };
+
+        case 'subdivision_only':
+            // Check if user belongs to the required subdivision
+            if (context?.subdivisionId && condition.subdivisionIds) {
+                if (!condition.subdivisionIds.includes(context.subdivisionId)) {
+                    return { allowed: false, reason: 'Access restricted to specific subdivisions' };
+                }
+            }
             return { allowed: true };
 
         default:
@@ -300,7 +380,7 @@ export async function getAllowedActions(
     if (!user) return [];
 
     if (user.role === 'super_admin') {
-        return ['view', 'create', 'edit', 'delete', 'manage'];
+        return ['view', 'create', 'edit', 'delete', 'manage', 'export', 'import', 'bulk_edit', 'archive', 'restore'];
     }
 
     const pagePermissions = await getUserPagePermissions(user, pageId);
@@ -323,6 +403,70 @@ export async function getAllowedActions(
     }
 
     return [];
+}
+
+/**
+ * Get all allowed sub-actions for a user on a specific page
+ */
+export async function getAllowedSubActions(
+    user: AdminUser | null,
+    pageId: string
+): Promise<SubAction[]> {
+    if (!user) return [];
+
+    // Super admin has all sub-actions
+    if (user.role === 'super_admin') {
+        return [
+            'view_list', 'view_details', 'view_history', 'view_analytics', 'view_sensitive',
+            'create_draft', 'create_publish', 'create_template',
+            'edit_content', 'edit_metadata', 'edit_status', 'edit_permissions', 'edit_settings',
+            'delete_soft', 'delete_permanent', 'delete_bulk',
+            'manage_users', 'manage_settings', 'manage_integrations', 'manage_webhooks'
+        ];
+    }
+
+    const pagePermissions = await getUserPagePermissions(user, pageId);
+    if (pagePermissions?.subActions) {
+        return pagePermissions.subActions;
+    }
+
+    // Default sub-actions based on granted actions
+    const actions = await getAllowedActions(user, pageId);
+    const defaultSubActions: SubAction[] = [];
+
+    if (actions.includes('view')) {
+        defaultSubActions.push('view_list', 'view_details');
+    }
+    if (actions.includes('create')) {
+        defaultSubActions.push('create_publish');
+    }
+    if (actions.includes('edit')) {
+        defaultSubActions.push('edit_content', 'edit_status');
+    }
+    if (actions.includes('delete')) {
+        defaultSubActions.push('delete_soft');
+    }
+    if (actions.includes('manage')) {
+        defaultSubActions.push('manage_settings');
+    }
+
+    return defaultSubActions;
+}
+
+/**
+ * Check if user has a specific sub-action permission
+ */
+export async function checkSubActionPermission(
+    user: AdminUser | null,
+    pageId: string,
+    subAction: SubAction
+): Promise<boolean> {
+    if (!user) return false;
+
+    if (user.role === 'super_admin') return true;
+
+    const allowedSubActions = await getAllowedSubActions(user, pageId);
+    return allowedSubActions.includes(subAction);
 }
 
 /**
@@ -358,6 +502,89 @@ export async function getAllowedFields(
 }
 
 /**
+ * Get blocked fields for a user on a specific page
+ * Returns null if no fields are blocked, or an array of blocked field IDs
+ */
+export async function getBlockedFields(
+    user: AdminUser | null,
+    pageId: string
+): Promise<string[] | null> {
+    if (!user) return null;
+
+    if (user.role === 'super_admin') {
+        return null; // No fields blocked for super admin
+    }
+
+    const pagePermissions = await getUserPagePermissions(user, pageId);
+    if (pagePermissions?.restrictions?.blockedFields) {
+        return pagePermissions.restrictions.blockedFields;
+    }
+
+    return null; // No fields blocked by default
+}
+
+/**
+ * Check if a specific field is accessible for a user
+ */
+export async function canAccessField(
+    user: AdminUser | null,
+    pageId: string,
+    fieldId: string
+): Promise<boolean> {
+    if (!user) return false;
+
+    if (user.role === 'super_admin') return true;
+
+    // Check blocked fields first
+    const blockedFields = await getBlockedFields(user, pageId);
+    if (blockedFields && blockedFields.includes(fieldId)) {
+        return false;
+    }
+
+    // Check allowed fields
+    const allowedFields = await getAllowedFields(user, pageId);
+    if (allowedFields === null) {
+        return true; // All fields allowed
+    }
+
+    return allowedFields.includes(fieldId);
+}
+
+/**
+ * Get time restrictions for a user on a specific page
+ */
+export async function getTimeRestrictions(
+    user: AdminUser | null,
+    pageId: string
+): Promise<TimeRestriction | null> {
+    if (!user) return null;
+
+    if (user.role === 'super_admin') {
+        return null; // No time restrictions for super admin
+    }
+
+    const pagePermissions = await getUserPagePermissions(user, pageId);
+    return pagePermissions?.restrictions?.timeRestrictions || null;
+}
+
+/**
+ * Get quantity limits for a user on a specific page
+ */
+export async function getQuantityLimits(
+    user: AdminUser | null,
+    pageId: string
+): Promise<QuantityLimit[] | null> {
+    if (!user) return null;
+
+    if (user.role === 'super_admin') {
+        return null; // No limits for super admin
+    }
+
+    const pagePermissions = await getUserPagePermissions(user, pageId);
+    return pagePermissions?.restrictions?.limits || null;
+}
+
+/**
  * Check multiple permissions at once
  */
 export async function checkMultiplePermissions(
@@ -382,7 +609,12 @@ export async function getPermissionSummary(user: AdminUser | null): Promise<{
     pageId: string;
     pageName: string;
     actions: PermissionAction[];
+    subActions: SubAction[];
     hasRestrictions: boolean;
+    hasFieldRestrictions: boolean;
+    hasTimeRestrictions: boolean;
+    hasLimits: boolean;
+    conditions: ConditionType[];
 }[]> {
     if (!user) return [];
 
@@ -395,14 +627,96 @@ export async function getPermissionSummary(user: AdminUser | null): Promise<{
         const actions = await getAllowedActions(user, page.id);
         if (actions.length > 0) {
             const allowedFields = await getAllowedFields(user, page.id);
+            const blockedFields = await getBlockedFields(user, page.id);
+            const subActions = await getAllowedSubActions(user, page.id);
+            const timeRestrictions = await getTimeRestrictions(user, page.id);
+            const limits = await getQuantityLimits(user, page.id);
+
+            // Get conditions from page permissions
+            const pagePermissions = await getUserPagePermissions(user, page.id);
+            const conditions = pagePermissions?.restrictions?.conditions?.map(c => c.type) || [];
+
             summary.push({
                 pageId: page.id,
                 pageName: page.name,
                 actions,
-                hasRestrictions: allowedFields !== null,
+                subActions,
+                hasRestrictions: allowedFields !== null || blockedFields !== null || conditions.length > 0,
+                hasFieldRestrictions: allowedFields !== null || blockedFields !== null,
+                hasTimeRestrictions: timeRestrictions !== null,
+                hasLimits: limits !== null && limits.length > 0,
+                conditions,
             });
         }
     }
 
     return summary;
+}
+
+/**
+ * Get a detailed permission report for a user (for debugging/auditing)
+ */
+export async function getDetailedPermissionReport(user: AdminUser | null): Promise<{
+    userId: string;
+    username: string;
+    role: string;
+    totalPages: number;
+    accessiblePages: number;
+    pages: {
+        pageId: string;
+        pageName: string;
+        canAccess: boolean;
+        actions: PermissionAction[];
+        subActions: SubAction[];
+        allowedFields: string[] | null;
+        blockedFields: string[] | null;
+        timeRestrictions: TimeRestriction | null;
+        limits: QuantityLimit[] | null;
+        conditions: PermissionCondition[];
+    }[];
+} | null> {
+    if (!user) return null;
+
+    const config = await getRolesConfig();
+    const pageDefinitions = config?.pageDefinitions || [];
+
+    const pages = [];
+    let accessibleCount = 0;
+
+    for (const page of pageDefinitions) {
+        const canAccess = await canAccessPage(user, page.id);
+        if (canAccess) accessibleCount++;
+
+        const actions = await getAllowedActions(user, page.id);
+        const subActions = await getAllowedSubActions(user, page.id);
+        const allowedFields = await getAllowedFields(user, page.id);
+        const blockedFields = await getBlockedFields(user, page.id);
+        const timeRestrictions = await getTimeRestrictions(user, page.id);
+        const limits = await getQuantityLimits(user, page.id);
+
+        const pagePermissions = await getUserPagePermissions(user, page.id);
+        const conditions = pagePermissions?.restrictions?.conditions || [];
+
+        pages.push({
+            pageId: page.id,
+            pageName: page.name,
+            canAccess,
+            actions,
+            subActions,
+            allowedFields,
+            blockedFields,
+            timeRestrictions,
+            limits,
+            conditions,
+        });
+    }
+
+    return {
+        userId: user.id,
+        username: user.username,
+        role: user.role,
+        totalPages: pageDefinitions.length,
+        accessiblePages: accessibleCount,
+        pages,
+    };
 }

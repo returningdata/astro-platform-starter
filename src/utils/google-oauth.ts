@@ -11,6 +11,7 @@
  */
 
 import { getStore } from '@netlify/blobs';
+import { notifyNewPendingUser, type PendingUser } from './pending-user-webhook';
 
 // Google API endpoints
 const GOOGLE_OAUTH_AUTHORIZE = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -418,6 +419,13 @@ export async function getOrCreateIntelUser(googleUser: GoogleUser): Promise<{ us
     };
 
     await store.setJSON(userId, newUser);
+
+    // Send immediate Discord notification for new pending user
+    // This runs asynchronously and won't block user registration
+    notifyNewPendingUser(newUser as PendingUser).catch(err => {
+        console.error('Failed to send pending user notification:', err);
+    });
+
     return { user: newUser, isNewUser: true };
 }
 

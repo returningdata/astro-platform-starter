@@ -1,0 +1,349 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Admin - Image Host Management" isAdmin={true}>
+    <div class="space-y-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Image Host Management</h1>
+                <p class="text-white/70">Manage uploaded images</p>
+            </div>
+            <a href="/images" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                View Public Page
+            </a>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="hidden rounded-lg p-4 border">
+        </div>
+
+        <!-- Images Gallery -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold">Uploaded Images</h2>
+                <span id="imageCount" class="text-white/60 text-sm"></span>
+            </div>
+            <div id="imagesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div class="col-span-full text-center py-8 text-white/60">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+                    <p>Loading images...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Detail Modal -->
+    <div id="imageModal" class="fixed inset-0 bg-black/90 z-50 hidden items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="relative w-full max-w-3xl mx-auto my-8">
+            <!-- Close Button -->
+            <button id="closeModal" class="absolute -top-12 right-0 text-white/80 hover:text-white p-2 transition-colors z-10">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <!-- Modal Content -->
+            <div class="bg-slate-800 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                <!-- Image Preview -->
+                <div class="relative bg-slate-900 flex items-center justify-center" style="min-height: 300px;">
+                    <img id="modalImage" src="" alt="" class="max-w-full max-h-[60vh] object-contain">
+                </div>
+
+                <!-- Image Info -->
+                <div class="p-6 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 id="modalName" class="text-xl font-bold text-white"></h3>
+                        <button id="deleteImageBtn" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors text-sm font-semibold">
+                            Delete Image
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-white/60">Original Name:</span>
+                            <span id="modalOriginalName" class="text-white ml-2"></span>
+                        </div>
+                        <div>
+                            <span class="text-white/60">Size:</span>
+                            <span id="modalSize" class="text-white ml-2"></span>
+                        </div>
+                        <div>
+                            <span class="text-white/60">Type:</span>
+                            <span id="modalType" class="text-white ml-2"></span>
+                        </div>
+                        <div>
+                            <span class="text-white/60">Uploaded:</span>
+                            <span id="modalDate" class="text-white ml-2"></span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-4 border-t border-white/10">
+                        <div>
+                            <label class="block text-sm font-medium text-white/60 mb-1">Raw Link (By ID)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="modalRawLink" readonly class="flex-grow px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white font-mono text-sm">
+                                <button class="copy-btn px-3 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors" data-target="modalRawLink">Copy</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-white/60 mb-1">Raw Link (By Name)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="modalNameLink" readonly class="flex-grow px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white font-mono text-sm">
+                                <button class="copy-btn px-3 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors" data-target="modalNameLink">Copy</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        let adminUser = null;
+        let imagesData = [];
+        let currentImageId = null;
+
+        // Check permissions via server-side session
+        async function validateSessionAndPermissions() {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    window.location.href = '/admin/login';
+                    return false;
+                }
+
+                adminUser = data.user;
+
+                // Check permission - super_admin can access everything
+                if (!hasPermission()) {
+                    document.body.innerHTML = `
+                        <div class="min-h-screen flex items-center justify-center bg-slate-900">
+                            <div class="text-center p-8">
+                                <h1 class="text-3xl font-bold text-red-400 mb-4">Access Denied</h1>
+                                <p class="text-white/70 mb-4">You don't have permission to access this page.</p>
+                                <a href="/admin" class="px-6 py-2 bg-primary hover:bg-primary/80 rounded-lg">Return to Dashboard</a>
+                            </div>
+                        </div>
+                    `;
+                    return false;
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Session validation error:', error);
+                window.location.href = '/admin/login';
+                return false;
+            }
+        }
+
+        function hasPermission() {
+            if (!adminUser) return false;
+            if (adminUser.role === 'super_admin') return true;
+            return adminUser.permissions && adminUser.permissions.includes('images');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+
+        // Load images
+        async function loadImages() {
+            try {
+                const response = await fetch('/api/images');
+                const data = await response.json();
+                imagesData = data.images || [];
+                document.getElementById('imageCount').textContent = `${imagesData.length} image${imagesData.length !== 1 ? 's' : ''}`;
+                renderImages();
+            } catch (error) {
+                console.error('Failed to load images:', error);
+                document.getElementById('imagesGrid').innerHTML = `
+                    <div class="col-span-full text-center py-8 text-red-400">
+                        <p>Failed to load images. Please refresh the page.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderImages() {
+            const imagesGrid = document.getElementById('imagesGrid');
+
+            if (imagesData.length === 0) {
+                imagesGrid.innerHTML = `
+                    <div class="col-span-full text-center py-8 text-white/60">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p class="text-lg">No images uploaded yet</p>
+                        <p class="text-sm text-white/40 mt-1">Images uploaded via the public page will appear here</p>
+                    </div>
+                `;
+                return;
+            }
+
+            imagesGrid.innerHTML = imagesData.map(image => `
+                <div class="image-card cursor-pointer group bg-slate-800/40 rounded-xl overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1" data-image-id="${image.id}">
+                    <div class="relative aspect-square bg-slate-900/50 overflow-hidden">
+                        <img
+                            src="/api/images/raw/${image.id}"
+                            alt="${image.customName}"
+                            class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                            onerror="this.parentElement.innerHTML='<div class=\"flex items-center justify-center h-full text-white/20\"><svg class=\"w-12 h-12\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1\" d=\"M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\"/></svg></div>'"
+                        >
+                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="delete-btn p-2 bg-red-600 hover:bg-red-500 rounded-lg transition-colors" data-image-id="${image.id}" title="Delete image">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-gradient-to-b from-slate-800/80 to-slate-800/40">
+                        <h3 class="font-medium text-white text-sm truncate">${image.customName}</h3>
+                        <p class="text-xs text-white/50 mt-1">${formatFileSize(image.size)}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            // Attach click events for cards
+            document.querySelectorAll('.image-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    // Don't open modal if delete button was clicked
+                    if (e.target.closest('.delete-btn')) return;
+
+                    const imageId = card.dataset.imageId;
+                    const image = imagesData.find(img => img.id === imageId);
+                    if (image) {
+                        openModal(image);
+                    }
+                });
+            });
+
+            // Attach click events for quick delete buttons
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const imageId = btn.dataset.imageId;
+                    const image = imagesData.find(img => img.id === imageId);
+                    if (image && confirm(`Are you sure you want to delete "${image.customName}"? This cannot be undone.`)) {
+                        await deleteImage(imageId);
+                    }
+                });
+            });
+        }
+
+        const modal = document.getElementById('imageModal');
+        const closeModalBtn = document.getElementById('closeModal');
+        const deleteImageBtn = document.getElementById('deleteImageBtn');
+
+        function openModal(image) {
+            currentImageId = image.id;
+            const baseUrl = window.location.origin;
+
+            document.getElementById('modalImage').src = `/api/images/raw/${image.id}`;
+            document.getElementById('modalName').textContent = image.customName;
+            document.getElementById('modalOriginalName').textContent = image.originalName;
+            document.getElementById('modalSize').textContent = formatFileSize(image.size);
+            document.getElementById('modalType').textContent = image.mimeType;
+            document.getElementById('modalDate').textContent = new Date(image.uploadedAt).toLocaleString();
+            document.getElementById('modalRawLink').value = `${baseUrl}/api/images/raw/${image.id}`;
+            document.getElementById('modalNameLink').value = `${baseUrl}/api/images/raw/name/${image.customName}`;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModalHandler() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+            currentImageId = null;
+        }
+
+        closeModalBtn.addEventListener('click', closeModalHandler);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModalHandler();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                closeModalHandler();
+            }
+        });
+
+        async function deleteImage(imageId) {
+            try {
+                const response = await fetch('/api/images', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: imageId }),
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showStatus('Image deleted successfully', 'success');
+                    closeModalHandler();
+                    loadImages();
+                } else {
+                    showStatus(result.error || 'Failed to delete image', 'error');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                showStatus('Failed to delete image. Please try again.', 'error');
+            }
+        }
+
+        // Delete image from modal
+        deleteImageBtn.addEventListener('click', async () => {
+            if (!currentImageId) return;
+
+            const image = imagesData.find(img => img.id === currentImageId);
+            if (!confirm(`Are you sure you want to delete "${image?.customName || 'this image'}"? This cannot be undone.`)) {
+                return;
+            }
+
+            await deleteImage(currentImageId);
+        });
+
+        // Copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.dataset.target;
+                const input = document.getElementById(targetId);
+                if (input) {
+                    navigator.clipboard.writeText(input.value);
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = originalText, 1500);
+                }
+            });
+        });
+
+        // Initialize - validate session first
+        validateSessionAndPermissions().then(valid => {
+            if (valid) {
+                loadImages();
+            }
+        });
+    </script>
+</Layout>

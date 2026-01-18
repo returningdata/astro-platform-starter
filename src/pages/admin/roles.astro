@@ -292,6 +292,40 @@ import Layout from '../../layouts/Layout.astro';
             edit: { label: 'Edit', icon: '✏️', color: 'bg-yellow-500/20 text-yellow-300' },
             delete: { label: 'Delete', icon: '🗑️', color: 'bg-red-500/20 text-red-300' },
             manage: { label: 'Manage', icon: '⚙️', color: 'bg-purple-500/20 text-purple-300' },
+            export: { label: 'Export', icon: '📤', color: 'bg-cyan-500/20 text-cyan-300' },
+            import: { label: 'Import', icon: '📥', color: 'bg-teal-500/20 text-teal-300' },
+            bulk_edit: { label: 'Bulk Edit', icon: '📋', color: 'bg-orange-500/20 text-orange-300' },
+            archive: { label: 'Archive', icon: '📦', color: 'bg-slate-500/20 text-slate-300' },
+            restore: { label: 'Restore', icon: '♻️', color: 'bg-emerald-500/20 text-emerald-300' },
+        };
+
+        // Sub-action labels
+        const subActionLabels = {
+            // View sub-actions
+            view_list: { label: 'View List', group: 'view', color: 'bg-blue-600/20 text-blue-200' },
+            view_details: { label: 'View Details', group: 'view', color: 'bg-blue-600/20 text-blue-200' },
+            view_history: { label: 'View History', group: 'view', color: 'bg-blue-600/20 text-blue-200' },
+            view_analytics: { label: 'View Analytics', group: 'view', color: 'bg-blue-600/20 text-blue-200' },
+            view_sensitive: { label: 'View Sensitive', group: 'view', color: 'bg-red-600/20 text-red-200' },
+            // Create sub-actions
+            create_draft: { label: 'Create Draft', group: 'create', color: 'bg-green-600/20 text-green-200' },
+            create_publish: { label: 'Create & Publish', group: 'create', color: 'bg-green-600/20 text-green-200' },
+            create_template: { label: 'Create Template', group: 'create', color: 'bg-green-600/20 text-green-200' },
+            // Edit sub-actions
+            edit_content: { label: 'Edit Content', group: 'edit', color: 'bg-yellow-600/20 text-yellow-200' },
+            edit_metadata: { label: 'Edit Metadata', group: 'edit', color: 'bg-yellow-600/20 text-yellow-200' },
+            edit_status: { label: 'Edit Status', group: 'edit', color: 'bg-yellow-600/20 text-yellow-200' },
+            edit_permissions: { label: 'Edit Permissions', group: 'edit', color: 'bg-red-600/20 text-red-200' },
+            edit_settings: { label: 'Edit Settings', group: 'edit', color: 'bg-yellow-600/20 text-yellow-200' },
+            // Delete sub-actions
+            delete_soft: { label: 'Soft Delete', group: 'delete', color: 'bg-red-600/20 text-red-200' },
+            delete_permanent: { label: 'Permanent Delete', group: 'delete', color: 'bg-red-700/30 text-red-100' },
+            delete_bulk: { label: 'Bulk Delete', group: 'delete', color: 'bg-red-700/30 text-red-100' },
+            // Manage sub-actions
+            manage_users: { label: 'Manage Users', group: 'manage', color: 'bg-purple-600/20 text-purple-200' },
+            manage_settings: { label: 'Manage Settings', group: 'manage', color: 'bg-purple-600/20 text-purple-200' },
+            manage_integrations: { label: 'Manage Integrations', group: 'manage', color: 'bg-purple-600/20 text-purple-200' },
+            manage_webhooks: { label: 'Manage Webhooks', group: 'manage', color: 'bg-purple-600/20 text-purple-200' },
         };
 
         // Condition labels
@@ -300,6 +334,9 @@ import Layout from '../../layouts/Layout.astro';
             max_per_day: 'Max per day limit',
             requires_approval: 'Requires approval',
             time_restricted: 'Time restricted',
+            requires_2fa: 'Requires 2FA',
+            ip_whitelist: 'IP whitelist',
+            subdivision_only: 'Subdivision only',
         };
 
         async function validateSessionAndPermissions() {
@@ -381,6 +418,13 @@ import Layout from '../../layouts/Layout.astro';
             container.innerHTML = rolesConfig.discordRoleMappings.map(mapping => {
                 const pagePermsCount = mapping.pagePermissions?.length || 0;
                 const legacyPermsCount = mapping.permissions?.length || 0;
+                const subActionsCount = mapping.pagePermissions?.reduce((sum, pp) => sum + (pp.subActions?.length || 0), 0) || 0;
+                const restrictionsCount = mapping.pagePermissions?.reduce((sum, pp) => {
+                    let count = 0;
+                    if (pp.restrictions?.allowedFields?.length) count += pp.restrictions.allowedFields.length;
+                    if (pp.restrictions?.conditions?.length) count += pp.restrictions.conditions.length;
+                    return sum + count;
+                }, 0) || 0;
 
                 return `
                 <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-600/50 ${mapping.isActive === false ? 'opacity-50' : ''}" data-id="${mapping.id}">
@@ -409,17 +453,27 @@ import Layout from '../../layouts/Layout.astro';
                             <div class="flex flex-wrap gap-2 text-xs">
                                 ${pagePermsCount > 0 ? `
                                     <span class="px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded-full">
-                                        ${pagePermsCount} page permissions
+                                        📄 ${pagePermsCount} page${pagePermsCount !== 1 ? 's' : ''}
+                                    </span>
+                                ` : ''}
+                                ${subActionsCount > 0 ? `
+                                    <span class="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-full">
+                                        🔧 ${subActionsCount} sub-action${subActionsCount !== 1 ? 's' : ''}
+                                    </span>
+                                ` : ''}
+                                ${restrictionsCount > 0 ? `
+                                    <span class="px-2 py-1 bg-amber-500/20 text-amber-300 rounded-full">
+                                        ⚠️ ${restrictionsCount} restriction${restrictionsCount !== 1 ? 's' : ''}
                                     </span>
                                 ` : ''}
                                 ${legacyPermsCount > 0 ? `
                                     <span class="px-2 py-1 bg-green-500/20 text-green-300 rounded-full">
-                                        ${legacyPermsCount} legacy permissions
+                                        📋 ${legacyPermsCount} legacy
                                     </span>
                                 ` : ''}
                                 ${pagePermsCount === 0 && legacyPermsCount === 0 && mapping.internalRole !== 'super_admin' ? `
                                     <span class="px-2 py-1 bg-orange-500/20 text-orange-300 rounded-full">
-                                        No permissions configured
+                                        ❌ No permissions
                                     </span>
                                 ` : ''}
                             </div>
@@ -429,7 +483,9 @@ import Layout from '../../layouts/Layout.astro';
                                 <div class="mt-2 flex flex-wrap gap-1">
                                     ${mapping.pagePermissions.slice(0, 5).map(pp => {
                                         const page = rolesConfig.pageDefinitions?.find(p => p.id === pp.pageId);
-                                        return `<span class="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300 rounded">${page?.name || pp.pageId}: ${pp.actions.join(', ')}</span>`;
+                                        const hasSubActions = pp.subActions && pp.subActions.length > 0;
+                                        const hasRestrictions = pp.restrictions && (pp.restrictions.allowedFields?.length || pp.restrictions.conditions?.length);
+                                        return `<span class="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-300 rounded">${page?.name || pp.pageId}: ${pp.actions.join(', ')}${hasSubActions ? ' 🔧' : ''}${hasRestrictions ? ' ⚠️' : ''}</span>`;
                                     }).join('')}
                                     ${mapping.pagePermissions.length > 5 ? `<span class="px-2 py-0.5 text-xs bg-slate-600 rounded">+${mapping.pagePermissions.length - 5} more</span>` : ''}
                                 </div>
@@ -494,8 +550,10 @@ import Layout from '../../layouts/Layout.astro';
                     <div class="flex items-center gap-2 mb-2">
                         <input type="checkbox" class="page-toggle rounded bg-slate-600" data-page="${page.id}">
                         <span class="font-medium text-white text-sm">${page.name}</span>
+                        ${page.notes ? `<span class="text-xs text-amber-400" title="${page.notes}">ⓘ</span>` : ''}
                     </div>
                     <div class="page-actions hidden pl-4 space-y-2" data-page="${page.id}">
+                        <!-- Main Actions -->
                         <div class="flex flex-wrap gap-2">
                             ${page.availableActions.map(action => `
                                 <label class="flex items-center gap-1 cursor-pointer">
@@ -505,14 +563,28 @@ import Layout from '../../layouts/Layout.astro';
                             `).join('')}
                         </div>
 
+                        ${page.availableSubActions && page.availableSubActions.length > 0 ? `
+                            <div class="mt-2 pt-2 border-t border-slate-700">
+                                <div class="text-xs text-white/50 mb-1">🔧 Fine-grained sub-actions:</div>
+                                <div class="flex flex-wrap gap-1">
+                                    ${page.availableSubActions.map(subAction => `
+                                        <label class="flex items-center gap-1 cursor-pointer text-xs">
+                                            <input type="checkbox" class="subaction-checkbox rounded bg-slate-600 w-3 h-3" data-page="${page.id}" data-subaction="${subAction}">
+                                            <span class="${subActionLabels[subAction]?.color || 'text-white/70'} px-1 py-0.5 rounded text-[10px]">${subActionLabels[subAction]?.label || subAction}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
                         ${page.restrictableFields && page.restrictableFields.length > 0 ? `
                             <div class="mt-2 pt-2 border-t border-slate-700">
-                                <div class="text-xs text-white/50 mb-1">Restrict to fields:</div>
+                                <div class="text-xs text-white/50 mb-1">📋 Field restrictions:</div>
                                 <div class="flex flex-wrap gap-1">
                                     ${page.restrictableFields.map(field => `
-                                        <label class="flex items-center gap-1 cursor-pointer text-xs">
+                                        <label class="flex items-center gap-1 cursor-pointer text-xs" title="${field.description}${field.sensitive ? ' (Sensitive)' : ''}">
                                             <input type="checkbox" class="field-checkbox rounded bg-slate-600 w-3 h-3" data-page="${page.id}" data-field="${field.id}">
-                                            <span class="text-white/70">${field.name}</span>
+                                            <span class="${field.sensitive ? 'text-red-300' : 'text-white/70'}">${field.name}${field.sensitive ? ' 🔒' : ''}</span>
                                         </label>
                                     `).join('')}
                                 </div>
@@ -521,7 +593,7 @@ import Layout from '../../layouts/Layout.astro';
 
                         ${page.availableConditions && page.availableConditions.length > 0 ? `
                             <div class="mt-2 pt-2 border-t border-slate-700">
-                                <div class="text-xs text-white/50 mb-1">Conditions:</div>
+                                <div class="text-xs text-white/50 mb-1">⚠️ Conditions:</div>
                                 <div class="flex flex-wrap gap-1">
                                     ${page.availableConditions.map(cond => `
                                         <label class="flex items-center gap-1 cursor-pointer text-xs">
@@ -530,6 +602,13 @@ import Layout from '../../layouts/Layout.astro';
                                         </label>
                                     `).join('')}
                                 </div>
+                            </div>
+                        ` : ''}
+
+                        ${page.supportsTimeRestrictions || page.supportsLimits ? `
+                            <div class="mt-2 pt-2 border-t border-slate-700 flex gap-2 text-xs text-white/40">
+                                ${page.supportsTimeRestrictions ? '<span>🕐 Supports time restrictions</span>' : ''}
+                                ${page.supportsLimits ? '<span>📊 Supports quantity limits</span>' : ''}
                             </div>
                         ` : ''}
                     </div>
@@ -602,11 +681,16 @@ import Layout from '../../layouts/Layout.astro';
             document.querySelectorAll('.page-toggle:checked').forEach(toggle => {
                 const pageId = toggle.dataset.page;
                 const actions = [];
+                const subActions = [];
                 const allowedFields = [];
                 const conditions = [];
 
                 document.querySelectorAll(`.action-checkbox[data-page="${pageId}"]:checked`).forEach(cb => {
                     actions.push(cb.dataset.action);
+                });
+
+                document.querySelectorAll(`.subaction-checkbox[data-page="${pageId}"]:checked`).forEach(cb => {
+                    subActions.push(cb.dataset.subaction);
                 });
 
                 document.querySelectorAll(`.field-checkbox[data-page="${pageId}"]:checked`).forEach(cb => {
@@ -619,6 +703,9 @@ import Layout from '../../layouts/Layout.astro';
 
                 if (actions.length > 0) {
                     const pagePerm = { pageId, actions };
+                    if (subActions.length > 0) {
+                        pagePerm.subActions = subActions;
+                    }
                     if (allowedFields.length > 0 || conditions.length > 0) {
                         pagePerm.restrictions = {};
                         if (allowedFields.length > 0) pagePerm.restrictions.allowedFields = allowedFields;
@@ -635,7 +722,7 @@ import Layout from '../../layouts/Layout.astro';
             // Reset all
             document.querySelectorAll('.page-toggle').forEach(t => t.checked = false);
             document.querySelectorAll('.page-actions').forEach(c => c.classList.add('hidden'));
-            document.querySelectorAll('.action-checkbox, .field-checkbox, .condition-checkbox').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.action-checkbox, .subaction-checkbox, .field-checkbox, .condition-checkbox').forEach(cb => cb.checked = false);
 
             if (!pagePermissions) return;
 
@@ -648,6 +735,11 @@ import Layout from '../../layouts/Layout.astro';
 
                     pp.actions?.forEach(action => {
                         const cb = document.querySelector(`.action-checkbox[data-page="${pp.pageId}"][data-action="${action}"]`);
+                        if (cb) cb.checked = true;
+                    });
+
+                    pp.subActions?.forEach(subAction => {
+                        const cb = document.querySelector(`.subaction-checkbox[data-page="${pp.pageId}"][data-subaction="${subAction}"]`);
                         if (cb) cb.checked = true;
                     });
 

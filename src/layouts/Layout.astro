@@ -14,12 +14,21 @@ interface Props {
     isAdmin?: boolean;
 }
 
+interface MusicPlaylistItem {
+    id: string;
+    title: string;
+}
+
 interface ThemeSettings {
     activeTheme: 'christmas' | 'halloween' | 'default' | 'new-year';
     christmasMusic: string;
     halloweenMusic: string;
     defaultMusic: string;
     newYearMusic: string;
+    defaultMusicPlaylist?: MusicPlaylistItem[];
+    christmasMusicPlaylist?: MusicPlaylistItem[];
+    halloweenMusicPlaylist?: MusicPlaylistItem[];
+    newYearMusicPlaylist?: MusicPlaylistItem[];
 }
 
 interface SiteInfo {
@@ -36,8 +45,40 @@ const defaultThemeSettings: ThemeSettings = {
     activeTheme: 'default',
     christmasMusic: 'yXfWUNl1PbM',
     halloweenMusic: 'qw07ZfxeV4g',
-    defaultMusic: '329iFlRszxs',
-    newYearMusic: 'MmC4BLodWDk'
+    defaultMusic: 'lY2yjAdbvdQ',
+    newYearMusic: 'MmC4BLodWDk',
+    // Default theme playlist - songs from Spotify Pop Mix playlist
+    defaultMusicPlaylist: [
+        { id: 'lY2yjAdbvdQ', title: 'Treat You Better - Shawn Mendes' },
+        { id: 'JGwWNGJdvx8', title: 'Shape of You - Ed Sheeran' },
+        { id: '4NRXx6U8ABQ', title: 'Blinding Lights - The Weeknd' },
+        { id: 'ic8j13piAhQ', title: 'Cruel Summer - Taylor Swift' },
+        { id: 'kPa7bsKwL-c', title: 'Die With A Smile - Lady Gaga, Bruno Mars' },
+        { id: 'hT_nvWreIhg', title: 'Counting Stars - OneRepublic' },
+        { id: 'G7KNmW9a75Y', title: 'Flowers - Miley Cyrus' },
+        { id: 'vkQ06Y9rg7A', title: 'Sorry - Justin Bieber' },
+        { id: 'QYh6mYIJG2Y', title: '7 rings - Ariana Grande' },
+        { id: 'tD4HCZe-tew', title: 'Lush Life - Zara Larsson' },
+        { id: 'V9PVRfjEBTI', title: 'BIRDS OF A FEATHER - Billie Eilish' },
+        { id: 'PMivT7MJ41M', title: "That's What I Like - Bruno Mars" },
+        { id: 'H5v3kku4y6Q', title: 'As It Was - Harry Styles' },
+        { id: 'oygrmJFKYZY', title: "Don't Start Now - Dua Lipa" },
+        { id: 'PT2_F-1esPk', title: 'Closer - The Chainsmokers ft. Halsey' },
+        { id: 'xpVfcZ0ZcFM', title: "There's Nothing Holdin' Me Back - Shawn Mendes" },
+        { id: 'NmugSMBh_iI', title: 'Maps - Maroon 5' },
+        { id: 'ZmDBbnmKpqQ', title: 'Without Me - Halsey' },
+        { id: 'nSDgHBxUbVQ', title: 'Photograph - Ed Sheeran' },
+        { id: 'nfs8NYg7yQM', title: 'Attention - Charlie Puth' },
+        { id: 'e-ORhEE9VVg', title: 'Blank Space - Taylor Swift' },
+        { id: 'LMOKlXfXn50', title: 'Save Your Tears (Remix) - The Weeknd, Ariana Grande' },
+        { id: 'LOZuxwVk7TU', title: 'Toxic - Britney Spears' },
+        { id: 'M11SvDtPBhA', title: 'Party In The U.S.A. - Miley Cyrus' },
+        { id: 'Vzo-EL_62fQ', title: 'Ghost - Justin Bieber' },
+        { id: 'eVli-tstM5E', title: 'Espresso - Sabrina Carpenter' },
+        { id: 'KEG7b851Ric', title: 'Taste - Sabrina Carpenter' },
+        { id: 'bVeTqsJU7c4', title: "we can't be friends - Ariana Grande" },
+        { id: 'bpOSxM0rNPM', title: 'Poker Face - Lady Gaga' }
+    ]
 };
 
 // Fetch theme settings from Netlify Blobs on the server
@@ -116,6 +157,16 @@ const musicIds = {
 };
 const activeMusicId = musicIds[activeTheme];
 
+// Get the playlist for the active theme (if available)
+const playlists = {
+    christmas: themeSettings.christmasMusicPlaylist,
+    halloween: themeSettings.halloweenMusicPlaylist,
+    default: themeSettings.defaultMusicPlaylist || defaultThemeSettings.defaultMusicPlaylist,
+    'new-year': themeSettings.newYearMusicPlaylist
+};
+const activePlaylist = playlists[activeTheme] || [];
+const playlistJson = JSON.stringify(activePlaylist);
+
 // Theme-specific styling for music player (server-rendered)
 const themePlayerStyles = {
     christmas: {
@@ -172,7 +223,7 @@ const playerStyle = themePlayerStyles[activeTheme];
         <!-- Discord specific -->
         <meta name="theme-color" content="#1e40af" />
     </head>
-    <body class={bodyClass} data-theme={activeTheme} data-music-id={activeMusicId}>
+    <body class={bodyClass} data-theme={activeTheme} data-music-id={activeMusicId} data-playlist={playlistJson}>
         <!-- Falling effects container -->
         <div id="effects-container" class="fixed inset-0 pointer-events-none z-[9999] overflow-hidden"></div>
 
@@ -291,6 +342,19 @@ const playerStyle = themePlayerStyles[activeTheme];
             // Get theme from server-rendered data attribute (no API fetch needed)
             const currentTheme = document.body.dataset.theme || 'christmas';
             const musicId = document.body.dataset.musicId;
+
+            // Parse playlist from data attribute
+            let playlist = [];
+            try {
+                const playlistData = document.body.dataset.playlist;
+                if (playlistData) {
+                    playlist = JSON.parse(playlistData);
+                }
+            } catch (e) {
+                console.error('Error parsing playlist:', e);
+            }
+
+            let currentSongIndex = 0;
             let player = null;
             let isPlaying = false;
             let shouldStayPaused = false; // Flag to enforce paused state after seekTo
@@ -307,8 +371,8 @@ const playerStyle = themePlayerStyles[activeTheme];
                     const saved = localStorage.getItem(MUSIC_STATE_KEY);
                     if (saved) {
                         const state = JSON.parse(saved);
-                        // Only restore if the same music is playing (same theme)
-                        if (state.musicId === musicId) {
+                        // Only restore if the same theme is active
+                        if (state.theme === currentTheme) {
                             return state;
                         }
                     }
@@ -333,7 +397,9 @@ const playerStyle = themePlayerStyles[activeTheme];
                 if (player && typeof player.getCurrentTime === 'function') {
                     try {
                         const state = {
-                            musicId: musicId,
+                            theme: currentTheme,
+                            musicId: getCurrentMusicId(),
+                            songIndex: currentSongIndex,
                             isPlaying: isPlaying,
                             currentTime: player.getCurrentTime(),
                             timestamp: Date.now()
@@ -343,6 +409,68 @@ const playerStyle = themePlayerStyles[activeTheme];
                         console.error('Error saving music state:', e);
                     }
                 }
+            }
+
+            // Get current music ID (from playlist or single ID)
+            function getCurrentMusicId() {
+                if (playlist && playlist.length > 0 && currentSongIndex < playlist.length) {
+                    return playlist[currentSongIndex].id;
+                }
+                return musicId;
+            }
+
+            // Get current song title
+            function getCurrentSongTitle() {
+                if (playlist && playlist.length > 0 && currentSongIndex < playlist.length) {
+                    return playlist[currentSongIndex].title;
+                }
+                const config = themeConfig[currentTheme] || themeConfig.christmas;
+                return config.musicTitle;
+            }
+
+            // Update song title display
+            function updateSongTitle() {
+                const musicTitle = document.getElementById('yt-song-title');
+                const songCounter = document.getElementById('yt-song-counter');
+                if (playlist && playlist.length > 0) {
+                    if (musicTitle) {
+                        musicTitle.textContent = getCurrentSongTitle();
+                    }
+                    if (songCounter) {
+                        songCounter.textContent = `${currentSongIndex + 1}/${playlist.length}`;
+                        songCounter.classList.remove('hidden');
+                    }
+                } else {
+                    if (songCounter) {
+                        songCounter.classList.add('hidden');
+                    }
+                }
+            }
+
+            // Change to a specific song
+            function changeSong(index) {
+                if (!playlist || playlist.length === 0) return;
+                if (index < 0) index = playlist.length - 1;
+                if (index >= playlist.length) index = 0;
+
+                currentSongIndex = index;
+                const newMusicId = playlist[currentSongIndex].id;
+
+                if (player && typeof player.loadVideoById === 'function') {
+                    player.loadVideoById(newMusicId);
+                    updateSongTitle();
+                    saveMusicState();
+                }
+            }
+
+            // Play next song
+            function nextSong() {
+                changeSong(currentSongIndex + 1);
+            }
+
+            // Play previous song
+            function prevSong() {
+                changeSong(currentSongIndex - 1);
             }
 
             // Save state before page unload (navigation)
@@ -368,21 +496,25 @@ const playerStyle = themePlayerStyles[activeTheme];
                     config.playerStyle.split(' ').forEach(cls => musicPlayer.classList.add(cls));
                 }
 
-                const musicButton = document.getElementById('yt-music-toggle');
-                if (musicButton) {
-                    // Remove old button style classes
-                    musicButton.classList.remove(
-                        'bg-green-700/50', 'hover:text-green-300',
-                        'bg-orange-700/50', 'hover:text-orange-300',
-                        'bg-blue-700/50', 'hover:text-blue-300',
-                        'bg-yellow-600/50', 'hover:text-yellow-300'
-                    );
-                    // Add new button style classes
-                    config.buttonStyle.split(' ').forEach(cls => musicButton.classList.add(cls));
-                }
+                // Apply style to all player buttons (play, prev, next)
+                const buttonIds = ['yt-music-toggle', 'yt-prev-btn', 'yt-next-btn'];
+                buttonIds.forEach(id => {
+                    const button = document.getElementById(id);
+                    if (button) {
+                        // Remove old button style classes
+                        button.classList.remove(
+                            'bg-green-700/50', 'hover:text-green-300',
+                            'bg-orange-700/50', 'hover:text-orange-300',
+                            'bg-blue-700/50', 'hover:text-blue-300',
+                            'bg-yellow-600/50', 'hover:text-yellow-300'
+                        );
+                        // Add new button style classes
+                        config.buttonStyle.split(' ').forEach(cls => button.classList.add(cls));
+                    }
+                });
 
                 const musicTitle = document.getElementById('yt-song-title');
-                if (musicTitle) {
+                if (musicTitle && (!playlist || playlist.length === 0)) {
                     musicTitle.textContent = config.musicTitle;
                 }
             }
@@ -539,6 +671,17 @@ const playerStyle = themePlayerStyles[activeTheme];
                 // Get saved state to restore playback position
                 const savedState = getSavedMusicState();
 
+                // If there's a playlist and saved state, restore song index
+                if (savedState && playlist && playlist.length > 0) {
+                    if (savedState.songIndex !== undefined && savedState.songIndex < playlist.length) {
+                        currentSongIndex = savedState.songIndex;
+                        videoId = playlist[currentSongIndex].id;
+                    }
+                } else if (playlist && playlist.length > 0) {
+                    // Start with first song in playlist
+                    videoId = playlist[0].id;
+                }
+
                 player = new YT.Player('youtube-player', {
                     height: '0',
                     width: '0',
@@ -555,6 +698,9 @@ const playerStyle = themePlayerStyles[activeTheme];
 
                             // Mark that user has visited the site
                             markAsVisited();
+
+                            // Update song title for playlist
+                            updateSongTitle();
 
                             // Restore playback position and state if available
                             if (savedState) {
@@ -602,9 +748,17 @@ const playerStyle = themePlayerStyles[activeTheme];
                             if (event.data === YT.PlayerState.PLAYING) {
                                 isPlaying = true;
                                 updatePlayIcon();
-                            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                            } else if (event.data === YT.PlayerState.PAUSED) {
                                 isPlaying = false;
                                 updatePlayIcon();
+                            } else if (event.data === YT.PlayerState.ENDED) {
+                                // Auto-advance to next song if playlist exists
+                                if (playlist && playlist.length > 1) {
+                                    nextSong();
+                                } else {
+                                    isPlaying = false;
+                                    updatePlayIcon();
+                                }
                             }
                         }
                     }
@@ -636,8 +790,19 @@ const playerStyle = themePlayerStyles[activeTheme];
                     initCountdown();
                 }
 
+                // Show/hide prev/next buttons based on playlist availability
+                const prevBtn = document.getElementById('yt-prev-btn');
+                const nextBtn = document.getElementById('yt-next-btn');
+                if (playlist && playlist.length > 1) {
+                    prevBtn?.classList.remove('hidden');
+                    nextBtn?.classList.remove('hidden');
+                } else {
+                    prevBtn?.classList.add('hidden');
+                    nextBtn?.classList.add('hidden');
+                }
+
                 // Initialize YouTube player with the server-provided music ID
-                initYouTubePlayer(musicId);
+                initYouTubePlayer(getCurrentMusicId());
             }
 
             // New Year Countdown Timer
@@ -699,6 +864,14 @@ const playerStyle = themePlayerStyles[activeTheme];
                             player.playVideo();
                         }
                     }
+                });
+
+                // Set up prev/next buttons for playlist
+                document.getElementById('yt-prev-btn')?.addEventListener('click', () => {
+                    prevSong();
+                });
+                document.getElementById('yt-next-btn')?.addEventListener('click', () => {
+                    nextSong();
                 });
             });
 
@@ -802,16 +975,29 @@ const playerStyle = themePlayerStyles[activeTheme];
 
         <!-- YouTube Music Player -->
         <div id="youtube-music-player" class={`fixed bottom-4 right-4 z-50 backdrop-blur-sm rounded-2xl p-3 shadow-lg border-2 transition-all hover:scale-105 min-w-[200px] ${playerStyle.playerClass}`}>
-            <div id="yt-song-title" class="text-white text-xs text-center mb-2 font-medium truncate px-2">
+            <div id="yt-song-title" class="text-white text-xs text-center mb-1 font-medium truncate px-2">
                 {playerStyle.musicTitle}
             </div>
+            <div id="yt-song-counter" class="text-white/60 text-[10px] text-center mb-2 hidden">1/1</div>
             <div class="flex items-center justify-center gap-2">
+                <!-- Previous Button (hidden by default, shown when playlist exists) -->
+                <button id="yt-prev-btn" class={`hidden items-center justify-center w-8 h-8 text-white transition-colors rounded-full ${playerStyle.buttonClass}`} aria-label="Previous song">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"></path>
+                    </svg>
+                </button>
                 <button id="yt-music-toggle" class={`flex items-center justify-center w-10 h-10 text-white transition-colors rounded-full ${playerStyle.buttonClass}`} aria-label="Toggle music">
                     <svg id="yt-icon-play" class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"></path>
                     </svg>
                     <svg id="yt-icon-pause" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+                    </svg>
+                </button>
+                <!-- Next Button (hidden by default, shown when playlist exists) -->
+                <button id="yt-next-btn" class={`hidden items-center justify-center w-8 h-8 text-white transition-colors rounded-full ${playerStyle.buttonClass}`} aria-label="Next song">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"></path>
                     </svg>
                 </button>
             </div>

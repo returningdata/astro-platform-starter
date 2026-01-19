@@ -145,9 +145,28 @@ export const prerender = false;
                         <li>No falling effects</li>
                         <li>Standard cursor</li>
                         <li>Classic police blue color scheme</li>
-                        <li>Background music</li>
+                        <li>Background music playlist with prev/next controls</li>
                     </ul>
                 </div>
+            </div>
+        </div>
+
+        <!-- Default Theme Music Playlist -->
+        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h2 class="text-2xl font-bold mb-4">🎵 Default Theme Music Playlist</h2>
+            <p class="text-white/70 text-sm mb-4">Manage the music playlist for the default theme. Users can skip between songs using the prev/next buttons on the music player.</p>
+
+            <div id="playlist-container" class="space-y-3">
+                <!-- Playlist items will be rendered here by JavaScript -->
+            </div>
+
+            <div class="mt-4 flex gap-2">
+                <button id="add-song-btn" class="btn btn-sm bg-green-600 hover:bg-green-700">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Add Song
+                </button>
             </div>
         </div>
 
@@ -167,6 +186,18 @@ export const prerender = false;
 
     <script>
         let adminUser = null;
+        let defaultMusicPlaylist = [
+            { id: 'V1Pl8CzNzCw', title: 'Song 1' },
+            { id: 'sZrTJesvJeo', title: 'Song 2' },
+            { id: 'dQw4w9WgXcQ', title: 'Song 3' },
+            { id: 'fJ9rUzIMcZQ', title: 'Song 4' },
+            { id: 'kJQP7kiw5Fk', title: 'Song 5' },
+            { id: 'RgKAFK5djSk', title: 'Song 6' },
+            { id: '09R8_2nJtjg', title: 'Song 7' },
+            { id: 'YQHsXMglC9A', title: 'Song 8' },
+            { id: 'JGwWNGJdvx8', title: 'Song 9' },
+            { id: 'CevxZvSJLk8', title: 'Song 10' }
+        ];
 
         async function validateSessionAndPermissions() {
             try {
@@ -212,6 +243,94 @@ export const prerender = false;
 
         let currentTheme = 'new-year';
 
+        // Render playlist UI
+        function renderPlaylist() {
+            const container = document.getElementById('playlist-container');
+            if (!container) return;
+
+            if (defaultMusicPlaylist.length === 0) {
+                container.innerHTML = '<p class="text-white/50 text-sm">No songs in playlist. Click "Add Song" to add one.</p>';
+                return;
+            }
+
+            container.innerHTML = defaultMusicPlaylist.map((song, index) => `
+                <div class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10" data-index="${index}">
+                    <span class="text-white/50 font-mono text-sm w-6">${index + 1}.</span>
+                    <input type="text" value="${song.title}" placeholder="Song title"
+                           class="flex-1 bg-white/10 border border-white/20 rounded px-3 py-2 text-sm text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                           onchange="updateSongTitle(${index}, this.value)">
+                    <input type="text" value="${song.id}" placeholder="YouTube Video ID"
+                           class="w-32 bg-white/10 border border-white/20 rounded px-3 py-2 text-sm text-white placeholder-white/50 focus:outline-none focus:border-blue-400 font-mono"
+                           onchange="updateSongId(${index}, this.value)">
+                    <a href="https://www.youtube.com/watch?v=${song.id}" target="_blank" rel="noopener noreferrer"
+                       class="text-blue-400 hover:text-blue-300 p-2" title="Preview on YouTube">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                        </svg>
+                    </a>
+                    <button onclick="moveSongUp(${index})" class="text-white/50 hover:text-white p-2 ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}" ${index === 0 ? 'disabled' : ''} title="Move up">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                        </svg>
+                    </button>
+                    <button onclick="moveSongDown(${index})" class="text-white/50 hover:text-white p-2 ${index === defaultMusicPlaylist.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}" ${index === defaultMusicPlaylist.length - 1 ? 'disabled' : ''} title="Move down">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <button onclick="removeSong(${index})" class="text-red-400 hover:text-red-300 p-2" title="Remove song">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Playlist management functions (global scope for onclick handlers)
+        window.updateSongTitle = function(index, title) {
+            if (index >= 0 && index < defaultMusicPlaylist.length) {
+                defaultMusicPlaylist[index].title = title;
+            }
+        };
+
+        window.updateSongId = function(index, id) {
+            if (index >= 0 && index < defaultMusicPlaylist.length) {
+                defaultMusicPlaylist[index].id = id;
+            }
+        };
+
+        window.moveSongUp = function(index) {
+            if (index > 0) {
+                [defaultMusicPlaylist[index], defaultMusicPlaylist[index - 1]] = [defaultMusicPlaylist[index - 1], defaultMusicPlaylist[index]];
+                renderPlaylist();
+            }
+        };
+
+        window.moveSongDown = function(index) {
+            if (index < defaultMusicPlaylist.length - 1) {
+                [defaultMusicPlaylist[index], defaultMusicPlaylist[index + 1]] = [defaultMusicPlaylist[index + 1], defaultMusicPlaylist[index]];
+                renderPlaylist();
+            }
+        };
+
+        window.removeSong = function(index) {
+            if (index >= 0 && index < defaultMusicPlaylist.length) {
+                defaultMusicPlaylist.splice(index, 1);
+                renderPlaylist();
+            }
+        };
+
+        function addSong() {
+            defaultMusicPlaylist.push({ id: '', title: `Song ${defaultMusicPlaylist.length + 1}` });
+            renderPlaylist();
+            // Scroll to the new item
+            const container = document.getElementById('playlist-container');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
         // Load current settings
         async function loadSettings() {
             try {
@@ -219,7 +338,12 @@ export const prerender = false;
                 const data = await response.json();
                 if (data.settings) {
                     currentTheme = data.settings.activeTheme || 'new-year';
+                    // Load playlist if available
+                    if (data.settings.defaultMusicPlaylist && data.settings.defaultMusicPlaylist.length > 0) {
+                        defaultMusicPlaylist = data.settings.defaultMusicPlaylist;
+                    }
                     updateThemeCards();
+                    renderPlaylist();
                 }
             } catch (error) {
                 console.error('Failed to load settings:', error);
@@ -258,6 +382,9 @@ export const prerender = false;
             btn.innerHTML = '<svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Saving...';
 
             try {
+                // Filter out songs with empty IDs
+                const validPlaylist = defaultMusicPlaylist.filter(song => song.id && song.id.trim() !== '');
+
                 const response = await fetch('/api/theme-settings', {
                     method: 'POST',
                     headers: {
@@ -269,8 +396,9 @@ export const prerender = false;
                             activeTheme: currentTheme,
                             christmasMusic: 'yXfWUNl1PbM',
                             halloweenMusic: 'qw07ZfxeV4g',
-                            defaultMusic: '329iFlRszxs',
-                            newYearMusic: 'MmC4BLodWDk'
+                            defaultMusic: validPlaylist.length > 0 ? validPlaylist[0].id : 'V1Pl8CzNzCw',
+                            newYearMusic: 'MmC4BLodWDk',
+                            defaultMusicPlaylist: validPlaylist
                         }
                     })
                 });
@@ -310,5 +438,8 @@ export const prerender = false;
                 loadSettings();
             }
         });
+
+        // Add song button handler
+        document.getElementById('add-song-btn')?.addEventListener('click', addSong);
     </script>
 </Layout>

@@ -4,6 +4,7 @@ import {
     getAllIntelUsers,
     updateIntelUserClearance,
     getIntelLoginLogs,
+    deleteIntelUser,
     type IntelUser,
     type ClearanceLevel,
     CLEARANCE_HIERARCHY,
@@ -115,6 +116,57 @@ export const PUT: APIRoute = async ({ request }) => {
     } catch (error) {
         console.error('Error updating clearance:', error);
         return new Response(JSON.stringify({ error: 'Failed to update clearance' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+};
+
+// DELETE - Delete intel user (admin only)
+export const DELETE: APIRoute = async ({ request }) => {
+    try {
+        const adminUser = await validateSession(request);
+        if (!adminUser) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // Check permission - only super_admin can delete users
+        if (adminUser.role !== 'super_admin') {
+            return new Response(JSON.stringify({ error: 'Forbidden - only super admins can delete users' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        const url = new URL(request.url);
+        const userId = url.searchParams.get('userId');
+
+        if (!userId) {
+            return new Response(JSON.stringify({ error: 'Missing userId parameter' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        const deleted = await deleteIntelUser(userId);
+
+        if (!deleted) {
+            return new Response(JSON.stringify({ error: 'User not found' }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('Error deleting intel user:', error);
+        return new Response(JSON.stringify({ error: 'Failed to delete intel user' }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });

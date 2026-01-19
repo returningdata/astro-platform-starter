@@ -663,3 +663,18 @@ export async function getIntelUserById(userId: string): Promise<IntelUser | null
     const store = getStore({ name: INTEL_USERS_STORE_NAME, consistency: 'strong' });
     return await store.get(userId, { type: 'json' }) as IntelUser | null;
 }
+
+/**
+ * Delete Intel user (admin only)
+ */
+export async function deleteIntelUser(userId: string): Promise<boolean> {
+    const store = getStore({ name: INTEL_USERS_STORE_NAME, consistency: 'strong' });
+    const user = await store.get(userId, { type: 'json' }) as IntelUser | null;
+
+    if (!user) {
+        return false;
+    }
+
+    await store.delete(userId);
+    return true;
+}

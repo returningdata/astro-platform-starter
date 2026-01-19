@@ -932,12 +932,13 @@ export const prerender = false;
             document.getElementById('detailsModal').classList.remove('hidden');
         }
 
-        function switchDetailsFilter(filter) {
+        // Expose to global scope for inline onclick handlers in dynamically generated HTML
+        window.switchDetailsFilter = function(filter) {
             if (!currentDetailsGang) return;
             currentDetailsFilter = filter;
             const contentEl = document.getElementById('detailsModalContent');
             contentEl.innerHTML = renderDetailsContent(currentDetailsGang, filter);
-        }
+        };
 
         function renderDetailsContent(gang, filter = 'all') {
             const vehicleStatusColors = {

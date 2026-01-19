@@ -227,3 +227,64 @@ export async function notifyMultiplePendingUsers(users: PendingUser[], totalPend
         return false;
     }
 }
+
+/**
+ * Send an updated Discord notification when a pending user completes their profile
+ * This notifies approvers with the user's Discord info so they can identify them
+ */
+export async function updatePendingUserNotification(user: PendingUser): Promise<boolean> {
+    try {
+        // Generate approval link
+        const siteUrl = getSiteUrl();
+        const approvalLink = `${siteUrl}/api/intel/user-approve?id=${encodeURIComponent(user.id)}`;
+
+        // Build the Discord embed for profile update
+        const embed = {
+            title: "Pending User Profile Updated",
+            description: "A pending user has completed their profile information.\n\n**[Click here to approve or deny](" + approvalLink + ")**",
+            color: 0x00AAFF, // Blue color for profile update
+            fields: [
+                {
+                    name: user.callsign && user.officerName
+                        ? `${user.callsign} | ${user.officerName}`
+                        : user.name || user.email,
+                    value: [
+                        `**Email:** ${user.email}`,
+                        user.discordId ? `**Discord:** ${user.discordUsername || 'N/A'} (<@${user.discordId}>)` : '',
+                        user.badgeNumber ? `**Badge:** ${user.badgeNumber}` : '',
+                        `**Registered:** <t:${Math.floor(user.createdAt / 1000)}:R>`
+                    ].filter(Boolean).join('\n'),
+                    inline: false
+                }
+            ],
+            thumbnail: user.picture ? { url: user.picture } : undefined,
+            footer: {
+                text: "Intel System - Profile Update Notification"
+            },
+            timestamp: new Date().toISOString()
+        };
+
+        // Send to Discord webhook
+        const response = await fetch(PENDING_APPROVALS_WEBHOOK_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                embeds: [embed]
+            })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to send Discord webhook for profile update:', await response.text());
+            return false;
+        }
+
+        console.log(`Successfully notified about pending user profile update: ${user.email}`);
+        return true;
+
+    } catch (error) {
+        console.error('Error sending profile update notification:', error);
+        return false;
+    }
+}

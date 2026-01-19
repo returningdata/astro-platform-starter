@@ -5,6 +5,7 @@ import {
     updateIntelUserProfile,
     type IntelUser
 } from '../../../utils/google-oauth';
+import { updatePendingUserNotification, type PendingUser } from '../../../utils/pending-user-webhook';
 
 export const prerender = false;
 
@@ -159,6 +160,14 @@ export const PUT: APIRoute = async ({ request }) => {
             return new Response(JSON.stringify({ error: 'User not found' }), {
                 status: 404,
                 headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
+        // If user is pending and just completed their profile, send an updated notification
+        // so approvers can see their Discord info
+        if (updatedUser.clearanceLevel === 'pending' && updatedUser.profileComplete) {
+            updatePendingUserNotification(updatedUser as PendingUser).catch(err => {
+                console.error('Failed to send profile update notification:', err);
             });
         }
 

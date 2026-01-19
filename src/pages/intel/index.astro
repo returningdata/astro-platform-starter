@@ -20,14 +20,87 @@ export const prerender = false;
 
         <!-- Pending State -->
         <div id="pendingState" class="hidden py-12">
-            <div class="max-w-md mx-auto bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
+            <!-- Profile Incomplete - Show form to collect Discord info -->
+            <div id="pendingProfileSetup" class="hidden max-w-md mx-auto bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
+                <div class="p-6 border-b border-slate-700 bg-cyan-500/10">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">Additional Info Required</h2>
+                            <p class="text-white/60 text-sm">Complete your profile to proceed with approval</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <p class="text-white/70 mb-4">Before your access can be approved, please provide your Discord information. This helps administrators identify you during the approval process.</p>
+                    <form id="pendingProfileForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-white/70 mb-1">Discord Username *</label>
+                            <input type="text" id="pendingDiscordUsername" required placeholder="e.g., johndoe"
+                                class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                            <p class="text-xs text-white/40 mt-1">Your Discord username (without the #)</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-white/70 mb-1">Discord ID *</label>
+                            <input type="text" id="pendingDiscordId" required placeholder="e.g., 123456789012345678"
+                                class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+                            <p class="text-xs text-white/40 mt-1">Your 17-19 digit Discord ID (Right-click your profile &gt; Copy User ID)</p>
+                        </div>
+
+                        <!-- Officer Info Preview (populated after Discord ID lookup) -->
+                        <div id="pendingOfficerInfoPreview" class="hidden bg-slate-700/30 rounded-lg p-4 border border-slate-600">
+                            <p class="text-xs text-white/40 uppercase tracking-wide mb-2">Chain of Command Data Found</p>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-white/60">Name:</span>
+                                    <span id="pendingPreviewOfficerName" class="text-white font-medium">-</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-white/60">Callsign:</span>
+                                    <span id="pendingPreviewCallsign" class="text-cyan-400 font-medium">-</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-white/60">Badge Number:</span>
+                                    <span id="pendingPreviewBadgeNumber" class="text-white font-medium">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="pendingProfileError" class="hidden text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-lg p-3"></div>
+
+                        <div class="pt-4">
+                            <button type="submit" id="pendingProfileSubmitBtn" class="w-full px-4 py-3 bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors font-semibold flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Submit Profile Info
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Profile Complete - Show waiting message -->
+            <div id="pendingWaiting" class="hidden max-w-md mx-auto bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
                 <div class="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
                 <h2 class="text-xl font-bold mb-2">Access Pending</h2>
+                <p class="text-white/70 mb-2">Your profile information has been submitted.</p>
                 <p class="text-white/70 mb-4">Your access is pending approval from an administrator. Please check back later.</p>
+                <div id="pendingProfileInfo" class="bg-slate-700/30 rounded-lg p-4 mb-4 text-left">
+                    <p class="text-xs text-white/40 uppercase tracking-wide mb-2">Your Profile</p>
+                    <div class="space-y-1 text-sm">
+                        <p><span class="text-white/60">Discord:</span> <span id="pendingUserDiscord" class="text-white">-</span></p>
+                        <p id="pendingOfficerInfo" class="hidden"><span class="text-white/60">Officer:</span> <span id="pendingUserOfficer" class="text-cyan-400">-</span></p>
+                    </div>
+                </div>
                 <button onclick="location.reload()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
                     Refresh Status
                 </button>
@@ -586,7 +659,21 @@ export const prerender = false;
 
                 if (data.user.clearanceLevel === 'pending') {
                     document.getElementById('pendingState').classList.remove('hidden');
-                    return null;
+                    // Show appropriate pending sub-state based on profile completion
+                    if (!data.user.profileComplete) {
+                        document.getElementById('pendingProfileSetup').classList.remove('hidden');
+                    } else {
+                        document.getElementById('pendingWaiting').classList.remove('hidden');
+                        // Display the user's profile info
+                        document.getElementById('pendingUserDiscord').textContent =
+                            `${data.user.discordUsername || 'N/A'} (${data.user.discordId || 'N/A'})`;
+                        if (data.user.callsign || data.user.officerName) {
+                            document.getElementById('pendingOfficerInfo').classList.remove('hidden');
+                            document.getElementById('pendingUserOfficer').textContent =
+                                `${data.user.callsign || ''} ${data.user.officerName || ''}`.trim();
+                        }
+                    }
+                    return data.user;
                 }
 
                 if (data.user.clearanceLevel === 'denied') {
@@ -1763,6 +1850,104 @@ export const prerender = false;
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
                     Complete Profile Setup
+                `;
+            }
+        });
+
+        // Pending Profile Form - Discord ID lookup on input (for pending users)
+        let pendingLookupTimeout = null;
+        document.getElementById('pendingDiscordId').addEventListener('input', function() {
+            const discordId = this.value.trim();
+            const previewSection = document.getElementById('pendingOfficerInfoPreview');
+
+            // Clear previous timeout
+            if (pendingLookupTimeout) clearTimeout(pendingLookupTimeout);
+
+            // Hide preview if ID is too short
+            if (!/^\d{17,19}$/.test(discordId)) {
+                previewSection.classList.add('hidden');
+                return;
+            }
+
+            // Debounce the lookup
+            pendingLookupTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/intel/profile?discordId=${discordId}`, { credentials: 'include' });
+                    const data = await response.json();
+                    if (data.found && data.officerInfo) {
+                        document.getElementById('pendingPreviewOfficerName').textContent = data.officerInfo.officerName || '-';
+                        document.getElementById('pendingPreviewCallsign').textContent = data.officerInfo.callsign || '-';
+                        document.getElementById('pendingPreviewBadgeNumber').textContent = data.officerInfo.badgeNumber || '-';
+                        previewSection.classList.remove('hidden');
+                    } else {
+                        previewSection.classList.add('hidden');
+                    }
+                } catch (error) {
+                    console.error('Error looking up officer info:', error);
+                    previewSection.classList.add('hidden');
+                }
+            }, 500);
+        });
+
+        // Pending Profile Form Submission
+        document.getElementById('pendingProfileForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('pendingProfileSubmitBtn');
+            const errorEl = document.getElementById('pendingProfileError');
+            const discordUsername = document.getElementById('pendingDiscordUsername').value.trim();
+            const discordId = document.getElementById('pendingDiscordId').value.trim();
+
+            // Clear previous errors
+            errorEl.classList.add('hidden');
+            errorEl.textContent = '';
+
+            // Validate Discord ID format
+            if (!/^\d{17,19}$/.test(discordId)) {
+                errorEl.textContent = 'Invalid Discord ID format. It should be a 17-19 digit number. To find your Discord ID, enable Developer Mode in Discord settings, then right-click your profile and select "Copy User ID".';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Submitting...
+            `;
+
+            try {
+                const response = await fetch('/api/intel/profile', {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ discordUsername, discordId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to update profile');
+                }
+
+                // Success - reload page to show the waiting state
+                window.location.reload();
+
+            } catch (error) {
+                console.error('Profile update error:', error);
+                errorEl.textContent = error.message || 'Failed to update profile. Please try again.';
+                errorEl.classList.remove('hidden');
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Submit Profile Info
                 `;
             }
         });

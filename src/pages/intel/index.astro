@@ -911,7 +911,13 @@ export const prerender = false;
         });
 
         // Details Modal Functions
+        let currentDetailsGang = null;
+        let currentDetailsFilter = 'all';
+
         function openDetailsModal(gang) {
+            currentDetailsGang = gang;
+            currentDetailsFilter = 'all';
+
             const titleEl = document.getElementById('detailsModalTitle');
             const categoryEl = document.getElementById('detailsModalCategory');
             const contentEl = document.getElementById('detailsModalContent');
@@ -922,11 +928,18 @@ export const prerender = false;
             categoryEl.textContent = categoryDisplayNames[category] || 'Organization';
             categoryEl.className = `px-2 py-0.5 rounded text-xs font-medium ${categoryColors[category] || categoryColors.other}`;
 
-            contentEl.innerHTML = renderDetailsContent(gang);
+            contentEl.innerHTML = renderDetailsContent(gang, 'all');
             document.getElementById('detailsModal').classList.remove('hidden');
         }
 
-        function renderDetailsContent(gang) {
+        function switchDetailsFilter(filter) {
+            if (!currentDetailsGang) return;
+            currentDetailsFilter = filter;
+            const contentEl = document.getElementById('detailsModalContent');
+            contentEl.innerHTML = renderDetailsContent(currentDetailsGang, filter);
+        }
+
+        function renderDetailsContent(gang, filter = 'all') {
             const vehicleStatusColors = {
                 active: { bg: 'bg-green-500/20', border: 'border-green-500/30', text: 'text-green-400' },
                 impounded: { bg: 'bg-orange-500/20', border: 'border-orange-500/30', text: 'text-orange-400' },
@@ -956,8 +969,64 @@ export const prerender = false;
 
             let html = '';
 
-            // Description Section
-            if (gang.thread.description) {
+            // Category Filter Tabs
+            const filterBtnClass = (f) => f === filter
+                ? 'px-4 py-2 rounded-lg font-semibold transition-colors bg-primary text-white'
+                : 'px-4 py-2 rounded-lg font-semibold transition-colors bg-slate-700/50 hover:bg-slate-600 text-white/70 hover:text-white';
+
+            html += `
+                <div class="mb-6">
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="switchDetailsFilter('all')" class="${filterBtnClass('all')}">
+                            All Intel
+                        </button>
+                        <button onclick="switchDetailsFilter('people')" class="${filterBtnClass('people')}">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                People (${gang.people?.length || 0})
+                            </span>
+                        </button>
+                        <button onclick="switchDetailsFilter('locations')" class="${filterBtnClass('locations')}">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Locations (${gang.locations?.length || 0})
+                            </span>
+                        </button>
+                        <button onclick="switchDetailsFilter('vehicles')" class="${filterBtnClass('vehicles')}">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                                </svg>
+                                Vehicles (${gang.vehicles?.length || 0})
+                            </span>
+                        </button>
+                        <button onclick="switchDetailsFilter('intel')" class="${filterBtnClass('intel')}">
+                            <span class="flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Reports (${gang.posts?.length || 0})
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Show content based on filter
+            const showAll = filter === 'all';
+            const showPeople = filter === 'all' || filter === 'people';
+            const showLocations = filter === 'all' || filter === 'locations';
+            const showVehicles = filter === 'all' || filter === 'vehicles';
+            const showIntel = filter === 'all' || filter === 'intel';
+
+            // Description Section (only show in 'all' view)
+            if (showAll && gang.thread.description) {
                 html += `
                     <div class="mb-6">
                         <h4 class="text-lg font-bold text-white/90 mb-3 flex items-center gap-2">
@@ -973,32 +1042,34 @@ export const prerender = false;
                 `;
             }
 
-            // Stats Summary
-            html += `
-                <div class="mb-6">
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-center">
-                            <div class="text-2xl font-bold text-green-400">${gang.people?.length || 0}</div>
-                            <div class="text-xs text-white/60 uppercase tracking-wide">Members</div>
-                        </div>
-                        <div class="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 text-center">
-                            <div class="text-2xl font-bold text-orange-400">${gang.locations?.length || 0}</div>
-                            <div class="text-xs text-white/60 uppercase tracking-wide">Locations</div>
-                        </div>
-                        <div class="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4 text-center">
-                            <div class="text-2xl font-bold text-purple-400">${gang.vehicles?.length || 0}</div>
-                            <div class="text-xs text-white/60 uppercase tracking-wide">Vehicles</div>
-                        </div>
-                        <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4 text-center">
-                            <div class="text-2xl font-bold text-cyan-400">${gang.posts?.length || 0}</div>
-                            <div class="text-xs text-white/60 uppercase tracking-wide">Intel Reports</div>
+            // Stats Summary (only show in 'all' view)
+            if (showAll) {
+                html += `
+                    <div class="mb-6">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-center cursor-pointer hover:bg-green-500/20 transition-colors" onclick="switchDetailsFilter('people')">
+                                <div class="text-2xl font-bold text-green-400">${gang.people?.length || 0}</div>
+                                <div class="text-xs text-white/60 uppercase tracking-wide">Members</div>
+                            </div>
+                            <div class="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 text-center cursor-pointer hover:bg-orange-500/20 transition-colors" onclick="switchDetailsFilter('locations')">
+                                <div class="text-2xl font-bold text-orange-400">${gang.locations?.length || 0}</div>
+                                <div class="text-xs text-white/60 uppercase tracking-wide">Locations</div>
+                            </div>
+                            <div class="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4 text-center cursor-pointer hover:bg-purple-500/20 transition-colors" onclick="switchDetailsFilter('vehicles')">
+                                <div class="text-2xl font-bold text-purple-400">${gang.vehicles?.length || 0}</div>
+                                <div class="text-xs text-white/60 uppercase tracking-wide">Vehicles</div>
+                            </div>
+                            <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4 text-center cursor-pointer hover:bg-cyan-500/20 transition-colors" onclick="switchDetailsFilter('intel')">
+                                <div class="text-2xl font-bold text-cyan-400">${gang.posts?.length || 0}</div>
+                                <div class="text-xs text-white/60 uppercase tracking-wide">Intel Reports</div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
 
             // Known Members Section
-            if (gang.people && gang.people.length > 0) {
+            if (showPeople && gang.people && gang.people.length > 0) {
                 html += `
                     <div class="mb-6">
                         <h4 class="text-lg font-bold text-white/90 mb-3 flex items-center gap-2">
@@ -1043,7 +1114,7 @@ export const prerender = false;
             }
 
             // Known Locations Section
-            if (gang.locations && gang.locations.length > 0) {
+            if (showLocations && gang.locations && gang.locations.length > 0) {
                 html += `
                     <div class="mb-6">
                         <h4 class="text-lg font-bold text-white/90 mb-3 flex items-center gap-2">
@@ -1092,7 +1163,7 @@ export const prerender = false;
             }
 
             // Known Vehicles Section
-            if (gang.vehicles && gang.vehicles.length > 0) {
+            if (showVehicles && gang.vehicles && gang.vehicles.length > 0) {
                 html += `
                     <div class="mb-6">
                         <h4 class="text-lg font-bold text-white/90 mb-3 flex items-center gap-2">
@@ -1146,7 +1217,7 @@ export const prerender = false;
             }
 
             // Intel Reports Section
-            if (gang.posts && gang.posts.length > 0) {
+            if (showIntel && gang.posts && gang.posts.length > 0) {
                 html += `
                     <div class="mb-6">
                         <h4 class="text-lg font-bold text-white/90 mb-3 flex items-center gap-2">
@@ -1173,8 +1244,16 @@ export const prerender = false;
                 `;
             }
 
-            // Empty State
-            if (!gang.people?.length && !gang.locations?.length && !gang.vehicles?.length && !gang.posts?.length) {
+            // Empty State - Context aware based on filter
+            const hasNoData = !gang.people?.length && !gang.locations?.length && !gang.vehicles?.length && !gang.posts?.length;
+            const filterEmptyStates = {
+                people: { condition: !gang.people?.length, text: 'No known members recorded.', subtext: 'Add people of interest to build this profile.' },
+                locations: { condition: !gang.locations?.length, text: 'No known locations recorded.', subtext: 'Add locations to track their territory.' },
+                vehicles: { condition: !gang.vehicles?.length, text: 'No known vehicles recorded.', subtext: 'Add vehicles associated with this organization.' },
+                intel: { condition: !gang.posts?.length, text: 'No intel reports filed.', subtext: 'Add intel posts to document observations.' }
+            };
+
+            if (filter === 'all' && hasNoData) {
                 html += `
                     <div class="text-center py-8">
                         <svg class="w-16 h-16 text-white/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1182,6 +1261,17 @@ export const prerender = false;
                         </svg>
                         <p class="text-white/50">No detailed intel gathered yet.</p>
                         <p class="text-white/40 text-sm mt-1">Use "Add Info" to contribute intelligence.</p>
+                    </div>
+                `;
+            } else if (filter !== 'all' && filterEmptyStates[filter]?.condition) {
+                const emptyState = filterEmptyStates[filter];
+                html += `
+                    <div class="text-center py-8">
+                        <svg class="w-16 h-16 text-white/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <p class="text-white/50">${emptyState.text}</p>
+                        <p class="text-white/40 text-sm mt-1">${emptyState.subtext}</p>
                     </div>
                 `;
             }

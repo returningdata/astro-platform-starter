@@ -1,17 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getStore } from '@netlify/blobs';
 
 export const prerender = false;
 
-// Fetch award recipients data
+// Fetch award recipients data directly from Netlify Blobs
 let awardRecipients: Array<{awardName: string, recipientName: string, imageUrl?: string}> = [];
 try {
-    const response = await fetch(new URL('/api/department-data', Astro.url.origin));
-    if (response.ok) {
-        const data = await response.json();
-        awardRecipients = data.awardRecipients || [];
+    const store = getStore({ name: 'department-data', consistency: 'strong' });
+    const data = await store.get('department-data', { type: 'json' }) as { awardRecipients?: Array<{awardName: string, recipientName: string, imageUrl?: string}> } | null;
+    if (data && data.awardRecipients) {
+        awardRecipients = data.awardRecipients;
     }
 } catch (e) {
+    console.error('Error fetching award recipients from Blobs:', e);
     // Use empty array as fallback
 }
 

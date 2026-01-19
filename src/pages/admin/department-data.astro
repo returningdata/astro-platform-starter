@@ -205,6 +205,22 @@ import Layout from '../../layouts/Layout.astro';
 
         let availableSubdivisions = [];
 
+        // Default award recipients structure
+        const defaultAwardRecipients = [
+            { awardName: 'Medal of Valor', recipientName: '' },
+            { awardName: 'Distinguished Service Medal', recipientName: '' },
+            { awardName: 'Service Medal', recipientName: '' },
+            { awardName: 'Gold Medal of Excellence', recipientName: '' },
+            { awardName: 'Meritorious Medal', recipientName: '' },
+            { awardName: 'Academy Officer Service Medal', recipientName: '' },
+            { awardName: 'Supervisor of the Month', recipientName: '' },
+            { awardName: 'Supervisor of the Week', recipientName: '' },
+            { awardName: 'Officer of the Month', recipientName: '' },
+            { awardName: 'Officer of the Week', recipientName: '' },
+            { awardName: 'Training Officer of the Week', recipientName: '' },
+            { awardName: 'Photo of the Week', recipientName: '', imageUrl: '' }
+        ];
+
         // Default rank positions structure
         const defaultRankPositions = [
             {
@@ -269,6 +285,16 @@ import Layout from '../../layouts/Layout.astro';
             }
         ];
 
+        // Default command positions structure
+        const defaultCommandPositions = [
+            { rank: 'Chief of Police', name: '', callSign: '1R-01', jobTitle: '' },
+            { rank: 'Deputy Chief of Police', name: '', callSign: '1R-02', jobTitle: '' },
+            { rank: 'Assistant Chief of Police', name: '', callSign: '1R-03', jobTitle: '' },
+            { rank: 'Colonel', name: '', callSign: '1R-04', jobTitle: '' },
+            { rank: 'Lieutenant Colonel', name: '', callSign: '1R-05', jobTitle: '' },
+            { rank: 'Commander', name: '', callSign: '1R-06', jobTitle: '' }
+        ];
+
         // Default subdivision leadership structure
         const defaultSubdivisionLeadership = [
             { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
@@ -329,8 +355,20 @@ import Layout from '../../layouts/Layout.astro';
                     return rp;
                 });
 
-                // Ensure command positions have jobTitle field
-                if (departmentData.commandPositions) {
+                // Ensure command positions exists with all default positions
+                if (!departmentData.commandPositions || departmentData.commandPositions.length === 0) {
+                    departmentData.commandPositions = defaultCommandPositions;
+                } else {
+                    // Ensure all default command positions exist
+                    const existingRanks = new Set(departmentData.commandPositions.map(cp => cp.rank));
+                    for (const defaultPos of defaultCommandPositions) {
+                        if (!existingRanks.has(defaultPos.rank)) {
+                            // Find the correct position to insert the missing command position
+                            const defaultIndex = defaultCommandPositions.findIndex(cp => cp.rank === defaultPos.rank);
+                            departmentData.commandPositions.splice(defaultIndex, 0, { ...defaultPos });
+                        }
+                    }
+                    // Ensure all have jobTitle field
                     departmentData.commandPositions = departmentData.commandPositions.map(cp => ({
                         ...cp,
                         jobTitle: cp.jobTitle || ''
@@ -340,6 +378,21 @@ import Layout from '../../layouts/Layout.astro';
                 // Ensure subdivisionLeadership exists
                 if (!departmentData.subdivisionLeadership || departmentData.subdivisionLeadership.length === 0) {
                     departmentData.subdivisionLeadership = defaultSubdivisionLeadership;
+                }
+
+                // Ensure awardRecipients exists with all default awards
+                if (!departmentData.awardRecipients || departmentData.awardRecipients.length === 0) {
+                    departmentData.awardRecipients = defaultAwardRecipients.map(a => ({ ...a }));
+                } else {
+                    // Ensure all default awards exist in the stored data
+                    const existingAwards = new Set(departmentData.awardRecipients.map(a => a.awardName));
+                    for (const defaultAward of defaultAwardRecipients) {
+                        if (!existingAwards.has(defaultAward.awardName)) {
+                            // Find the correct position to insert the missing award
+                            const defaultIndex = defaultAwardRecipients.findIndex(a => a.awardName === defaultAward.awardName);
+                            departmentData.awardRecipients.splice(defaultIndex, 0, { ...defaultAward });
+                        }
+                    }
                 }
 
                 renderCommandPositions();
@@ -425,15 +478,28 @@ import Layout from '../../layouts/Layout.astro';
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-1">
                                 Discord ID
-                                <span class="text-xs text-white/50 font-normal ml-1">(optional)</span>
+                                <span class="text-xs text-white/50 font-normal ml-1">(enter ID to auto-populate name)</span>
                             </label>
-                            <input
-                                type="text"
-                                value="${liaison.discordId || ''}"
-                                placeholder="Discord User ID..."
-                                class="liaison-discord-id w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                data-index="${index}"
-                            >
+                            <div class="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    value="${liaison.discordId || ''}"
+                                    placeholder="Discord User ID..."
+                                    class="liaison-discord-id flex-1 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    data-index="${index}"
+                                >
+                                <button
+                                    type="button"
+                                    class="liaison-lookup-btn px-3 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg transition-colors text-white text-sm font-medium flex items-center gap-1.5"
+                                    data-index="${index}"
+                                    title="Look up Discord user and auto-fill name"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <span class="liaison-lookup-status text-xs mt-1 hidden block" data-index="${index}"></span>
                         </div>
                         <div class="flex items-end">
                             <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${liaison.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
@@ -482,6 +548,32 @@ import Layout from '../../layouts/Layout.astro';
                     const liaison = getLiaisonByIndex(index);
                     if (liaison) liaison.discordId = e.target.value;
                 });
+
+                // Auto-lookup when user pastes or enters a valid Discord ID
+                input.addEventListener('change', async (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const discordId = e.target.value.trim();
+
+                    // Check if it looks like a valid Discord ID (17-20 digits)
+                    if (/^\d{17,20}$/.test(discordId)) {
+                        await lookupLiaisonDiscordUser(index, discordId, getLiaisonByIndex);
+                    }
+                });
+            });
+
+            // Lookup button click handlers for liaisons
+            document.querySelectorAll('.liaison-lookup-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    const discordIdInput = document.querySelector(`.liaison-discord-id[data-index="${index}"]`);
+                    const discordId = discordIdInput?.value?.trim();
+
+                    if (discordId) {
+                        await lookupLiaisonDiscordUser(index, discordId, getLiaisonByIndex);
+                    } else {
+                        showLiaisonLookupStatus(index, 'Enter a Discord ID first', 'warning');
+                    }
+                });
             });
 
             document.querySelectorAll('.liaison-loa').forEach(input => {
@@ -492,6 +584,87 @@ import Layout from '../../layouts/Layout.astro';
                     renderDepartmentLiaisons();
                 });
             });
+        }
+
+        // Liaison-specific lookup helper functions
+        function showLiaisonLookupStatus(index, message, type = 'info') {
+            const statusEl = document.querySelector(`.liaison-lookup-status[data-index="${index}"]`);
+            if (!statusEl) return;
+
+            statusEl.classList.remove('hidden', 'text-green-400', 'text-red-400', 'text-yellow-400', 'text-blue-400');
+
+            const colorClass = {
+                'success': 'text-green-400',
+                'error': 'text-red-400',
+                'warning': 'text-yellow-400',
+                'info': 'text-blue-400'
+            }[type] || 'text-white/60';
+
+            statusEl.classList.add(colorClass);
+            statusEl.textContent = message;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 5000);
+        }
+
+        async function lookupLiaisonDiscordUser(index, discordId, getLiaisonByIndex) {
+            const btn = document.querySelector(`.liaison-lookup-btn[data-index="${index}"]`);
+
+            // Validate Discord ID format
+            if (!/^\d{17,20}$/.test(discordId)) {
+                showLiaisonLookupStatus(index, 'Invalid Discord ID format', 'error');
+                return;
+            }
+
+            // Disable button and show loading state
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `
+                    <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                `;
+            }
+
+            try {
+                const response = await fetch(`/api/discord-user-lookup?userId=${encodeURIComponent(discordId)}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.user) {
+                    // Auto-populate the name field
+                    const nameInput = document.querySelector(`.liaison-name[data-index="${index}"]`);
+                    const liaison = getLiaisonByIndex(index);
+                    if (nameInput && liaison) {
+                        nameInput.value = result.user.displayName;
+                        liaison.name = result.user.displayName;
+                    }
+
+                    // Show success message
+                    const memberStatus = result.isMember ? '' : ' (not in server)';
+                    showLiaisonLookupStatus(index, `Found: ${result.user.displayName}${memberStatus}`, result.isMember ? 'success' : 'warning');
+                } else {
+                    showLiaisonLookupStatus(index, result.error || 'User not found', 'error');
+                }
+            } catch (error) {
+                console.error('Discord lookup error:', error);
+                showLiaisonLookupStatus(index, 'Lookup failed', 'error');
+            } finally {
+                // Restore button state
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    `;
+                }
+            }
         }
 
         function renderCommandPositions() {
@@ -517,9 +690,13 @@ import Layout from '../../layouts/Layout.astro';
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-1">Call Sign</label>
-                            <div class="px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg text-cyan-300 font-mono">
-                                ${position.callSign}
-                            </div>
+                            <input
+                                type="text"
+                                value="${position.callSign || ''}"
+                                placeholder="e.g., 1R-01"
+                                class="command-callsign w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-cyan-300 font-mono focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                data-index="${index}"
+                            >
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-1">Name</label>
@@ -558,13 +735,27 @@ import Layout from '../../layouts/Layout.astro';
                             Discord ID
                             <span class="text-xs text-white/50 font-normal ml-1">(for webhook mentions - not visible on site)</span>
                         </label>
-                        <input
-                            type="text"
-                            value="${position.discordId || ''}"
-                            placeholder="Enter Discord User ID (e.g., 123456789012345678)"
-                            class="command-discord-id w-full md:w-1/2 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            data-index="${index}"
-                        >
+                        <div class="flex gap-2 items-center">
+                            <input
+                                type="text"
+                                value="${position.discordId || ''}"
+                                placeholder="Enter Discord User ID (e.g., 123456789012345678)"
+                                class="command-discord-id flex-1 md:w-1/2 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                data-index="${index}"
+                            >
+                            <button
+                                type="button"
+                                class="command-lookup-btn flex items-center gap-2 px-4 py-2 bg-purple-600/50 hover:bg-purple-600/70 border border-purple-500 rounded-lg text-purple-200 transition-colors"
+                                data-index="${index}"
+                                title="Lookup Discord user to auto-fill callsign and name"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                Lookup
+                            </button>
+                        </div>
+                        <div class="command-lookup-status hidden mt-2 text-sm" data-index="${index}"></div>
                     </div>
                 </div>
             `).join('');
@@ -813,10 +1004,11 @@ import Layout from '../../layouts/Layout.astro';
                 const index = subdivision.originalIndex;
                 const linkedName = getLinkedSubdivisionName(subdivision.subdivisionId);
                 const posInfo = getPositionTypeInfo(subdivision.positionType);
+                const isVacant = subdivision.isVacant || false;
 
                 return `
-                <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${subdivision.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
-                    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div class="p-4 bg-slate-800/50 rounded-lg border border-slate-600/50 ${isVacant ? 'border-gray-500/50 bg-gray-500/10' : subdivision.isLOA ? 'border-yellow-500/50 bg-yellow-500/10' : ''}">
+                    <div class="grid grid-cols-1 md:grid-cols-7 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-1">Division Name</label>
                             <input
@@ -831,20 +1023,22 @@ import Layout from '../../layouts/Layout.astro';
                             <label class="block text-sm font-medium text-slate-300 mb-1">Name</label>
                             <input
                                 type="text"
-                                value="${subdivision.name || ''}"
+                                value="${isVacant ? 'Looking for Head of ' + (subdivision.division || 'Subdivision') : (subdivision.name || '')}"
                                 placeholder="Enter head name..."
-                                class="subdivision-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                class="subdivision-name w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent ${isVacant ? 'bg-gray-600/50 text-gray-400' : ''}"
                                 data-index="${index}"
+                                ${isVacant ? 'readonly' : ''}
                             >
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-1">Callsign</label>
                             <input
                                 type="text"
-                                value="${subdivision.callSign || ''}"
+                                value="${isVacant ? 'N/A' : (subdivision.callSign || '')}"
                                 placeholder="Enter callsign..."
-                                class="subdivision-callsign w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white font-mono focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                class="subdivision-callsign w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white font-mono focus:ring-2 focus:ring-orange-500 focus:border-transparent ${isVacant ? 'bg-gray-600/50 text-gray-400' : ''}"
                                 data-index="${index}"
+                                ${isVacant ? 'readonly' : ''}
                             >
                         </div>
                         <div>
@@ -858,12 +1052,24 @@ import Layout from '../../layouts/Layout.astro';
                             >
                         </div>
                         <div class="flex items-end">
-                            <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${subdivision.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''}">
+                            <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${isVacant ? 'border-gray-500 bg-gray-500/20' : ''}">
+                                <input
+                                    type="checkbox"
+                                    class="subdivision-vacant w-4 h-4 rounded border-slate-500 text-gray-500 focus:ring-gray-500 focus:ring-offset-0"
+                                    data-index="${index}"
+                                    ${isVacant ? 'checked' : ''}
+                                >
+                                <span class="text-sm font-medium ${isVacant ? 'text-gray-400' : 'text-slate-300'}">Vacant</span>
+                            </label>
+                        </div>
+                        <div class="flex items-end">
+                            <label class="flex items-center gap-2 px-4 py-2 bg-slate-700/30 border border-slate-600 rounded-lg cursor-pointer hover:bg-slate-700/50 transition-colors w-full justify-center ${subdivision.isLOA ? 'border-yellow-500 bg-yellow-500/20' : ''} ${isVacant ? 'opacity-50 cursor-not-allowed' : ''}">
                                 <input
                                     type="checkbox"
                                     class="subdivision-loa w-4 h-4 rounded border-slate-500 text-yellow-500 focus:ring-yellow-500 focus:ring-offset-0"
                                     data-index="${index}"
                                     ${subdivision.isLOA ? 'checked' : ''}
+                                    ${isVacant ? 'disabled' : ''}
                                 >
                                 <span class="text-sm font-medium ${subdivision.isLOA ? 'text-yellow-400' : 'text-slate-300'}">LOA</span>
                             </label>
@@ -919,15 +1125,29 @@ import Layout from '../../layouts/Layout.astro';
                     <div class="mt-3">
                         <label class="block text-sm font-medium text-slate-300 mb-1">
                             Discord ID
-                            <span class="text-xs text-white/50 font-normal ml-1">(for webhook mentions - not visible on site)</span>
+                            <span class="text-xs text-white/50 font-normal ml-1">(enter ID to auto-populate name)</span>
                         </label>
-                        <input
-                            type="text"
-                            value="${subdivision.discordId || ''}"
-                            placeholder="Enter Discord User ID (e.g., 123456789012345678)"
-                            class="subdivision-discord-id w-full md:w-1/2 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            data-index="${index}"
-                        >
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value="${subdivision.discordId || ''}"
+                                placeholder="Enter Discord User ID (e.g., 123456789012345678)"
+                                class="subdivision-discord-id flex-1 md:max-w-[50%] px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-purple-300 font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                data-index="${index}"
+                            >
+                            <button
+                                type="button"
+                                class="subdivision-lookup-btn px-3 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg transition-colors text-white text-sm font-medium flex items-center gap-1.5"
+                                data-index="${index}"
+                                title="Look up Discord user and auto-fill name"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                Lookup
+                            </button>
+                            <span class="subdivision-lookup-status text-sm hidden" data-index="${index}"></span>
+                        </div>
                     </div>
                     <div class="mt-2">
                         ${linkedName ? `<p class="text-xs text-green-400">Linked to: ${linkedName}</p>` :
@@ -1118,7 +1338,119 @@ import Layout from '../../layouts/Layout.astro';
             });
         }
 
+        // Command position Discord lookup functions
+        function showCommandLookupStatus(index, message, type = 'info') {
+            const statusEl = document.querySelector(`.command-lookup-status[data-index="${index}"]`);
+            if (!statusEl) return;
+
+            statusEl.classList.remove('hidden', 'text-green-400', 'text-red-400', 'text-yellow-400', 'text-slate-400');
+
+            let colorClass = 'text-slate-400';
+            if (type === 'success') colorClass = 'text-green-400';
+            else if (type === 'error') colorClass = 'text-red-400';
+            else if (type === 'warning') colorClass = 'text-yellow-400';
+
+            statusEl.classList.add(colorClass);
+            statusEl.textContent = message;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 5000);
+        }
+
+        async function lookupCommandDiscordUser(index, discordId) {
+            const btn = document.querySelector(`.command-lookup-btn[data-index="${index}"]`);
+            const statusEl = document.querySelector(`.command-lookup-status[data-index="${index}"]`);
+
+            // Validate Discord ID format
+            if (!/^\d{17,20}$/.test(discordId)) {
+                showCommandLookupStatus(index, 'Invalid Discord ID format', 'error');
+                return;
+            }
+
+            // Disable button and show loading state
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `
+                    <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Looking up...
+                `;
+            }
+
+            try {
+                const response = await fetch(`/api/discord-user-lookup?userId=${encodeURIComponent(discordId)}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.user) {
+                    // Auto-populate the callsign and name fields
+                    const callsignInput = document.querySelector(`.command-callsign[data-index="${index}"]`);
+                    const nameInput = document.querySelector(`.command-name[data-index="${index}"]`);
+
+                    if (result.user.callSign && callsignInput) {
+                        callsignInput.value = result.user.callSign;
+                        departmentData.commandPositions[index].callSign = result.user.callSign;
+                    }
+
+                    if (result.user.parsedName && nameInput) {
+                        nameInput.value = result.user.parsedName;
+                        departmentData.commandPositions[index].name = result.user.parsedName;
+                    } else if (result.user.displayName && nameInput) {
+                        // Fall back to displayName if parsedName is not available
+                        nameInput.value = result.user.displayName;
+                        departmentData.commandPositions[index].name = result.user.displayName;
+                    }
+
+                    // Build status message
+                    let statusMessage = '';
+                    if (result.user.callSign && result.user.parsedName) {
+                        statusMessage = `Found: ${result.user.callSign} | ${result.user.parsedName}`;
+                    } else if (result.user.displayName) {
+                        statusMessage = `Found: ${result.user.displayName}`;
+                        if (!result.user.callSign) {
+                            statusMessage += ' (no callsign detected in nickname)';
+                        }
+                    }
+
+                    if (result.warning) {
+                        showCommandLookupStatus(index, `${statusMessage} - ${result.warning}`, 'warning');
+                    } else {
+                        showCommandLookupStatus(index, statusMessage, 'success');
+                    }
+                } else {
+                    showCommandLookupStatus(index, result.error || 'User not found', 'error');
+                }
+            } catch (error) {
+                console.error('Discord lookup error:', error);
+                showCommandLookupStatus(index, 'Failed to lookup user', 'error');
+            } finally {
+                // Restore button state
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Lookup
+                    `;
+                }
+            }
+        }
+
         function attachCommandListeners() {
+            document.querySelectorAll('.command-callsign').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    departmentData.commandPositions[index].callSign = e.target.value;
+                });
+            });
+
             document.querySelectorAll('.command-name').forEach(input => {
                 input.addEventListener('input', (e) => {
                     const index = parseInt(e.target.dataset.index);
@@ -1146,6 +1478,32 @@ import Layout from '../../layouts/Layout.astro';
                     const index = parseInt(e.target.dataset.index);
                     departmentData.commandPositions[index].discordId = e.target.value;
                 });
+
+                // Auto-lookup when user pastes or enters a valid Discord ID
+                input.addEventListener('change', async (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const discordId = e.target.value.trim();
+
+                    // Check if it looks like a valid Discord ID (17-20 digits)
+                    if (/^\d{17,20}$/.test(discordId)) {
+                        await lookupCommandDiscordUser(index, discordId);
+                    }
+                });
+            });
+
+            // Lookup button click handlers
+            document.querySelectorAll('.command-lookup-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    const discordIdInput = document.querySelector(`.command-discord-id[data-index="${index}"]`);
+                    const discordId = discordIdInput?.value?.trim();
+
+                    if (discordId) {
+                        await lookupCommandDiscordUser(index, discordId);
+                    } else {
+                        showCommandLookupStatus(index, 'Enter a Discord ID first', 'warning');
+                    }
+                });
             });
         }
 
@@ -1165,11 +1523,112 @@ import Layout from '../../layouts/Layout.astro';
             });
         }
 
+        // Discord user lookup helper functions
+        function showLookupStatus(index, message, type = 'info') {
+            const statusEl = document.querySelector(`.subdivision-lookup-status[data-index="${index}"]`);
+            if (!statusEl) return;
+
+            statusEl.classList.remove('hidden', 'text-green-400', 'text-red-400', 'text-yellow-400', 'text-blue-400');
+
+            const colorClass = {
+                'success': 'text-green-400',
+                'error': 'text-red-400',
+                'warning': 'text-yellow-400',
+                'info': 'text-blue-400'
+            }[type] || 'text-white/60';
+
+            statusEl.classList.add(colorClass);
+            statusEl.textContent = message;
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 5000);
+        }
+
+        async function lookupDiscordUser(index, discordId) {
+            const btn = document.querySelector(`.subdivision-lookup-btn[data-index="${index}"]`);
+            const statusEl = document.querySelector(`.subdivision-lookup-status[data-index="${index}"]`);
+
+            // Validate Discord ID format
+            if (!/^\d{17,20}$/.test(discordId)) {
+                showLookupStatus(index, 'Invalid Discord ID format', 'error');
+                return;
+            }
+
+            // Disable button and show loading state
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `
+                    <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Looking up...
+                `;
+            }
+
+            try {
+                const response = await fetch(`/api/discord-user-lookup?userId=${encodeURIComponent(discordId)}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.user) {
+                    // Auto-populate the callsign field if available
+                    const callsignInput = document.querySelector(`.subdivision-callsign[data-index="${index}"]`);
+                    if (callsignInput && result.user.callSign) {
+                        callsignInput.value = result.user.callSign;
+                        departmentData.subdivisionLeadership[index].callSign = result.user.callSign;
+                    }
+
+                    // Auto-populate the name field (use parsedName if available, otherwise displayName)
+                    const nameInput = document.querySelector(`.subdivision-name[data-index="${index}"]`);
+                    const nameValue = result.user.parsedName || result.user.displayName;
+                    if (nameInput && nameValue) {
+                        nameInput.value = nameValue;
+                        departmentData.subdivisionLeadership[index].name = nameValue;
+                    }
+
+                    // Show success message with both callsign and name
+                    const memberStatus = result.isMember ? '' : ' (not in server)';
+                    const foundInfo = result.user.callSign
+                        ? `${result.user.callSign} - ${result.user.parsedName || result.user.displayName}`
+                        : result.user.displayName;
+                    showLookupStatus(index, `Found: ${foundInfo}${memberStatus}`, result.isMember ? 'success' : 'warning');
+                } else {
+                    showLookupStatus(index, result.error || 'User not found', 'error');
+                }
+            } catch (error) {
+                console.error('Discord lookup error:', error);
+                showLookupStatus(index, 'Lookup failed', 'error');
+            } finally {
+                // Restore button state
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Lookup
+                    `;
+                }
+            }
+        }
+
         function attachSubdivisionListeners() {
             document.querySelectorAll('.subdivision-division').forEach(input => {
                 input.addEventListener('input', (e) => {
                     const index = parseInt(e.target.dataset.index);
                     departmentData.subdivisionLeadership[index].division = e.target.value;
+
+                    // If position is vacant, update the auto-filled name
+                    if (departmentData.subdivisionLeadership[index].isVacant) {
+                        departmentData.subdivisionLeadership[index].name = 'Looking for Head of ' + (e.target.value || 'Subdivision');
+                        const nameInput = document.querySelector(`.subdivision-name[data-index="${index}"]`);
+                        if (nameInput) nameInput.value = departmentData.subdivisionLeadership[index].name;
+                    }
                 });
             });
 
@@ -1206,6 +1665,32 @@ import Layout from '../../layouts/Layout.astro';
                 input.addEventListener('input', (e) => {
                     const index = parseInt(e.target.dataset.index);
                     departmentData.subdivisionLeadership[index].discordId = e.target.value;
+                });
+
+                // Auto-lookup when user pastes or enters a valid Discord ID
+                input.addEventListener('change', async (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const discordId = e.target.value.trim();
+
+                    // Check if it looks like a valid Discord ID (17-20 digits)
+                    if (/^\d{17,20}$/.test(discordId)) {
+                        await lookupDiscordUser(index, discordId);
+                    }
+                });
+            });
+
+            // Lookup button click handlers
+            document.querySelectorAll('.subdivision-lookup-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const index = parseInt(e.currentTarget.dataset.index);
+                    const discordIdInput = document.querySelector(`.subdivision-discord-id[data-index="${index}"]`);
+                    const discordId = discordIdInput?.value?.trim();
+
+                    if (discordId) {
+                        await lookupDiscordUser(index, discordId);
+                    } else {
+                        showLookupStatus(index, 'Enter a Discord ID first', 'warning');
+                    }
                 });
             });
 
@@ -1249,6 +1734,29 @@ import Layout from '../../layouts/Layout.astro';
                         departmentData.subdivisionLeadership.splice(index, 1);
                         renderSubdivisionLeadership();
                     }
+                });
+            });
+
+            document.querySelectorAll('.subdivision-vacant').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const index = parseInt(e.target.dataset.index);
+                    const isVacant = e.target.checked;
+                    departmentData.subdivisionLeadership[index].isVacant = isVacant;
+
+                    if (isVacant) {
+                        // Auto-fill name and callsign for vacant positions
+                        const divisionName = departmentData.subdivisionLeadership[index].division || 'Subdivision';
+                        departmentData.subdivisionLeadership[index].name = 'Looking for Head of ' + divisionName;
+                        departmentData.subdivisionLeadership[index].callSign = 'N/A';
+                        departmentData.subdivisionLeadership[index].isLOA = false;
+                        departmentData.subdivisionLeadership[index].discordId = '';
+                    } else {
+                        // Clear the auto-filled values when unchecking vacant
+                        departmentData.subdivisionLeadership[index].name = '';
+                        departmentData.subdivisionLeadership[index].callSign = '';
+                    }
+
+                    renderSubdivisionLeadership();
                 });
             });
 

@@ -62,6 +62,7 @@ export interface SubdivisionLeader {
     isLOA?: boolean;
     discordId?: string;
     positionType?: 'department_liaison' | 'overseer' | 'assistant_head' | 'leader';
+    isVacant?: boolean;  // When true, auto-fills name with "Looking for Head of [division]" and callSign with "N/A"
 }
 
 export interface DepartmentData {
@@ -303,6 +304,19 @@ const defaultDepartmentData: DepartmentData = {
     ]
 };
 
+// Helper function to infer positionType from division name
+function inferPositionType(division: string): 'department_liaison' | 'overseer' | 'assistant_head' | 'leader' {
+    const divLower = (division || '').toLowerCase();
+    if (divLower.includes('department liaison') || divLower === 'department liaison') {
+        return 'department_liaison';
+    } else if (divLower.includes('overseer') || divLower === 'subdivision overseer') {
+        return 'overseer';
+    } else if (divLower.includes('assistant head') || divLower.includes('assistant overseer')) {
+        return 'assistant_head';
+    }
+    return 'leader';
+}
+
 async function getDepartmentData(): Promise<DepartmentData> {
     try {
         const store = getStore({ name: 'department-data', consistency: 'strong' });
@@ -310,8 +324,31 @@ async function getDepartmentData(): Promise<DepartmentData> {
         if (data && typeof data === 'object') {
             const result = data as DepartmentData;
 
-            // Ensure all default subdivisions exist in stored data
+            // Ensure all default command positions exist in stored data
+            if (result.commandPositions) {
+                const existingRanks = new Set(result.commandPositions.map(cp => cp.rank));
+                for (const defaultPos of defaultDepartmentData.commandPositions) {
+                    if (!existingRanks.has(defaultPos.rank)) {
+                        // Find the correct position to insert the missing command position
+                        const defaultIndex = defaultDepartmentData.commandPositions.findIndex(cp => cp.rank === defaultPos.rank);
+                        result.commandPositions.splice(defaultIndex, 0, { ...defaultPos });
+                    }
+                }
+            } else {
+                result.commandPositions = defaultDepartmentData.commandPositions;
+            }
+
+            // Ensure all default subdivisions exist in stored data and migrate positionType
             if (result.subdivisionLeadership) {
+                // First, ensure all entries have positionType set
+                result.subdivisionLeadership = result.subdivisionLeadership.map(leader => {
+                    if (!leader.positionType) {
+                        return { ...leader, positionType: inferPositionType(leader.division) };
+                    }
+                    return leader;
+                });
+
+                // Then, ensure all default subdivisions exist
                 const existingDivisions = new Set(result.subdivisionLeadership.map(s => s.division));
                 for (const defaultSub of defaultDepartmentData.subdivisionLeadership) {
                     if (!existingDivisions.has(defaultSub.division)) {

@@ -1,48 +1,150 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getStore } from '@netlify/blobs';
 
 export const prerender = false;
 
-// Fetch command positions data
-let commandPositions: Array<{
-    rank: string,
-    name: string,
-    callSign: string,
-    jobTitle?: string,
-    isLOA?: boolean,
-    discordId?: string,
-    strikes?: number,
-    activityStatus?: 'active' | 'inactive' | 'semi_active' | 'warning' | 'probation',
-    isSuspended?: boolean,
-    suspensionReason?: string
-}> = [];
-let tierPositions: Array<{tierName: string, members: Array<{name: string, jobTitle: string}>}> = [];
-let rankPositions: Array<{
-    rank: string,
-    members: Array<{
-        name: string,
-        callSign: string,
-        jobTitle: string,
-        isLOA?: boolean,
-        discordId?: string,
-        strikes?: number,
-        activityStatus?: 'active' | 'inactive' | 'semi_active' | 'warning' | 'probation',
-        isSuspended?: boolean,
-        suspensionReason?: string
-    }>
-}> = [];
-let subdivisionLeadership: Array<{division: string, name: string, callSign: string, jobTitle: string, isLOA?: boolean, discordId?: string, positionType?: 'department_liaison' | 'overseer' | 'assistant_head' | 'leader'}> = [];
+// Type definitions
+interface CommandPosition {
+    rank: string;
+    name: string;
+    callSign: string;
+    jobTitle?: string;
+    isLOA?: boolean;
+    discordId?: string;
+    strikes?: number;
+    activityStatus?: 'active' | 'inactive' | 'semi_active' | 'warning' | 'probation';
+    isSuspended?: boolean;
+    suspensionReason?: string;
+}
+
+interface RankMember {
+    name: string;
+    callSign: string;
+    jobTitle: string;
+    isLOA?: boolean;
+    discordId?: string;
+    strikes?: number;
+    activityStatus?: 'active' | 'inactive' | 'semi_active' | 'warning' | 'probation';
+    isSuspended?: boolean;
+    suspensionReason?: string;
+}
+
+interface RankPositions {
+    rank: string;
+    members: RankMember[];
+}
+
+interface TierMember {
+    name: string;
+    jobTitle: string;
+}
+
+interface TierPositions {
+    tierName: string;
+    members: TierMember[];
+}
+
+interface SubdivisionLeader {
+    division: string;
+    name: string;
+    callSign: string;
+    jobTitle: string;
+    subdivisionId?: string;
+    isLOA?: boolean;
+    discordId?: string;
+    positionType?: 'department_liaison' | 'overseer' | 'assistant_head' | 'leader';
+}
+
+interface DepartmentData {
+    awardRecipients?: Array<{ awardName: string; recipientName: string; imageUrl?: string }>;
+    commandPositions: CommandPosition[];
+    tierPositions: TierPositions[];
+    rankPositions: RankPositions[];
+    subdivisionLeadership: SubdivisionLeader[];
+}
+
+// Default command positions structure
+const defaultCommandPositions: CommandPosition[] = [
+    { rank: 'Chief of Police', name: '', callSign: '1R-01', jobTitle: '' },
+    { rank: 'Deputy Chief of Police', name: '', callSign: '1R-02', jobTitle: '' },
+    { rank: 'Assistant Chief of Police', name: '', callSign: '1R-03', jobTitle: '' },
+    { rank: 'Colonel', name: '', callSign: '1R-04', jobTitle: '' },
+    { rank: 'Lieutenant Colonel', name: '', callSign: '1R-05', jobTitle: '' },
+    { rank: 'Commander', name: '', callSign: '1R-06', jobTitle: '' }
+];
+
+// Default subdivision leadership structure
+const defaultSubdivisionLeadership: SubdivisionLeader[] = [
+    { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+    { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+    { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+    { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+    { division: 'Department Liaison', name: '', callSign: '', jobTitle: '', positionType: 'department_liaison' },
+    { division: 'Subdivision Overseer', name: '', callSign: '', jobTitle: '', positionType: 'overseer' },
+    { division: 'Assistant Head of Subdivisions', name: '', callSign: '', jobTitle: '', positionType: 'assistant_head' },
+    { division: 'Field Training Division', name: '', callSign: '', jobTitle: '', subdivisionId: 'ftd', positionType: 'leader' },
+    { division: 'Special Weapons and Tactics', name: '', callSign: '', jobTitle: '', subdivisionId: 'swat', positionType: 'leader' },
+    { division: 'Traffic Enforcement Unit', name: '', callSign: '', jobTitle: '', subdivisionId: 'teu', positionType: 'leader' },
+    { division: 'Criminal Investigations Unit', name: '', callSign: '', jobTitle: '', subdivisionId: 'ciu', positionType: 'leader' },
+    { division: 'K9 Division', name: '', callSign: '', jobTitle: '', subdivisionId: 'k9', positionType: 'leader' },
+    { division: 'Internal Affairs', name: '', callSign: '', jobTitle: '', subdivisionId: 'ia', positionType: 'leader' }
+];
+
+// Fetch command positions data directly from Netlify Blobs
+let commandPositions: CommandPosition[] = [];
+let tierPositions: TierPositions[] = [];
+let rankPositions: RankPositions[] = [];
+let subdivisionLeadership: SubdivisionLeader[] = [];
 
 try {
-    const response = await fetch(new URL('/api/department-data', Astro.url.origin));
-    if (response.ok) {
-        const data = await response.json();
-        commandPositions = data.commandPositions || [];
+    const store = getStore({ name: 'department-data', consistency: 'strong' });
+    const data = await store.get('department-data', { type: 'json' }) as DepartmentData | null;
+
+    if (data && typeof data === 'object') {
+        // Handle command positions with migration for missing entries
+        if (data.commandPositions && Array.isArray(data.commandPositions)) {
+            commandPositions = [...data.commandPositions];
+            // Ensure all default command positions exist
+            const existingRanks = new Set(commandPositions.map(cp => cp.rank));
+            for (const defaultPos of defaultCommandPositions) {
+                if (!existingRanks.has(defaultPos.rank)) {
+                    // Find the correct position to insert the missing command position
+                    const defaultIndex = defaultCommandPositions.findIndex(cp => cp.rank === defaultPos.rank);
+                    commandPositions.splice(defaultIndex, 0, { ...defaultPos });
+                }
+            }
+        } else {
+            commandPositions = defaultCommandPositions;
+        }
+
         tierPositions = data.tierPositions || [];
         rankPositions = data.rankPositions || [];
-        subdivisionLeadership = data.subdivisionLeadership || [];
+
+        // Handle subdivision leadership with positionType migration
+        if (data.subdivisionLeadership && Array.isArray(data.subdivisionLeadership)) {
+            subdivisionLeadership = data.subdivisionLeadership.map((leader, index) => {
+                // If positionType is missing, infer it from the division name or use defaults
+                if (!leader.positionType) {
+                    const divLower = (leader.division || '').toLowerCase();
+                    if (divLower.includes('department liaison') || divLower === 'department liaison') {
+                        return { ...leader, positionType: 'department_liaison' as const };
+                    } else if (divLower.includes('overseer') || divLower === 'subdivision overseer') {
+                        return { ...leader, positionType: 'overseer' as const };
+                    } else if (divLower.includes('assistant head') || divLower.includes('assistant overseer')) {
+                        return { ...leader, positionType: 'assistant_head' as const };
+                    } else {
+                        return { ...leader, positionType: 'leader' as const };
+                    }
+                }
+                return leader;
+            });
+        } else {
+            subdivisionLeadership = defaultSubdivisionLeadership;
+        }
     }
 } catch (e) {
+    console.error('Error fetching department data from Blobs:', e);
     // Use empty arrays as fallback
 }
 

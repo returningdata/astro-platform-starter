@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getStore } from '@netlify/blobs';
 import { validateSession } from '../../../utils/session';
+import { getIntelSession, hasRequiredClearance, CLEARANCE_DISPLAY_NAMES } from '../../../utils/google-oauth';
 import type { IntelThread } from './threads';
 
 export const prerender = false;
@@ -75,23 +76,46 @@ export const GET: APIRoute = async ({ request }) => {
     }
 };
 
-// POST - Create new post (admin only - officers post into admin-created threads)
+// POST - Create new post (intel users with sufficient clearance OR admins with intel-management permission)
 export const POST: APIRoute = async ({ request }) => {
     try {
-        const user = await validateSession(request);
-        if (!user) {
+        // Check for Intel session first (Google OAuth users)
+        const intelSession = await getIntelSession(request);
+
+        // Check for Admin session (admin panel users)
+        const adminUser = await validateSession(request);
+
+        // Must have at least one valid session
+        if (!intelSession && !adminUser) {
             return new Response(JSON.stringify({ error: 'Unauthorized' }), {
                 status: 401,
                 headers: { 'Content-Type': 'application/json' }
             });
         }
 
-        // Check permission
-        if (user.role !== 'super_admin' && !user.permissions.includes('intel-management')) {
-            return new Response(JSON.stringify({ error: 'Forbidden' }), {
-                status: 403,
-                headers: { 'Content-Type': 'application/json' }
-            });
+        // If only admin session, check intel-management permission
+        if (!intelSession && adminUser) {
+            if (adminUser.role !== 'super_admin' && !adminUser.permissions.includes('intel-management')) {
+                return new Response(JSON.stringify({ error: 'Forbidden' }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
+        // If intel session, check if clearance is not pending/denied
+        if (intelSession) {
+            if (intelSession.user.clearanceLevel === 'pending' || intelSession.user.clearanceLevel === 'denied') {
+                return new Response(JSON.stringify({
+                    error: 'Access pending',
+                    message: intelSession.user.clearanceLevel === 'pending'
+                        ? 'Your access is pending approval.'
+                        : 'Your access has been denied.',
+                }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
         }
 
         const body = await request.json();
@@ -115,6 +139,19 @@ export const POST: APIRoute = async ({ request }) => {
             });
         }
 
+        // Check clearance level via intel session
+        if (intelSession) {
+            if (!hasRequiredClearance(intelSession.user.clearanceLevel, thread.requiredClearance)) {
+                return new Response(JSON.stringify({
+                    error: 'Insufficient clearance',
+                    message: `This thread requires ${CLEARANCE_DISPLAY_NAMES[thread.requiredClearance]} clearance.`,
+                }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
         if (thread.isLocked) {
             return new Response(JSON.stringify({ error: 'Thread is locked' }), {
                 status: 403,
@@ -127,13 +164,35 @@ export const POST: APIRoute = async ({ request }) => {
         const postId = `${threadId}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const now = Date.now();
 
+        // Determine author name and role based on session type
+        let authorName: string;
+        let authorRole: string;
+
+        if (intelSession) {
+            // Intel session user - use officer name or Google name
+            authorName = intelSession.user.officerName || intelSession.user.name;
+            authorRole = intelSession.user.callsign
+                ? `Officer (${intelSession.user.callsign})`
+                : 'Officer';
+        } else if (adminUser) {
+            // Admin session user
+            authorName = adminUser.displayName;
+            authorRole = adminUser.role === 'super_admin' ? 'Super Admin' :
+                        adminUser.role === 'subdivision_overseer' ? 'Subdivision Overseer' : 'Officer';
+        } else {
+            // This shouldn't happen due to earlier checks
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+
         const post: IntelPost = {
             id: postId,
             threadId,
             content,
-            author: user.displayName,
-            authorRole: user.role === 'super_admin' ? 'Super Admin' :
-                       user.role === 'subdivision_overseer' ? 'Subdivision Overseer' : 'Officer',
+            author: authorName,
+            authorRole: authorRole,
             createdAt: now,
             updatedAt: now,
             attachments: attachments || [],

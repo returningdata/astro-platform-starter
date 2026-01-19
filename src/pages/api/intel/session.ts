@@ -16,6 +16,11 @@ export const GET: APIRoute = async ({ request }) => {
                     name: session.user.name,
                     picture: session.user.picture,
                     clearanceLevel: session.user.clearanceLevel,
+                    discordId: session.user.discordId,
+                    discordUsername: session.user.discordUsername,
+                    officerName: session.user.officerName,
+                    callsign: session.user.callsign,
+                    badgeNumber: session.user.badgeNumber,
                 },
             }), {
                 status: 200,

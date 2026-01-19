@@ -201,7 +201,13 @@ export const prerender = false;
                                 </div>
                             </div>
                             <!-- Actions -->
-                            <div class="px-4 pb-4">
+                            <div class="px-4 pb-4 space-y-2">
+                                <button id="sendWebhookBtn" class="w-full px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg transition-colors text-sm flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>
+                                    </svg>
+                                    <span id="sendWebhookBtnText">Send to Discord</span>
+                                </button>
                                 <button id="logoutBtn" class="w-full px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors text-sm">
                                     Logout
                                 </button>
@@ -302,6 +308,26 @@ export const prerender = false;
                     <label class="block text-sm font-medium text-white/70 mb-1">Intel Report *</label>
                     <textarea id="postContent" required rows="4" placeholder="Enter your intel report or observation..."
                         class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Photo URLs (optional)</label>
+                    <div id="postPhotosContainer" class="space-y-2">
+                        <div class="flex gap-2">
+                            <input type="url" class="post-photo-input flex-1 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" placeholder="https://..." />
+                            <button type="button" class="remove-photo-btn hidden px-3 py-2 bg-red-600/50 hover:bg-red-600 rounded-lg transition-colors" title="Remove photo">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" id="addPhotoBtn" class="mt-2 text-sm text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add another photo
+                    </button>
+                    <p class="text-xs text-white/40 mt-1">Add URLs for photos to attach to this intel report</p>
                 </div>
                 <div class="flex gap-3 pt-4">
                     <button type="button" id="cancelPostBtn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
@@ -573,6 +599,18 @@ export const prerender = false;
             <div id="detailsModalContent" class="p-6">
                 <!-- Content populated dynamically -->
             </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox Modal -->
+    <div id="imageLightboxModal" class="hidden fixed inset-0 bg-black/95 z-[80] flex items-center justify-center p-4">
+        <button id="closeLightboxBtn" class="absolute top-4 right-4 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors z-10">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+        <div class="max-w-[90vw] max-h-[90vh] relative">
+            <img id="lightboxImage" src="" alt="Expanded image" class="max-w-full max-h-[90vh] object-contain rounded-lg" />
         </div>
     </div>
 
@@ -858,7 +896,7 @@ export const prerender = false;
                                     return `
                                         <div class="bg-slate-700/30 rounded-lg p-3 flex items-center gap-3">
                                             ${person.photo ? `
-                                                <img src="${person.photo}" alt="${person.name}" class="w-10 h-10 rounded-full object-cover">
+                                                <img src="${person.photo}" alt="${person.name}" class="w-10 h-10 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-primary transition-all" onclick="openLightbox('${person.photo.replace(/'/g, "\\'")}'); event.stopPropagation();" title="Click to expand">
                                             ` : `
                                                 <div class="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center text-lg font-bold">
                                                     ${person.name.charAt(0).toUpperCase()}
@@ -942,6 +980,16 @@ export const prerender = false;
                                         <span class="text-white/50 text-sm">${formatDateTime(post.createdAt)}</span>
                                     </div>
                                     <p class="text-white/80 whitespace-pre-wrap">${post.content.length > 300 ? post.content.substring(0, 300) + '...' : post.content}</p>
+                                    ${post.attachments && post.attachments.length > 0 ? `
+                                        <div class="mt-3 flex flex-wrap gap-2">
+                                            ${post.attachments.slice(0, 3).map(url => `
+                                                <div class="cursor-pointer" onclick="openLightbox('${url.replace(/'/g, "\\'")}')">
+                                                    <img src="${url}" alt="Attachment" class="w-16 h-16 object-cover rounded-lg border border-slate-600 hover:border-primary transition-colors" onerror="this.parentElement.style.display='none'" title="Click to expand" />
+                                                </div>
+                                            `).join('')}
+                                            ${post.attachments.length > 3 ? `<span class="text-white/50 text-sm self-center">+${post.attachments.length - 3} more</span>` : ''}
+                                        </div>
+                                    ` : ''}
                                 </div>
                             `).join('') : `
                                 <p class="text-white/50 text-sm">No intel posts yet.</p>
@@ -1252,7 +1300,7 @@ export const prerender = false;
                                     <div class="bg-slate-700/30 rounded-lg p-4">
                                         <div class="flex items-start gap-4">
                                             ${person.photo ? `
-                                                <img src="${person.photo}" alt="${person.name}" class="w-16 h-16 rounded-lg object-cover border-2 border-slate-600">
+                                                <img src="${person.photo}" alt="${person.name}" class="w-16 h-16 rounded-lg object-cover border-2 border-slate-600 cursor-pointer hover:border-primary transition-colors" onclick="openLightbox('${person.photo.replace(/'/g, "\\'")}')" title="Click to expand">
                                             ` : `
                                                 <div class="w-16 h-16 bg-slate-600 rounded-lg flex items-center justify-center text-2xl font-bold text-white/50">
                                                     ${person.name.charAt(0).toUpperCase()}
@@ -1299,7 +1347,7 @@ export const prerender = false;
                                     <div class="bg-slate-700/30 rounded-lg p-4">
                                         <div class="flex items-start gap-4">
                                             ${location.photo ? `
-                                                <img src="${location.photo}" alt="${location.name}" class="w-20 h-20 rounded-lg object-cover border-2 border-slate-600">
+                                                <img src="${location.photo}" alt="${location.name}" class="w-20 h-20 rounded-lg object-cover border-2 border-slate-600 cursor-pointer hover:border-primary transition-colors" onclick="openLightbox('${location.photo.replace(/'/g, "\\'")}')" title="Click to expand">
                                             ` : `
                                                 <div class="w-20 h-20 bg-orange-500/20 rounded-lg flex items-center justify-center">
                                                     <svg class="w-10 h-10 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1353,7 +1401,7 @@ export const prerender = false;
                                     <div class="bg-slate-700/30 rounded-lg p-4">
                                         <div class="flex items-start gap-4">
                                             ${vehicle.photo ? `
-                                                <img src="${vehicle.photo}" alt="${vehicleName}" class="w-24 h-20 rounded-lg object-cover border-2 border-slate-600">
+                                                <img src="${vehicle.photo}" alt="${vehicleName}" class="w-24 h-20 rounded-lg object-cover border-2 border-slate-600 cursor-pointer hover:border-primary transition-colors" onclick="openLightbox('${vehicle.photo.replace(/'/g, "\\'")}')" title="Click to expand">
                                             ` : `
                                                 <div class="w-24 h-20 bg-purple-500/20 rounded-lg flex items-center justify-center">
                                                     <svg class="w-10 h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1404,6 +1452,15 @@ export const prerender = false;
                                         <span class="text-white/50 text-sm">${formatDateTime(post.createdAt)}</span>
                                     </div>
                                     <p class="text-white/80 whitespace-pre-wrap">${post.content}</p>
+                                    ${post.attachments && post.attachments.length > 0 ? `
+                                        <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                            ${post.attachments.map(url => `
+                                                <div class="cursor-pointer" onclick="openLightbox('${url.replace(/'/g, "\\'")}')">
+                                                    <img src="${url}" alt="Attachment" class="w-full h-24 object-cover rounded-lg border border-slate-600 hover:border-primary transition-colors" onerror="this.parentElement.style.display='none'" title="Click to expand" />
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
                                 </div>
                             `).join('')}
                         </div>
@@ -1469,6 +1526,75 @@ export const prerender = false;
             document.getElementById('postModal').classList.add('hidden');
         });
 
+        // Photo management for post form
+        function createPhotoInputRow() {
+            const row = document.createElement('div');
+            row.className = 'flex gap-2';
+            row.innerHTML = `
+                <input type="url" class="post-photo-input flex-1 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" placeholder="https://..." />
+                <button type="button" class="remove-photo-btn px-3 py-2 bg-red-600/50 hover:bg-red-600 rounded-lg transition-colors" title="Remove photo">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            `;
+            return row;
+        }
+
+        function updateRemoveButtons() {
+            const container = document.getElementById('postPhotosContainer');
+            const rows = container.querySelectorAll('.flex.gap-2');
+            rows.forEach((row, index) => {
+                const removeBtn = row.querySelector('.remove-photo-btn');
+                // Show remove button only if there's more than one row
+                if (rows.length > 1) {
+                    removeBtn.classList.remove('hidden');
+                } else {
+                    removeBtn.classList.add('hidden');
+                }
+            });
+        }
+
+        document.getElementById('addPhotoBtn').addEventListener('click', () => {
+            const container = document.getElementById('postPhotosContainer');
+            container.appendChild(createPhotoInputRow());
+            updateRemoveButtons();
+        });
+
+        document.getElementById('postPhotosContainer').addEventListener('click', (e) => {
+            if (e.target.closest('.remove-photo-btn')) {
+                const row = e.target.closest('.flex.gap-2');
+                row.remove();
+                updateRemoveButtons();
+            }
+        });
+
+        function getPostAttachments() {
+            const inputs = document.querySelectorAll('#postPhotosContainer .post-photo-input');
+            const attachments = [];
+            inputs.forEach(input => {
+                const url = input.value.trim();
+                if (url) {
+                    attachments.push(url);
+                }
+            });
+            return attachments;
+        }
+
+        function resetPostPhotos() {
+            const container = document.getElementById('postPhotosContainer');
+            container.innerHTML = `
+                <div class="flex gap-2">
+                    <input type="url" class="post-photo-input flex-1 px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" placeholder="https://..." />
+                    <button type="button" class="remove-photo-btn hidden px-3 py-2 bg-red-600/50 hover:bg-red-600 rounded-lg transition-colors" title="Remove photo">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }
+
         document.getElementById('postForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!currentGang) return;
@@ -1479,11 +1605,13 @@ export const prerender = false;
                 return;
             }
 
+            const attachments = getPostAttachments();
+
             try {
                 const response = await fetch('/api/intel/posts', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ threadId: currentGang.thread.id, content }),
+                    body: JSON.stringify({ threadId: currentGang.thread.id, content, attachments }),
                     credentials: 'include'
                 });
 
@@ -1492,6 +1620,7 @@ export const prerender = false;
 
                 document.getElementById('postModal').classList.add('hidden');
                 document.getElementById('postContent').value = '';
+                resetPostPhotos();
                 showStatus('Intel post added successfully');
 
                 // Refresh search results
@@ -1749,6 +1878,41 @@ export const prerender = false;
             }
         });
 
+        // Send to Discord webhook handler
+        document.getElementById('sendWebhookBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('sendWebhookBtn');
+            const btnText = document.getElementById('sendWebhookBtnText');
+            const originalText = btnText.textContent;
+
+            try {
+                // Disable button and show loading state
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btnText.textContent = 'Sending...';
+
+                const response = await fetch('/api/intel/send-webhook', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus(data.message || 'Intel sent to Discord successfully!', 'success');
+                } else {
+                    showStatus(data.error || 'Failed to send intel to Discord', 'error');
+                }
+            } catch (error) {
+                console.error('Send webhook error:', error);
+                showStatus('Failed to send intel to Discord', 'error');
+            } finally {
+                // Re-enable button
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnText.textContent = originalText;
+            }
+        });
+
         // Profile Setup Form - Discord ID lookup on blur
         let lookupTimeout = null;
         document.getElementById('profileDiscordId').addEventListener('input', function() {
@@ -1951,6 +2115,41 @@ export const prerender = false;
                 `;
             }
         });
+
+        // Image Lightbox functionality
+        function openLightbox(imageUrl) {
+            const modal = document.getElementById('imageLightboxModal');
+            const img = document.getElementById('lightboxImage');
+            img.src = imageUrl;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const modal = document.getElementById('imageLightboxModal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Close lightbox button
+        document.getElementById('closeLightboxBtn').addEventListener('click', closeLightbox);
+
+        // Close lightbox on backdrop click
+        document.getElementById('imageLightboxModal').addEventListener('click', (e) => {
+            if (e.target.id === 'imageLightboxModal') {
+                closeLightbox();
+            }
+        });
+
+        // Close lightbox on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('imageLightboxModal').classList.contains('hidden')) {
+                closeLightbox();
+            }
+        });
+
+        // Expose openLightbox to global scope for onclick handlers
+        window.openLightbox = openLightbox;
 
         // Initialize
         checkSession().then(async user => {

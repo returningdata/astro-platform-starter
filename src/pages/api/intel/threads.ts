@@ -19,6 +19,7 @@ export interface IntelThread {
     isPinned: boolean;
     isLocked: boolean;
     postCount: number;
+    image?: string; // Gang/organization image URL
 }
 
 // GET - List all threads (admin only)
@@ -153,7 +154,7 @@ export const PUT: APIRoute = async ({ request }) => {
         }
 
         const body = await request.json();
-        const { id, title, description, category, requiredClearance, isPinned, isLocked } = body;
+        const { id, title, description, category, requiredClearance, isPinned, isLocked, image } = body;
 
         if (!id) {
             return new Response(JSON.stringify({ error: 'Thread ID required' }), {
@@ -180,6 +181,7 @@ export const PUT: APIRoute = async ({ request }) => {
             requiredClearance: requiredClearance ?? existingThread.requiredClearance,
             isPinned: isPinned ?? existingThread.isPinned,
             isLocked: isLocked ?? existingThread.isLocked,
+            image: image ?? existingThread.image,
             updatedAt: Date.now(),
         };
 

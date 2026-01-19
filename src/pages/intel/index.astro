@@ -4,334 +4,222 @@ import Layout from '../../layouts/Layout.astro';
 export const prerender = false;
 ---
 
-<Layout title="Investigations Forum - DPPD">
-    <div id="loadingState" class="py-12 text-center">
-        <div class="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p class="text-white/70">Loading Investigations Forum...</p>
-    </div>
-
-    <div id="pendingState" class="hidden py-12">
-        <div class="max-w-md mx-auto bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
-            <div class="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+<Layout title="Gang Intel Database - DPPD">
+    <div class="space-y-8">
+        <!-- Header with Add Additional Info button -->
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-2">Gang Intel Database</h1>
+                <p class="text-white/70">Search organizations by name to view intelligence</p>
             </div>
-            <h2 class="text-xl font-bold mb-2">Access Pending</h2>
-            <p class="text-white/70 mb-4">Your access is pending approval from an administrator. Please check back later.</p>
-            <button onclick="location.reload()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
-                Refresh Status
+            <button id="addInfoBtn" class="hidden px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Additional Info
             </button>
         </div>
-    </div>
 
-    <div id="deniedState" class="hidden py-12">
-        <div class="max-w-md mx-auto bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
-            <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-            </div>
-            <h2 class="text-xl font-bold mb-2 text-red-400">Access Denied</h2>
-            <p class="text-white/70 mb-4">Your access to the Intel Database has been denied. Please contact an administrator if you believe this is an error.</p>
+        <!-- Loading State -->
+        <div id="loadingState" class="py-12 text-center">
+            <div class="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-white/70">Checking clearance...</p>
         </div>
-    </div>
 
-    <div id="mainContent" class="hidden">
-        <div class="flex gap-6 flex-col lg:flex-row">
-            <!-- Main Content Area -->
-            <div class="flex-1 space-y-6">
-                <!-- Header -->
-                <div>
-                    <h1 class="text-4xl md:text-5xl font-bold mb-2">Investigations Forum</h1>
-                    <p class="text-white/70">Classified Intelligence Database</p>
+        <!-- Pending State -->
+        <div id="pendingState" class="hidden py-12">
+            <div class="max-w-md mx-auto bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
+                <div class="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                 </div>
+                <h2 class="text-xl font-bold mb-2">Access Pending</h2>
+                <p class="text-white/70 mb-4">Your access is pending approval from an administrator. Please check back later.</p>
+                <button onclick="location.reload()" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                    Refresh Status
+                </button>
+            </div>
+        </div>
 
-                <!-- Search and Filter Bar -->
-                <div class="flex gap-4 flex-wrap items-center">
-                    <!-- Filters Dropdown -->
-                    <div class="relative">
-                        <button id="filtersBtn" class="flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg hover:bg-slate-700/50 transition-colors">
-                            <span class="font-semibold">Filters</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                            </svg>
-                        </button>
-                        <div id="filtersDropdown" class="hidden absolute top-full left-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-10">
-                            <div class="p-2">
-                                <p class="text-xs text-white/50 uppercase px-2 py-1">Select Category</p>
-                                <button data-category="all" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors text-primary font-medium">All Categories</button>
-                                <button data-category="gang" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Gang</button>
-                                <button data-category="cartel" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Cartel</button>
-                                <button data-category="militia" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Militia</button>
-                                <button data-category="crime_family" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Crime Family</button>
-                                <button data-category="motorcycle_club" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Motorcycle Club</button>
-                                <button data-category="other" class="category-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Other</button>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Denied State -->
+        <div id="deniedState" class="hidden py-12">
+            <div class="max-w-md mx-auto bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
+                <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                </div>
+                <h2 class="text-xl font-bold mb-2 text-red-400">Access Denied</h2>
+                <p class="text-white/70 mb-4">Your access to the Intel Database has been denied. Please contact an administrator if you believe this is an error.</p>
+            </div>
+        </div>
 
-                    <!-- Search -->
-                    <div class="flex-1 relative">
-                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <!-- Main Content -->
+        <div id="mainContent" class="hidden space-y-8">
+            <!-- Status Messages -->
+            <div id="statusMessage" class="hidden rounded-lg p-4 border">
+            </div>
+
+            <!-- Search Section -->
+            <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-3">
+                    <span class="text-xl">🔍</span>
+                    Search Organizations
+                </h2>
+                <p class="text-white/60 mb-4">Enter a gang, cartel, militia, or organization name to search the intel database.</p>
+
+                <div class="flex gap-4">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Enter organization name (e.g., Vagos, Ballas, Grove Street)"
+                        class="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-white/40 focus:ring-2 focus:ring-primary focus:border-transparent"
+                    >
+                    <button id="searchBtn" class="px-6 py-3 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                        <input type="text" id="searchInput" placeholder="Search investigations..."
-                            class="w-full pl-10 pr-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-
-                    <!-- Sort -->
-                    <div class="relative">
-                        <button id="sortBtn" class="flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg hover:bg-slate-700/50 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                            </svg>
-                            <span id="sortLabel">Newest First</span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                        <div id="sortDropdown" class="hidden absolute top-full right-0 mt-2 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-10">
-                            <div class="p-2">
-                                <button data-sort="newest" class="sort-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors text-primary">Newest First</button>
-                                <button data-sort="oldest" class="sort-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Oldest First</button>
-                                <button data-sort="most_posts" class="sort-btn w-full text-left px-3 py-2 rounded hover:bg-slate-700 transition-colors">Most Posts</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Threads Grid -->
-                <div id="threadsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <p class="text-white/60 text-center py-8 col-span-full">No investigations available.</p>
+                        Search
+                    </button>
                 </div>
             </div>
 
-            <!-- User Profile Sidebar -->
-            <div class="lg:w-72 shrink-0">
-                <div class="sticky top-4">
-                    <div id="userCard" class="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
-                        <!-- Profile Image -->
-                        <div class="flex justify-center pt-6">
-                            <div class="relative">
-                                <img id="userPicture" src="" alt="Profile"
-                                    class="w-24 h-24 rounded-full border-4 border-primary object-cover" />
-                            </div>
-                        </div>
-                        <!-- User Info -->
-                        <div class="p-4 text-center">
-                            <p id="userCallsignName" class="text-lg font-bold text-yellow-400"></p>
-                            <p id="userDiscordId" class="text-sm text-white/60 font-mono mb-3"></p>
-                            <div class="border-t border-slate-700 pt-3">
-                                <p class="text-xs text-white/50 uppercase tracking-wider mb-2">Clearance Level</p>
-                                <div id="userClearanceBadge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                    </svg>
-                                    <span id="userClearanceCode" class="font-bold"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Actions -->
-                        <div class="px-4 pb-4">
-                            <button id="logoutBtn" class="w-full px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors text-sm">
-                                Logout
-                            </button>
-                        </div>
-                    </div>
+            <!-- Search Results -->
+            <div id="searchResults" class="hidden space-y-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white/90" id="resultsHeader">Search Results</h2>
+                    <button id="clearResultsBtn" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-sm">
+                        Clear Results
+                    </button>
+                </div>
+                <div id="resultsContainer" class="space-y-6">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+
+            <!-- Searching State -->
+            <div id="searchingState" class="hidden">
+                <div class="text-center py-12 text-white/60">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-white/20 border-t-primary mb-4"></div>
+                    <p>Searching database...</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Thread View Modal -->
-    <div id="threadModal" class="hidden fixed inset-0 bg-black/80 z-50 overflow-y-auto">
-        <div class="min-h-screen py-8 px-4">
-            <div class="max-w-4xl mx-auto bg-slate-900 rounded-lg border border-slate-700">
-                <!-- Header -->
-                <div class="p-6 border-b border-slate-700">
-                    <div class="flex justify-between items-start">
-                        <div class="flex items-center gap-4">
-                            <button id="backBtn" class="p-2 hover:bg-slate-800 rounded-lg transition-colors">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                            <div>
-                                <h2 id="modalTitle" class="text-2xl font-bold"></h2>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span id="modalCategory" class="px-2 py-0.5 rounded text-xs font-medium"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <button id="closeModalBtn" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Tabs -->
-                <div class="flex border-b border-slate-700 px-6">
-                    <button data-tab="operations" class="thread-tab flex items-center gap-2 px-4 py-3 border-b-2 border-primary text-primary font-semibold">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                        </svg>
-                        Operations
-                    </button>
-                    <button data-tab="people" class="thread-tab flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-white/60 hover:text-white/80">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        People
-                    </button>
-                    <button data-tab="locations" class="thread-tab flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-white/60 hover:text-white/80">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        Locations
-                    </button>
-                    <button data-tab="vehicles" class="thread-tab flex items-center gap-2 px-4 py-3 border-b-2 border-transparent text-white/60 hover:text-white/80">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
-                        </svg>
-                        Vehicles
-                    </button>
-                </div>
-
-                <!-- Tab Content -->
-                <div id="tabOperations" class="tab-content p-6">
-                    <!-- Search and filter bar for posts -->
-                    <div class="flex gap-4 mb-4">
-                        <div class="flex-1 relative">
-                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input type="text" id="postsSearchInput" placeholder="Search messages..."
-                                class="w-full pl-9 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                        </div>
-                        <select id="postsFilter" class="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                            <option value="all">Filter</option>
-                        </select>
-                    </div>
-
-                    <!-- Posts -->
-                    <div id="modalPosts" class="space-y-4 max-h-96 overflow-y-auto">
-                        <p class="text-white/60 text-center">Loading...</p>
-                    </div>
-
-                    <!-- Post input -->
-                    <div class="mt-4 flex gap-2 items-end border-t border-slate-700 pt-4">
-                        <div class="flex-1 relative">
-                            <input type="file" id="attachmentFileInput" accept="image/*" class="hidden" />
-                            <button id="attachmentBtn" type="button" class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors" title="Attach an image">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                </svg>
-                            </button>
-                            <input type="text" id="newMessageInput" placeholder="Type a message or use /add person, /add vehicle, /add location..."
-                                class="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                            <!-- Command suggestions dropdown -->
-                            <div id="commandSuggestions" class="hidden absolute bottom-full left-0 right-0 mb-2 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden">
-                                <div class="p-2 text-xs text-white/50 border-b border-slate-700">Available Commands</div>
-                                <button type="button" data-command="/add person" class="command-suggestion w-full text-left px-4 py-2 hover:bg-slate-700 transition-colors flex items-center gap-3">
-                                    <div class="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
-                                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-white">/add person</div>
-                                        <div class="text-xs text-white/50">Add a person of interest to this investigation</div>
-                                    </div>
-                                </button>
-                                <button type="button" data-command="/add vehicle" class="command-suggestion w-full text-left px-4 py-2 hover:bg-slate-700 transition-colors flex items-center gap-3">
-                                    <div class="w-8 h-8 bg-orange-500/20 rounded-full flex items-center justify-center shrink-0">
-                                        <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-white">/add vehicle</div>
-                                        <div class="text-xs text-white/50">Add a vehicle to this investigation</div>
-                                    </div>
-                                </button>
-                                <button type="button" data-command="/add location" class="command-suggestion w-full text-left px-4 py-2 hover:bg-slate-700 transition-colors flex items-center gap-3">
-                                    <div class="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center shrink-0">
-                                        <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <div class="font-medium text-white">/add location</div>
-                                        <div class="text-xs text-white/50">Add a location to this investigation</div>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-                        <select id="postClearanceSelect" class="px-3 py-3 bg-slate-800 border border-slate-700 rounded-lg text-sm">
-                            <option value="public_trust">PT</option>
-                            <option value="confidential">C</option>
-                            <option value="secret">S</option>
-                            <option value="top_secret" selected>TS</option>
-                            <option value="top_secret_sci">TS/SCI</option>
-                            <option value="special_access">SA</option>
-                        </select>
-                        <button id="sendMessageBtn" class="p-3 bg-primary hover:bg-primary/80 rounded-lg transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="tabPeople" class="tab-content hidden p-6">
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="peopleGrid">
-                        <p class="text-white/60 text-center col-span-full">No people information available for this investigation.</p>
-                    </div>
-                </div>
-
-                <div id="tabLocations" class="tab-content hidden p-6">
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="locationsGrid">
-                        <p class="text-white/60 text-center col-span-full">No location information available for this investigation.</p>
-                    </div>
-                </div>
-
-                <div id="tabVehicles" class="tab-content hidden p-6">
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4" id="vehiclesGrid">
-                        <p class="text-white/60 text-center col-span-full">No vehicle information available for this investigation.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Person Modal -->
-    <div id="addPersonModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <!-- Add Info Modal -->
+    <div id="addInfoModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg my-8">
             <div class="p-6 border-b border-slate-700">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-bold">Add Person of Interest</h3>
-                    </div>
-                    <button id="closeAddPersonModal" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                    <h3 class="text-xl font-bold">Add Additional Info</h3>
+                    <button id="closeAddInfoModal" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
             </div>
-            <form id="addPersonForm" class="p-6 space-y-4">
+            <div class="p-6">
+                <p class="text-white/70 mb-4">Select what type of information you want to add:</p>
+                <div class="grid grid-cols-1 gap-3">
+                    <button id="addPostBtn" class="flex items-center gap-3 p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors text-left">
+                        <div class="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-semibold">Add Intel Post</div>
+                            <div class="text-sm text-white/50">Add a new intel report or observation</div>
+                        </div>
+                    </button>
+                    <button id="addPersonBtn" class="flex items-center gap-3 p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors text-left">
+                        <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-semibold">Add Person</div>
+                            <div class="text-sm text-white/50">Add a person of interest</div>
+                        </div>
+                    </button>
+                    <button id="addLocationBtn" class="flex items-center gap-3 p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors text-left">
+                        <div class="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-semibold">Add Location</div>
+                            <div class="text-sm text-white/50">Add a known location</div>
+                        </div>
+                    </button>
+                    <button id="addVehicleBtn" class="flex items-center gap-3 p-4 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors text-left">
+                        <div class="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center shrink-0">
+                            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-semibold">Add Vehicle</div>
+                            <div class="text-sm text-white/50">Add a known vehicle</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Post Modal -->
+    <div id="postModal" class="hidden fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg my-8">
+            <div class="p-6 border-b border-slate-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Add Intel Post</h3>
+                    <button id="closePostModal" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <form id="postForm" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Intel Report *</label>
+                    <textarea id="postContent" required rows="4" placeholder="Enter your intel report or observation..."
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" id="cancelPostBtn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                        Add Post
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Person Modal -->
+    <div id="personModal" class="hidden fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg my-8 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-slate-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Add Person</h3>
+                    <button id="closePersonModal" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <form id="personForm" class="p-6 space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-white/70 mb-1">Name *</label>
                     <input type="text" id="personName" required placeholder="Full name or known alias"
@@ -360,11 +248,6 @@ export const prerender = false;
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">Affiliation</label>
-                    <input type="text" id="personAffiliation" placeholder="Organization or group"
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-                <div>
                     <label class="block text-sm font-medium text-white/70 mb-1">Last Known Location</label>
                     <input type="text" id="personLocation" placeholder="Address or area"
                         class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
@@ -381,14 +264,14 @@ export const prerender = false;
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-white/70 mb-1">Notes</label>
-                    <textarea id="personNotes" rows="2" placeholder="Additional intelligence or observations"
+                    <textarea id="personNotes" rows="2" placeholder="Additional intelligence"
                         class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
                 </div>
                 <div class="flex gap-3 pt-4">
-                    <button type="button" id="cancelAddPerson" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                    <button type="button" id="cancelPersonBtn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" id="submitAddPerson" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                    <button type="submit" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
                         Add Person
                     </button>
                 </div>
@@ -396,28 +279,96 @@ export const prerender = false;
         </div>
     </div>
 
-    <!-- Add Vehicle Modal -->
-    <div id="addVehicleModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <!-- Add Location Modal -->
+    <div id="locationModal" class="hidden fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg my-8 max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-slate-700">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
-                            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-bold">Add Vehicle</h3>
-                    </div>
-                    <button id="closeAddVehicleModal" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                    <h3 class="text-xl font-bold">Add Location</h3>
+                    <button id="closeLocationModal" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
             </div>
-            <form id="addVehicleForm" class="p-6 space-y-4">
+            <form id="locationForm" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Name *</label>
+                    <input type="text" id="locationName" required placeholder="Location name"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Type</label>
+                        <select id="locationType" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="other">Other</option>
+                            <option value="headquarters">Headquarters</option>
+                            <option value="safehouse">Safehouse</option>
+                            <option value="meetup">Meetup Point</option>
+                            <option value="stash">Stash House</option>
+                            <option value="business">Business</option>
+                            <option value="residence">Residence</option>
+                            <option value="territory">Territory</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-white/70 mb-1">Status</label>
+                        <select id="locationStatus" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
+                            <option value="unknown">Unknown</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="under_surveillance">Under Surveillance</option>
+                            <option value="raided">Raided</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Address</label>
+                    <input type="text" id="locationAddress" placeholder="Full street address"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Photo URL (optional)</label>
+                    <input type="text" id="locationPhoto" placeholder="https://..."
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Description</label>
+                    <textarea id="locationDescription" rows="2" placeholder="Location details"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-white/70 mb-1">Notes</label>
+                    <textarea id="locationNotes" rows="2" placeholder="Additional intelligence"
+                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" id="cancelLocationBtn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                        Add Location
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Vehicle Modal -->
+    <div id="vehicleModal" class="hidden fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg my-8 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-slate-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold">Add Vehicle</h3>
+                    <button id="closeVehicleModal" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <form id="vehicleForm" class="p-6 space-y-4">
                 <div class="grid grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-white/70 mb-1">Year</label>
@@ -473,43 +424,9 @@ export const prerender = false;
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">VIN</label>
-                    <input type="text" id="vehicleVin" placeholder="Vehicle Identification Number"
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-white/70 mb-1">Registered Owner</label>
-                        <input type="text" id="vehicleOwner" placeholder="Name of owner"
-                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-white/70 mb-1">Associated Person</label>
-                        <input type="text" id="vehicleAssociated" placeholder="Known driver/user"
-                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-white/70 mb-1">Last Seen Location</label>
-                        <input type="text" id="vehicleLastLocation" placeholder="Address or area"
-                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-white/70 mb-1">Last Seen Date</label>
-                        <input type="date" id="vehicleLastDate"
-                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                </div>
-                <div>
                     <label class="block text-sm font-medium text-white/70 mb-1">Photo URL (optional)</label>
                     <input type="text" id="vehiclePhoto" placeholder="https://..."
                         class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">Description</label>
-                    <textarea id="vehicleDescription" rows="2" placeholder="Additional details about the vehicle"
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-white/70 mb-1">Notes</label>
@@ -517,171 +434,11 @@ export const prerender = false;
                         class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
                 </div>
                 <div class="flex gap-3 pt-4">
-                    <button type="button" id="cancelAddVehicle" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
+                    <button type="button" id="cancelVehicleBtn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" id="submitAddVehicle" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
+                    <button type="submit" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
                         Add Vehicle
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Add Location Modal -->
-    <div id="addLocationModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b border-slate-700">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-bold">Add Location</h3>
-                    </div>
-                    <button id="closeAddLocationModal" class="p-2 hover:bg-slate-700 rounded-lg transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            <form id="addLocationForm" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">Name *</label>
-                    <input type="text" id="locationName" required placeholder="Location name or identifier"
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-white/70 mb-1">Type</label>
-                        <select id="locationType" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                            <option value="other">Other</option>
-                            <option value="headquarters">Headquarters</option>
-                            <option value="safehouse">Safehouse</option>
-                            <option value="meetup">Meetup Point</option>
-                            <option value="stash">Stash House</option>
-                            <option value="business">Business</option>
-                            <option value="residence">Residence</option>
-                            <option value="territory">Territory</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-white/70 mb-1">Status</label>
-                        <select id="locationStatus" class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary">
-                            <option value="unknown">Unknown</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                            <option value="under_surveillance">Under Surveillance</option>
-                            <option value="raided">Raided</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">Address</label>
-                    <input type="text" id="locationAddress" placeholder="Full street address"
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-white/70 mb-1">Latitude</label>
-                        <input type="number" step="any" id="locationLat" placeholder="e.g., 34.0522"
-                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-white/70 mb-1">Longitude</label>
-                        <input type="number" step="any" id="locationLng" placeholder="e.g., -118.2437"
-                            class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">Photo URL (optional)</label>
-                    <input type="text" id="locationPhoto" placeholder="https://..."
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">Description</label>
-                    <textarea id="locationDescription" rows="2" placeholder="Description of the location"
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">Notes</label>
-                    <textarea id="locationNotes" rows="2" placeholder="Additional intelligence"
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
-                </div>
-                <div class="flex gap-3 pt-4">
-                    <button type="button" id="cancelAddLocation" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
-                        Cancel
-                    </button>
-                    <button type="submit" id="submitAddLocation" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
-                        Add Location
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Profile Setup Modal -->
-    <div id="profileModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-lg border border-slate-700 w-full max-w-md">
-            <div class="p-6 border-b border-slate-700">
-                <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                        <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-bold">Additional Info Required!</h3>
-                        <p class="text-white/70 text-sm">To continue the Site Admins require the following</p>
-                    </div>
-                </div>
-            </div>
-            <form id="profileForm" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">Discord Username</label>
-                    <input type="text" id="discordUsername" required placeholder="e.g., username#1234 or username"
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-white/70 mb-1">Discord ID</label>
-                    <input type="text" id="discordIdInput" required placeholder="e.g., 123456789012345678"
-                        class="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary" />
-                    <p class="text-xs text-white/50 mt-1">Right-click your profile in Discord and select "Copy User ID"</p>
-                </div>
-
-                <!-- Auto-filled Officer Info (read-only display after lookup) -->
-                <div id="officerInfoSection" class="hidden space-y-3 p-4 bg-slate-700/30 rounded-lg border border-slate-600">
-                    <p class="text-xs text-white/50 uppercase tracking-wider">Officer Information (from Chain of Command)</p>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-xs text-white/50 mb-1">Officer Name</label>
-                            <p id="officerNameDisplay" class="text-white font-medium">-</p>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-white/50 mb-1">Callsign</label>
-                            <p id="callsignDisplay" class="text-white font-medium">-</p>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-white/50 mb-1">Badge Number</label>
-                            <p id="badgeNumberDisplay" class="text-white font-medium">-</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="lookupError" class="hidden p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-yellow-200 text-sm">
-                    <p>Discord ID not found in Chain of Command. Your profile will be submitted for admin review.</p>
-                </div>
-
-                <div class="flex gap-3 pt-4">
-                    <button type="button" id="lookupBtn" class="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg transition-colors">
-                        Lookup Officer
-                    </button>
-                    <button type="submit" id="submitProfileBtn" class="flex-1 px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg transition-colors font-semibold">
-                        Submit
                     </button>
                 </div>
             </form>
@@ -690,972 +447,571 @@ export const prerender = false;
 
     <script type="module">
         let currentUser = null;
-        let allThreads = [];
-        let currentCategory = 'all';
-        let currentSort = 'newest';
-        let searchQuery = '';
-        let currentThread = null;
-        let currentTab = 'operations';
+        let currentGang = null;
 
-        // Clearance badge colors
-        const clearanceBadgeColors = {
-            'pending': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-            'public_trust': 'bg-green-500/20 text-green-300 border-green-500/30',
-            'confidential': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-            'secret': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-            'top_secret': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-            'top_secret_sci': 'bg-red-500/20 text-red-300 border-red-500/30',
-            'special_access': 'bg-pink-500/20 text-pink-300 border-pink-500/30',
-            'denied': 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-        };
-
-        const categoryColors = {
-            gang: 'bg-red-500/20 text-red-300 border-red-500/30',
-            cartel: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-            militia: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-            crime_family: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-            motorcycle_club: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-            other: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-        };
-
-        // Check session and load data
-        async function init() {
+        // Check session
+        async function checkSession() {
             try {
-                const response = await fetch('/api/intel/session', {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                const data = await response.json();
-
-                if (!data.authenticated) {
-                    window.location.href = '/intel/login';
-                    return;
-                }
-
-                currentUser = data.user;
-                loadIntel();
-            } catch (error) {
-                console.error('Session error:', error);
-                window.location.href = '/intel/login';
-            }
-        }
-
-        async function loadIntel() {
-            try {
-                const response = await fetch('/api/intel/view', {
-                    method: 'GET',
-                    credentials: 'include'
-                });
+                const response = await fetch('/api/intel/session', { credentials: 'include' });
                 const data = await response.json();
 
                 document.getElementById('loadingState').classList.add('hidden');
 
-                if (data.error === 'Access pending') {
+                if (!data.authenticated) {
+                    window.location.href = '/intel/login';
+                    return null;
+                }
+
+                if (data.user.clearanceLevel === 'pending') {
                     document.getElementById('pendingState').classList.remove('hidden');
-                    return;
+                    return null;
                 }
 
-                if (data.error && data.clearanceLevel === 'denied') {
+                if (data.user.clearanceLevel === 'denied') {
                     document.getElementById('deniedState').classList.remove('hidden');
-                    return;
+                    return null;
                 }
 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                currentUser = data.user;
-                allThreads = data.threads || [];
-
-                // Show main content
                 document.getElementById('mainContent').classList.remove('hidden');
-
-                // Update user card
-                updateUserCard();
-
-                // Check if profile needs to be completed
-                checkProfileCompletion();
-
-                renderThreads();
+                return data.user;
             } catch (error) {
-                console.error('Error loading intel:', error);
-                document.getElementById('loadingState').innerHTML = `
-                    <div class="text-red-400">
-                        <p>Error loading intel: ${error.message}</p>
-                        <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded-lg">
-                            Retry
-                        </button>
-                    </div>
-                `;
+                console.error('Session error:', error);
+                window.location.href = '/intel/login';
+                return null;
             }
         }
 
-        function updateUserCard() {
-            // Set profile picture
-            const picture = document.getElementById('userPicture');
-            picture.src = currentUser.picture || '/default-avatar.png';
-
-            // Set callsign | name
-            const displayName = currentUser.callsign && currentUser.officerName
-                ? `${currentUser.callsign} | ${currentUser.officerName}`
-                : currentUser.callsign || currentUser.officerName || currentUser.name;
-            document.getElementById('userCallsignName').textContent = displayName;
-
-            // Set Discord ID
-            document.getElementById('userDiscordId').textContent = currentUser.discordId
-                ? `ID: ${currentUser.discordId}`
-                : currentUser.email;
-
-            // Set clearance badge
-            const badgeEl = document.getElementById('userClearanceBadge');
-            const codeEl = document.getElementById('userClearanceCode');
-            const clearanceColors = clearanceBadgeColors[currentUser.clearanceLevel] || clearanceBadgeColors['pending'];
-            badgeEl.className = `inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border ${clearanceColors}`;
-            codeEl.textContent = currentUser.clearanceCode || currentUser.clearanceLevel.toUpperCase();
-        }
-
-        function checkProfileCompletion() {
-            // Check for the needs_profile cookie or if profile is incomplete
-            const needsProfile = document.cookie.includes('intel_needs_profile=true') || !currentUser.profileComplete;
-
-            if (needsProfile) {
-                document.getElementById('profileModal').classList.remove('hidden');
-            }
-        }
-
-        function renderThreads() {
-            const container = document.getElementById('threadsGrid');
-            let filtered = [...allThreads];
-
-            // Apply category filter
-            if (currentCategory !== 'all') {
-                filtered = filtered.filter(t => t.category === currentCategory);
-            }
-
-            // Apply search
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase();
-                filtered = filtered.filter(t =>
-                    t.title.toLowerCase().includes(query) ||
-                    t.description.toLowerCase().includes(query)
-                );
-            }
-
-            // Apply sort
-            filtered.sort((a, b) => {
-                switch (currentSort) {
-                    case 'oldest':
-                        return a.updatedAt - b.updatedAt;
-                    case 'most_posts':
-                        return (b.postCount || 0) - (a.postCount || 0);
-                    default: // newest
-                        return b.updatedAt - a.updatedAt;
-                }
-            });
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<p class="text-white/60 text-center py-8 col-span-full">No investigations found${currentCategory !== 'all' ? ' in this category' : ''}.</p>`;
-                return;
-            }
-
-            container.innerHTML = filtered.map(thread => `
-                <div class="bg-slate-800/50 rounded-lg border ${thread.isPinned ? 'border-yellow-500/50' : 'border-slate-700'} p-5 hover:bg-slate-800/70 transition-colors cursor-pointer" onclick="viewThread('${thread.id}')">
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                        </div>
-                        <span class="px-2 py-0.5 rounded text-xs font-medium ${categoryColors[thread.category]}">${thread.category.charAt(0).toUpperCase() + thread.category.slice(1)}</span>
-                    </div>
-                    <h3 class="font-bold mb-2">${thread.title}</h3>
-                    <p class="text-white/70 text-sm mb-4 line-clamp-2">${thread.description}</p>
-                    <div class="flex items-center justify-between text-xs text-white/50">
-                        <span class="flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                            ${thread.postCount || 0} Posts
-                        </span>
-                        <span>Last Activity: ${formatDate(thread.updatedAt)}</span>
-                    </div>
-                </div>
-            `).join('');
+        function showStatus(message, type = 'success') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `rounded-lg p-4 border ${type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-200' : 'bg-green-500/20 border-green-500/50 text-green-200'}`;
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
         }
 
         function formatDate(timestamp) {
-            const date = new Date(timestamp);
-            const now = new Date();
-            const diff = now - date;
-
-            if (diff < 60000) return 'just now';
-            if (diff < 3600000) return `${Math.floor(diff / 60000)} minutes ago`;
-            if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
-            if (diff < 604800000) return `${Math.floor(diff / 86400000)} days ago`;
-            return date.toLocaleDateString();
+            if (!timestamp) return 'Unknown';
+            return new Date(timestamp).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
         }
 
-        // Filters dropdown
-        const filtersBtn = document.getElementById('filtersBtn');
-        const filtersDropdown = document.getElementById('filtersDropdown');
-        filtersBtn.addEventListener('click', () => {
-            filtersDropdown.classList.toggle('hidden');
-            sortDropdown.classList.add('hidden');
-        });
-
-        // Sort dropdown
-        const sortBtn = document.getElementById('sortBtn');
-        const sortDropdown = document.getElementById('sortDropdown');
-        sortBtn.addEventListener('click', () => {
-            sortDropdown.classList.toggle('hidden');
-            filtersDropdown.classList.add('hidden');
-        });
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!filtersBtn.contains(e.target) && !filtersDropdown.contains(e.target)) {
-                filtersDropdown.classList.add('hidden');
-            }
-            if (!sortBtn.contains(e.target) && !sortDropdown.contains(e.target)) {
-                sortDropdown.classList.add('hidden');
-            }
-        });
-
-        // Category filter buttons
-        document.querySelectorAll('.category-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.category-btn').forEach(b => {
-                    b.classList.remove('text-primary', 'font-medium');
-                });
-                btn.classList.add('text-primary', 'font-medium');
-                currentCategory = btn.dataset.category;
-                filtersDropdown.classList.add('hidden');
-                renderThreads();
+        function formatDateTime(timestamp) {
+            if (!timestamp) return 'Unknown';
+            return new Date(timestamp).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
             });
-        });
+        }
 
-        // Sort buttons
-        document.querySelectorAll('.sort-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.sort-btn').forEach(b => {
-                    b.classList.remove('text-primary');
-                });
-                btn.classList.add('text-primary');
-                currentSort = btn.dataset.sort;
-                document.getElementById('sortLabel').textContent = btn.textContent;
-                sortDropdown.classList.add('hidden');
-                renderThreads();
-            });
-        });
-
-        // Search
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            searchQuery = e.target.value;
-            renderThreads();
-        });
-
-        // View thread
-        window.viewThread = async function(threadId) {
-            currentThread = allThreads.find(t => t.id === threadId);
-            if (!currentThread) return;
-
-            const modal = document.getElementById('threadModal');
-            modal.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-
-            document.getElementById('modalTitle').textContent = `${currentThread.title} - Operations`;
-            const categoryEl = document.getElementById('modalCategory');
-            categoryEl.textContent = currentThread.category.toUpperCase();
-            categoryEl.className = `px-2 py-0.5 rounded text-xs font-medium ${categoryColors[currentThread.category]}`;
-
-            // Reset to operations tab
-            currentTab = 'operations';
-            updateTabs();
-
-            await loadPosts(threadId);
+        const statusColors = {
+            active: { bg: 'bg-green-500/20', border: 'border-green-500/30', text: 'text-green-400' },
+            inactive: { bg: 'bg-gray-500/20', border: 'border-gray-500/30', text: 'text-gray-400' },
+            incarcerated: { bg: 'bg-orange-500/20', border: 'border-orange-500/30', text: 'text-orange-400' },
+            deceased: { bg: 'bg-red-500/20', border: 'border-red-500/30', text: 'text-red-400' },
+            unknown: { bg: 'bg-slate-500/20', border: 'border-slate-500/30', text: 'text-slate-400' }
         };
 
-        function updateTabs() {
-            document.querySelectorAll('.thread-tab').forEach(tab => {
-                if (tab.dataset.tab === currentTab) {
-                    tab.classList.remove('border-transparent', 'text-white/60');
-                    tab.classList.add('border-primary', 'text-primary');
-                } else {
-                    tab.classList.remove('border-primary', 'text-primary');
-                    tab.classList.add('border-transparent', 'text-white/60');
-                }
-            });
+        const categoryColors = {
+            gang: 'bg-red-500/20 text-red-300',
+            cartel: 'bg-orange-500/20 text-orange-300',
+            militia: 'bg-yellow-500/20 text-yellow-300',
+            crime_family: 'bg-purple-500/20 text-purple-300',
+            motorcycle_club: 'bg-blue-500/20 text-blue-300',
+            other: 'bg-gray-500/20 text-gray-300'
+        };
 
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.add('hidden');
-            });
-            document.getElementById(`tab${currentTab.charAt(0).toUpperCase() + currentTab.slice(1)}`).classList.remove('hidden');
+        function renderGangCard(gang) {
+            const thread = gang.thread;
+            const hasImage = thread.image && thread.image.trim() !== '';
 
-            if (currentThread) {
-                const titleEl = document.getElementById('modalTitle');
-                titleEl.textContent = `${currentThread.title} - ${currentTab.charAt(0).toUpperCase() + currentTab.slice(1)}`;
-            }
-        }
-
-        // Tab clicks
-        document.querySelectorAll('.thread-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                currentTab = tab.dataset.tab;
-                updateTabs();
-            });
-        });
-
-        async function loadPosts(threadId) {
-            const container = document.getElementById('modalPosts');
-            container.innerHTML = '<p class="text-white/60 text-center">Loading...</p>';
-
-            try {
-                const response = await fetch(`/api/intel/view?threadId=${threadId}`, {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-
-                if (data.error) throw new Error(data.error);
-
-                const posts = data.posts || [];
-                const people = data.people || [];
-                const locations = data.locations || [];
-
-                // Render posts
-                if (posts.length === 0) {
-                    container.innerHTML = '<p class="text-white/60 text-center py-8">No posts in this investigation yet.</p>';
-                } else {
-                    container.innerHTML = posts.map(post => `
-                        <div class="flex gap-3">
-                            <div class="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
-                                ${post.author.charAt(0).toUpperCase()}
+            return `
+                <div class="bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 overflow-hidden" data-gang-id="${thread.id}">
+                    <!-- Gang Header -->
+                    <div class="p-6 border-b border-white/10">
+                        <div class="flex flex-col md:flex-row gap-6">
+                            <!-- Gang Image -->
+                            <div class="flex-shrink-0">
+                                ${hasImage ? `
+                                    <img
+                                        src="${thread.image}"
+                                        alt="${thread.title}"
+                                        class="w-32 h-32 md:w-40 md:h-40 object-cover rounded-lg border-2 border-white/20"
+                                        onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'w-32 h-32 md:w-40 md:h-40 bg-slate-700 rounded-lg border-2 border-white/20 flex items-center justify-center\\'><svg class=\\'w-16 h-16 text-white/30\\' fill=\\'currentColor\\' viewBox=\\'0 0 24 24\\'><path d=\\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z\\'/></svg></div>';"
+                                    >
+                                ` : `
+                                    <div class="w-32 h-32 md:w-40 md:h-40 bg-slate-700 rounded-lg border-2 border-white/20 flex items-center justify-center">
+                                        <svg class="w-16 h-16 text-white/30" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                                        </svg>
+                                    </div>
+                                `}
                             </div>
-                            <div class="flex-1 bg-slate-800 rounded-lg p-3">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="font-semibold text-sm">${post.author}</span>
-                                    <span class="text-xs px-2 py-0.5 bg-slate-700 rounded">${post.authorRole}</span>
-                                    <span class="text-white/50 text-xs">${new Date(post.createdAt).toLocaleString()}</span>
-                                </div>
-                                <p class="text-white/90 text-sm whitespace-pre-wrap">${post.content}</p>
-                            </div>
-                        </div>
-                    `).join('');
-                }
 
-                // Render people
-                const peopleContainer = document.getElementById('peopleGrid');
-                const personStatusColors = {
-                    active: 'bg-green-500/20 text-green-300',
-                    inactive: 'bg-gray-500/20 text-gray-300',
-                    incarcerated: 'bg-orange-500/20 text-orange-300',
-                    deceased: 'bg-red-500/20 text-red-300',
-                    unknown: 'bg-slate-500/20 text-slate-300',
-                };
+                            <!-- Gang Info -->
+                            <div class="flex-1">
+                                <h3 class="text-2xl font-bold text-white mb-3">${thread.title}</h3>
 
-                if (people.length === 0) {
-                    peopleContainer.innerHTML = '<p class="text-white/60 text-center col-span-full">No people information available for this investigation.</p>';
-                } else {
-                    peopleContainer.innerHTML = people.map(person => `
-                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                            <div class="flex gap-3">
-                                ${person.photo ? `<img src="${person.photo}" alt="${person.name}" class="w-14 h-14 rounded-lg object-cover shrink-0" />` : `<div class="w-14 h-14 bg-slate-700 rounded-lg flex items-center justify-center text-xl font-bold shrink-0">${person.name.charAt(0).toUpperCase()}</div>`}
-                                <div class="flex-1 min-w-0">
-                                    <h4 class="font-semibold text-sm truncate">${person.name}</h4>
-                                    ${person.aliases?.length ? `<p class="text-white/50 text-xs">AKA: ${person.aliases.join(', ')}</p>` : ''}
-                                    ${person.role ? `<p class="text-white/70 text-xs mt-1">${person.role}</p>` : ''}
-                                    <span class="inline-block px-2 py-0.5 rounded text-xs font-medium mt-1 ${personStatusColors[person.status] || personStatusColors.unknown}">${person.status || 'unknown'}</span>
-                                </div>
-                            </div>
-                            ${person.description ? `<p class="text-white/60 text-xs mt-2">${person.description}</p>` : ''}
-                            ${person.lastKnownLocation ? `<p class="text-white/50 text-xs mt-1">Last seen: ${person.lastKnownLocation}</p>` : ''}
-                        </div>
-                    `).join('');
-                }
-
-                // Render locations
-                const locationsContainer = document.getElementById('locationsGrid');
-                const locationTypeColors = {
-                    headquarters: 'bg-red-500/20 text-red-300',
-                    safehouse: 'bg-yellow-500/20 text-yellow-300',
-                    meetup: 'bg-blue-500/20 text-blue-300',
-                    stash: 'bg-orange-500/20 text-orange-300',
-                    business: 'bg-green-500/20 text-green-300',
-                    residence: 'bg-purple-500/20 text-purple-300',
-                    territory: 'bg-pink-500/20 text-pink-300',
-                    other: 'bg-gray-500/20 text-gray-300',
-                };
-
-                const locationStatusColors = {
-                    active: 'bg-green-500/20 text-green-300',
-                    inactive: 'bg-gray-500/20 text-gray-300',
-                    under_surveillance: 'bg-yellow-500/20 text-yellow-300',
-                    raided: 'bg-red-500/20 text-red-300',
-                    unknown: 'bg-slate-500/20 text-slate-300',
-                };
-
-                if (locations.length === 0) {
-                    locationsContainer.innerHTML = '<p class="text-white/60 text-center col-span-full">No location information available for this investigation.</p>';
-                } else {
-                    locationsContainer.innerHTML = locations.map(location => `
-                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                            <div class="flex gap-3">
-                                ${location.photo ? `<img src="${location.photo}" alt="${location.name}" class="w-14 h-14 rounded-lg object-cover shrink-0" />` : `<div class="w-14 h-14 bg-slate-700 rounded-lg flex items-center justify-center shrink-0"><svg class="w-6 h-6 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg></div>`}
-                                <div class="flex-1 min-w-0">
-                                    <h4 class="font-semibold text-sm truncate">${location.name}</h4>
-                                    ${location.address ? `<p class="text-white/50 text-xs">${location.address}</p>` : ''}
-                                    <div class="flex gap-1 flex-wrap mt-1">
-                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${locationTypeColors[location.type] || locationTypeColors.other}">${location.type || 'other'}</span>
-                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${locationStatusColors[location.status] || locationStatusColors.unknown}">${(location.status || 'unknown').replace('_', ' ')}</span>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                                    <div class="bg-slate-700/30 rounded-lg p-3">
+                                        <div class="text-white/50 text-xs uppercase tracking-wide mb-1">Category</div>
+                                        <div class="text-white font-semibold capitalize">${thread.category.replace('_', ' ')}</div>
+                                    </div>
+                                    <div class="bg-slate-700/30 rounded-lg p-3">
+                                        <div class="text-white/50 text-xs uppercase tracking-wide mb-1">Known Members</div>
+                                        <div class="text-white font-semibold text-xl">${gang.totalMembers}</div>
+                                    </div>
+                                    <div class="bg-slate-700/30 rounded-lg p-3">
+                                        <div class="text-white/50 text-xs uppercase tracking-wide mb-1">Locations</div>
+                                        <div class="text-white font-semibold text-xl">${gang.totalLocations}</div>
+                                    </div>
+                                    <div class="bg-slate-700/30 rounded-lg p-3">
+                                        <div class="text-white/50 text-xs uppercase tracking-wide mb-1">Intel Reports</div>
+                                        <div class="text-white font-semibold text-xl">${gang.totalPosts}</div>
                                     </div>
                                 </div>
-                            </div>
-                            ${location.description ? `<p class="text-white/60 text-xs mt-2">${location.description}</p>` : ''}
-                        </div>
-                    `).join('');
-                }
 
-                // Render vehicles
-                const vehiclesContainer = document.getElementById('vehiclesGrid');
-                const vehicles = data.vehicles || [];
-                const vehicleTypeColors = {
-                    car: 'bg-blue-500/20 text-blue-300',
-                    truck: 'bg-orange-500/20 text-orange-300',
-                    suv: 'bg-green-500/20 text-green-300',
-                    van: 'bg-yellow-500/20 text-yellow-300',
-                    motorcycle: 'bg-red-500/20 text-red-300',
-                    boat: 'bg-cyan-500/20 text-cyan-300',
-                    aircraft: 'bg-purple-500/20 text-purple-300',
-                    other: 'bg-gray-500/20 text-gray-300',
-                };
-
-                const vehicleStatusColors = {
-                    active: 'bg-green-500/20 text-green-300',
-                    impounded: 'bg-orange-500/20 text-orange-300',
-                    stolen: 'bg-red-500/20 text-red-300',
-                    destroyed: 'bg-gray-500/20 text-gray-300',
-                    unknown: 'bg-slate-500/20 text-slate-300',
-                };
-
-                if (vehicles.length === 0) {
-                    vehiclesContainer.innerHTML = '<p class="text-white/60 text-center col-span-full">No vehicle information available for this investigation.</p>';
-                } else {
-                    vehiclesContainer.innerHTML = vehicles.map(vehicle => {
-                        const displayName = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ') || 'Unknown Vehicle';
-                        return `
-                        <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                            <div class="flex gap-3">
-                                ${vehicle.photo ? `<img src="${vehicle.photo}" alt="${displayName}" class="w-14 h-14 rounded-lg object-cover shrink-0" />` : `<div class="w-14 h-14 bg-slate-700 rounded-lg flex items-center justify-center shrink-0"><svg class="w-6 h-6 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg></div>`}
-                                <div class="flex-1 min-w-0">
-                                    <h4 class="font-semibold text-sm truncate">${displayName}</h4>
-                                    ${vehicle.color ? `<p class="text-white/70 text-xs">Color: ${vehicle.color}</p>` : ''}
-                                    ${vehicle.licensePlate ? `<p class="text-white/50 text-xs">Plate: ${vehicle.licensePlate}</p>` : ''}
-                                    <div class="flex gap-1 flex-wrap mt-1">
-                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${vehicleTypeColors[vehicle.type] || vehicleTypeColors.other}">${vehicle.type || 'other'}</span>
-                                        <span class="px-2 py-0.5 rounded text-xs font-medium ${vehicleStatusColors[vehicle.status] || vehicleStatusColors.unknown}">${vehicle.status || 'unknown'}</span>
-                                    </div>
+                                <!-- Member Status Summary -->
+                                <div class="flex flex-wrap gap-3">
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusColors.active.bg} ${statusColors.active.border} ${statusColors.active.text} border">
+                                        ${gang.statusCounts.active} Active
+                                    </span>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusColors.incarcerated.bg} ${statusColors.incarcerated.border} ${statusColors.incarcerated.text} border">
+                                        ${gang.statusCounts.incarcerated} Incarcerated
+                                    </span>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase ${statusColors.deceased.bg} ${statusColors.deceased.border} ${statusColors.deceased.text} border">
+                                        ${gang.statusCounts.deceased} Deceased
+                                    </span>
                                 </div>
                             </div>
-                            ${vehicle.description ? `<p class="text-white/60 text-xs mt-2">${vehicle.description}</p>` : ''}
-                            ${vehicle.associatedPerson ? `<p class="text-white/50 text-xs mt-1">Associated: ${vehicle.associatedPerson}</p>` : ''}
                         </div>
-                    `;}).join('');
+                    </div>
+
+                    <!-- Description -->
+                    <div class="p-6 border-b border-white/10 bg-slate-800/30">
+                        <p class="text-white/80">${thread.description}</p>
+                    </div>
+
+                    <!-- Known Members Section -->
+                    ${gang.people.length > 0 ? `
+                        <div class="p-6 border-b border-white/10">
+                            <h4 class="text-lg font-bold text-white/90 mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                Known Members (${gang.people.length})
+                            </h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                ${gang.people.slice(0, 6).map(person => {
+                                    const colors = statusColors[person.status] || statusColors.unknown;
+                                    return `
+                                        <div class="bg-slate-700/30 rounded-lg p-3 flex items-center gap-3">
+                                            ${person.photo ? `
+                                                <img src="${person.photo}" alt="${person.name}" class="w-10 h-10 rounded-full object-cover">
+                                            ` : `
+                                                <div class="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center text-lg font-bold">
+                                                    ${person.name.charAt(0).toUpperCase()}
+                                                </div>
+                                            `}
+                                            <div class="flex-1 min-w-0">
+                                                <div class="font-semibold truncate">${person.name}</div>
+                                                ${person.role ? `<div class="text-white/50 text-xs">${person.role}</div>` : ''}
+                                            </div>
+                                            <span class="px-2 py-0.5 rounded text-xs font-medium ${colors.bg} ${colors.text}">
+                                                ${person.status || 'unknown'}
+                                            </span>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                            ${gang.people.length > 6 ? `<p class="text-white/50 text-sm mt-3">+ ${gang.people.length - 6} more members</p>` : ''}
+                        </div>
+                    ` : ''}
+
+                    <!-- Known Locations Section -->
+                    ${gang.locations.length > 0 ? `
+                        <div class="p-6 border-b border-white/10">
+                            <h4 class="text-lg font-bold text-white/90 mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Known Locations (${gang.locations.length})
+                            </h4>
+                            <div class="flex flex-wrap gap-2">
+                                ${gang.locations.map(location => `
+                                    <span class="px-3 py-1 bg-orange-500/20 border border-orange-500/30 text-orange-300 rounded-lg text-sm">
+                                        ${location.name}${location.type && location.type !== 'other' ? ` (${location.type})` : ''}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Known Vehicles Section -->
+                    ${gang.vehicles.length > 0 ? `
+                        <div class="p-6 border-b border-white/10">
+                            <h4 class="text-lg font-bold text-white/90 mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                                </svg>
+                                Known Vehicles (${gang.vehicles.length})
+                            </h4>
+                            <div class="flex flex-wrap gap-2">
+                                ${gang.vehicles.map(vehicle => {
+                                    const name = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(' ') || 'Unknown Vehicle';
+                                    return `
+                                        <span class="px-3 py-1 bg-purple-500/20 border border-purple-500/30 text-purple-300 rounded-lg text-sm">
+                                            ${name}${vehicle.color ? ` - ${vehicle.color}` : ''}${vehicle.licensePlate ? ` (${vehicle.licensePlate})` : ''}
+                                        </span>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Recent Intel Section -->
+                    <div class="p-6">
+                        <h4 class="text-lg font-bold text-white/90 mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Recent Intel
+                        </h4>
+
+                        <div class="space-y-3">
+                            ${gang.posts.length > 0 ? gang.posts.slice(0, 5).map(post => `
+                                <div class="bg-slate-700/30 rounded-lg p-4 border border-white/10">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-semibold text-white">${post.author}</span>
+                                            <span class="text-xs px-2 py-0.5 bg-slate-600 rounded text-white/70">${post.authorRole || 'Officer'}</span>
+                                        </div>
+                                        <span class="text-white/50 text-sm">${formatDateTime(post.createdAt)}</span>
+                                    </div>
+                                    <p class="text-white/80 whitespace-pre-wrap">${post.content.length > 300 ? post.content.substring(0, 300) + '...' : post.content}</p>
+                                </div>
+                            `).join('') : `
+                                <p class="text-white/50 text-sm">No intel posts yet.</p>
+                            `}
+                            ${gang.posts.length > 5 ? `<p class="text-white/50 text-sm mt-3">+ ${gang.posts.length - 5} more intel posts</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function searchDatabase(query) {
+            const searchingState = document.getElementById('searchingState');
+            const searchResults = document.getElementById('searchResults');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const resultsHeader = document.getElementById('resultsHeader');
+            const addInfoBtn = document.getElementById('addInfoBtn');
+
+            // Show loading, hide results
+            searchingState.classList.remove('hidden');
+            searchResults.classList.add('hidden');
+            addInfoBtn.classList.add('hidden');
+
+            try {
+                const response = await fetch(`/api/intel/gang-database?q=${encodeURIComponent(query)}`, { credentials: 'include' });
+                const data = await response.json();
+
+                searchingState.classList.add('hidden');
+
+                if (!data.success) {
+                    showStatus(data.error || 'Search failed', 'error');
+                    return;
                 }
 
+                if (data.gangs.length === 0) {
+                    resultsHeader.textContent = 'No Results Found';
+                    resultsContainer.innerHTML = `
+                        <div class="bg-white/10 backdrop-blur-sm rounded-lg p-8 border border-white/20 text-center">
+                            <svg class="w-16 h-16 text-white/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <h3 class="text-xl font-semibold text-white/70 mb-2">No organizations found</h3>
+                            <p class="text-white/50">No intel records match your search for "${query}".</p>
+                            <p class="text-white/50 mt-2">Try searching with a different name.</p>
+                        </div>
+                    `;
+                } else {
+                    resultsHeader.textContent = `Search Results (${data.totalResults} organization${data.totalResults > 1 ? 's' : ''} found)`;
+                    resultsContainer.innerHTML = data.gangs.map(gang => renderGangCard(gang)).join('');
+
+                    // Store current gang for adding info
+                    if (data.gangs.length === 1) {
+                        currentGang = data.gangs[0];
+                        addInfoBtn.classList.remove('hidden');
+                    }
+                }
+
+                searchResults.classList.remove('hidden');
             } catch (error) {
-                container.innerHTML = `<p class="text-red-400 text-center">Error: ${error.message}</p>`;
+                console.error('Search error:', error);
+                searchingState.classList.add('hidden');
+                showStatus('Failed to search database. Please try again.', 'error');
             }
         }
 
-        // Close modal buttons
-        document.getElementById('closeModalBtn').addEventListener('click', closeThreadModal);
-        document.getElementById('backBtn').addEventListener('click', closeThreadModal);
-
-        function closeThreadModal() {
-            document.getElementById('threadModal').classList.add('hidden');
-            document.body.style.overflow = '';
-            currentThread = null;
-        }
-
-        // Close modal on escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeThreadModal();
-            }
-        });
-
-        // Profile form handling
-        const profileForm = document.getElementById('profileForm');
-        const lookupBtn = document.getElementById('lookupBtn');
-        const discordIdInput = document.getElementById('discordIdInput');
-
-        lookupBtn.addEventListener('click', async () => {
-            const discordId = discordIdInput.value.trim();
-            if (!discordId) {
-                alert('Please enter your Discord ID');
+        // Event listeners
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                showStatus('Please enter an organization name to search', 'error');
                 return;
             }
-
-            lookupBtn.disabled = true;
-            lookupBtn.textContent = 'Looking up...';
-
-            try {
-                const response = await fetch(`/api/intel/profile?discordId=${encodeURIComponent(discordId)}`, {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-
-                if (data.found && data.officerInfo) {
-                    document.getElementById('officerInfoSection').classList.remove('hidden');
-                    document.getElementById('lookupError').classList.add('hidden');
-                    document.getElementById('officerNameDisplay').textContent = data.officerInfo.officerName || '-';
-                    document.getElementById('callsignDisplay').textContent = data.officerInfo.callsign || '-';
-                    document.getElementById('badgeNumberDisplay').textContent = data.officerInfo.badgeNumber || '-';
-                } else {
-                    document.getElementById('officerInfoSection').classList.add('hidden');
-                    document.getElementById('lookupError').classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error('Lookup error:', error);
-                document.getElementById('officerInfoSection').classList.add('hidden');
-                document.getElementById('lookupError').classList.remove('hidden');
-            } finally {
-                lookupBtn.disabled = false;
-                lookupBtn.textContent = 'Lookup Officer';
-            }
+            searchDatabase(query);
         });
 
-        profileForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const discordUsername = document.getElementById('discordUsername').value.trim();
-            const discordId = discordIdInput.value.trim();
-
-            if (!discordUsername || !discordId) {
-                alert('Please fill in all required fields');
-                return;
-            }
-
-            const submitBtn = document.getElementById('submitProfileBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Submitting...';
-
-            try {
-                const response = await fetch('/api/intel/profile', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ discordUsername, discordId }),
-                    credentials: 'include'
-                });
-                const data = await response.json();
-
-                if (data.error) throw new Error(data.error);
-
-                // Update current user
-                currentUser = data.user;
-                updateUserCard();
-
-                // Close modal
-                document.getElementById('profileModal').classList.add('hidden');
-
-                // Clear the cookie
-                document.cookie = 'intel_needs_profile=; Path=/; Max-Age=0';
-
-            } catch (error) {
-                alert('Error saving profile: ' + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Submit';
-            }
-        });
-
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            try {
-                await fetch('/api/intel/logout', {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-            } catch (error) {
-                console.error('Logout error:', error);
-            }
-            window.location.href = '/intel/login';
-        });
-
-        // ===== Chat Commands System =====
-        const messageInput = document.getElementById('newMessageInput');
-        const commandSuggestions = document.getElementById('commandSuggestions');
-
-        // Command definitions
-        const commands = [
-            { trigger: '/add person', modal: 'addPersonModal' },
-            { trigger: '/add vehicle', modal: 'addVehicleModal' },
-            { trigger: '/add location', modal: 'addLocationModal' }
-        ];
-
-        // Show/hide command suggestions based on input
-        messageInput.addEventListener('input', (e) => {
-            const value = e.target.value.toLowerCase().trim();
-
-            if (value.startsWith('/')) {
-                // Show suggestions that match
-                const matchingCommands = commands.filter(cmd =>
-                    cmd.trigger.toLowerCase().startsWith(value) || value.startsWith(cmd.trigger.toLowerCase())
-                );
-
-                if (matchingCommands.length > 0 || value === '/') {
-                    // Highlight matching commands
-                    document.querySelectorAll('.command-suggestion').forEach(btn => {
-                        const cmdTrigger = btn.dataset.command.toLowerCase();
-                        if (cmdTrigger.startsWith(value) || value.startsWith(cmdTrigger)) {
-                            btn.classList.add('bg-slate-700/50');
-                        } else {
-                            btn.classList.remove('bg-slate-700/50');
-                        }
-                    });
-                    commandSuggestions.classList.remove('hidden');
-                } else {
-                    commandSuggestions.classList.add('hidden');
-                }
-            } else {
-                commandSuggestions.classList.add('hidden');
-            }
-        });
-
-        // Handle command selection from suggestions
-        document.querySelectorAll('.command-suggestion').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const command = btn.dataset.command;
-                executeCommand(command);
-            });
-        });
-
-        // Handle Enter key on input to execute commands
-        messageInput.addEventListener('keydown', (e) => {
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                const value = messageInput.value.toLowerCase().trim();
-
-                // Check if it's a command
-                const matchedCommand = commands.find(cmd =>
-                    value === cmd.trigger.toLowerCase() ||
-                    value.startsWith(cmd.trigger.toLowerCase() + ' ')
-                );
-
-                if (matchedCommand) {
-                    e.preventDefault();
-                    executeCommand(matchedCommand.trigger);
+                const query = e.target.value.trim();
+                if (!query) {
+                    showStatus('Please enter an organization name to search', 'error');
+                    return;
                 }
+                searchDatabase(query);
             }
         });
 
-        // Execute command function
-        function executeCommand(command) {
-            if (!currentThread) {
-                alert('Please open an investigation thread first.');
-                return;
-            }
+        document.getElementById('clearResultsBtn').addEventListener('click', () => {
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('searchInput').value = '';
+            document.getElementById('addInfoBtn').classList.add('hidden');
+            currentGang = null;
+        });
 
-            messageInput.value = '';
-            commandSuggestions.classList.add('hidden');
+        // Add Info Modal
+        document.getElementById('addInfoBtn').addEventListener('click', () => {
+            document.getElementById('addInfoModal').classList.remove('hidden');
+        });
 
-            const cmd = commands.find(c => c.trigger.toLowerCase() === command.toLowerCase());
-            if (cmd) {
-                openAddModal(cmd.modal);
-            }
-        }
+        document.getElementById('closeAddInfoModal').addEventListener('click', () => {
+            document.getElementById('addInfoModal').classList.add('hidden');
+        });
 
-        // Open add modals
-        function openAddModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.remove('hidden');
-            }
-        }
+        // Add Post
+        document.getElementById('addPostBtn').addEventListener('click', () => {
+            document.getElementById('addInfoModal').classList.add('hidden');
+            document.getElementById('postModal').classList.remove('hidden');
+        });
 
-        // Close add modals
-        function closeAddModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.add('hidden');
-                // Reset form
-                const form = modal.querySelector('form');
-                if (form) form.reset();
-            }
-        }
+        document.getElementById('closePostModal').addEventListener('click', () => {
+            document.getElementById('postModal').classList.add('hidden');
+        });
 
-        // Add Person Modal handlers
-        document.getElementById('closeAddPersonModal').addEventListener('click', () => closeAddModal('addPersonModal'));
-        document.getElementById('cancelAddPerson').addEventListener('click', () => closeAddModal('addPersonModal'));
+        document.getElementById('cancelPostBtn').addEventListener('click', () => {
+            document.getElementById('postModal').classList.add('hidden');
+        });
 
-        document.getElementById('addPersonForm').addEventListener('submit', async (e) => {
+        document.getElementById('postForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!currentGang) return;
 
-            if (!currentThread) {
-                alert('No thread selected');
+            const content = document.getElementById('postContent').value.trim();
+            if (!content) {
+                showStatus('Please enter content for the post', 'error');
                 return;
             }
-
-            const submitBtn = document.getElementById('submitAddPerson');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Adding...';
 
             try {
-                const aliasesInput = document.getElementById('personAliases').value.trim();
-                const aliases = aliasesInput ? aliasesInput.split(',').map(a => a.trim()).filter(a => a) : [];
+                const response = await fetch('/api/intel/posts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ threadId: currentGang.thread.id, content }),
+                    credentials: 'include'
+                });
 
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                document.getElementById('postModal').classList.add('hidden');
+                document.getElementById('postContent').value = '';
+                showStatus('Intel post added successfully');
+
+                // Refresh search results
+                const query = document.getElementById('searchInput').value.trim();
+                if (query) searchDatabase(query);
+            } catch (error) {
+                showStatus('Error adding post: ' + error.message, 'error');
+            }
+        });
+
+        // Add Person
+        document.getElementById('addPersonBtn').addEventListener('click', () => {
+            document.getElementById('addInfoModal').classList.add('hidden');
+            document.getElementById('personModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closePersonModal').addEventListener('click', () => {
+            document.getElementById('personModal').classList.add('hidden');
+        });
+
+        document.getElementById('cancelPersonBtn').addEventListener('click', () => {
+            document.getElementById('personModal').classList.add('hidden');
+        });
+
+        document.getElementById('personForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentGang) return;
+
+            const aliasesStr = document.getElementById('personAliases').value;
+            const aliases = aliasesStr ? aliasesStr.split(',').map(a => a.trim()).filter(a => a) : [];
+
+            const payload = {
+                threadId: currentGang.thread.id,
+                name: document.getElementById('personName').value,
+                aliases,
+                role: document.getElementById('personRole').value,
+                status: document.getElementById('personStatus').value,
+                lastKnownLocation: document.getElementById('personLocation').value,
+                photo: document.getElementById('personPhoto').value,
+                description: document.getElementById('personDescription').value,
+                notes: document.getElementById('personNotes').value,
+            };
+
+            try {
                 const response = await fetch('/api/intel/people', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        threadId: currentThread.id,
-                        name: document.getElementById('personName').value.trim(),
-                        aliases,
-                        role: document.getElementById('personRole').value.trim(),
-                        status: document.getElementById('personStatus').value,
-                        affiliation: document.getElementById('personAffiliation').value.trim(),
-                        lastKnownLocation: document.getElementById('personLocation').value.trim(),
-                        photo: document.getElementById('personPhoto').value.trim(),
-                        description: document.getElementById('personDescription').value.trim(),
-                        notes: document.getElementById('personNotes').value.trim()
-                    })
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
                 });
 
                 const data = await response.json();
-
                 if (data.error) throw new Error(data.error);
 
-                closeAddModal('addPersonModal');
+                document.getElementById('personModal').classList.add('hidden');
+                document.getElementById('personForm').reset();
+                showStatus('Person added successfully');
 
-                // Reload the thread data to show the new person
-                await loadPosts(currentThread.id);
-
-                // Switch to People tab to show the new entry
-                currentTab = 'people';
-                updateTabs();
-
+                // Refresh search results
+                const query = document.getElementById('searchInput').value.trim();
+                if (query) searchDatabase(query);
             } catch (error) {
-                alert('Error adding person: ' + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Add Person';
+                showStatus('Error adding person: ' + error.message, 'error');
             }
         });
 
-        // Add Vehicle Modal handlers
-        document.getElementById('closeAddVehicleModal').addEventListener('click', () => closeAddModal('addVehicleModal'));
-        document.getElementById('cancelAddVehicle').addEventListener('click', () => closeAddModal('addVehicleModal'));
+        // Add Location
+        document.getElementById('addLocationBtn').addEventListener('click', () => {
+            document.getElementById('addInfoModal').classList.add('hidden');
+            document.getElementById('locationModal').classList.remove('hidden');
+        });
 
-        document.getElementById('addVehicleForm').addEventListener('submit', async (e) => {
+        document.getElementById('closeLocationModal').addEventListener('click', () => {
+            document.getElementById('locationModal').classList.add('hidden');
+        });
+
+        document.getElementById('cancelLocationBtn').addEventListener('click', () => {
+            document.getElementById('locationModal').classList.add('hidden');
+        });
+
+        document.getElementById('locationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!currentGang) return;
 
-            if (!currentThread) {
-                alert('No thread selected');
-                return;
+            const payload = {
+                threadId: currentGang.thread.id,
+                name: document.getElementById('locationName').value,
+                type: document.getElementById('locationType').value,
+                status: document.getElementById('locationStatus').value,
+                address: document.getElementById('locationAddress').value,
+                photo: document.getElementById('locationPhoto').value,
+                description: document.getElementById('locationDescription').value,
+                notes: document.getElementById('locationNotes').value,
+            };
+
+            try {
+                const response = await fetch('/api/intel/locations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+
+                document.getElementById('locationModal').classList.add('hidden');
+                document.getElementById('locationForm').reset();
+                showStatus('Location added successfully');
+
+                // Refresh search results
+                const query = document.getElementById('searchInput').value.trim();
+                if (query) searchDatabase(query);
+            } catch (error) {
+                showStatus('Error adding location: ' + error.message, 'error');
             }
+        });
 
-            const submitBtn = document.getElementById('submitAddVehicle');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Adding...';
+        // Add Vehicle
+        document.getElementById('addVehicleBtn').addEventListener('click', () => {
+            document.getElementById('addInfoModal').classList.add('hidden');
+            document.getElementById('vehicleModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeVehicleModal').addEventListener('click', () => {
+            document.getElementById('vehicleModal').classList.add('hidden');
+        });
+
+        document.getElementById('cancelVehicleBtn').addEventListener('click', () => {
+            document.getElementById('vehicleModal').classList.add('hidden');
+        });
+
+        document.getElementById('vehicleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentGang) return;
+
+            const payload = {
+                threadId: currentGang.thread.id,
+                make: document.getElementById('vehicleMake').value,
+                model: document.getElementById('vehicleModel').value,
+                year: document.getElementById('vehicleYear').value,
+                color: document.getElementById('vehicleColor').value,
+                licensePlate: document.getElementById('vehiclePlate').value,
+                type: document.getElementById('vehicleType').value,
+                status: document.getElementById('vehicleStatus').value,
+                photo: document.getElementById('vehiclePhoto').value,
+                notes: document.getElementById('vehicleNotes').value,
+            };
 
             try {
                 const response = await fetch('/api/intel/vehicles', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        threadId: currentThread.id,
-                        year: document.getElementById('vehicleYear').value.trim(),
-                        make: document.getElementById('vehicleMake').value.trim(),
-                        model: document.getElementById('vehicleModel').value.trim(),
-                        color: document.getElementById('vehicleColor').value.trim(),
-                        licensePlate: document.getElementById('vehiclePlate').value.trim(),
-                        type: document.getElementById('vehicleType').value,
-                        status: document.getElementById('vehicleStatus').value,
-                        vin: document.getElementById('vehicleVin').value.trim(),
-                        registeredOwner: document.getElementById('vehicleOwner').value.trim(),
-                        associatedPerson: document.getElementById('vehicleAssociated').value.trim(),
-                        lastSeenLocation: document.getElementById('vehicleLastLocation').value.trim(),
-                        lastSeenDate: document.getElementById('vehicleLastDate').value,
-                        photo: document.getElementById('vehiclePhoto').value.trim(),
-                        description: document.getElementById('vehicleDescription').value.trim(),
-                        notes: document.getElementById('vehicleNotes').value.trim()
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.error) throw new Error(data.error);
-
-                closeAddModal('addVehicleModal');
-
-                // Reload the thread data to show the new vehicle
-                await loadPosts(currentThread.id);
-
-                // Switch to Vehicles tab to show the new entry
-                currentTab = 'vehicles';
-                updateTabs();
-
-            } catch (error) {
-                alert('Error adding vehicle: ' + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Add Vehicle';
-            }
-        });
-
-        // Add Location Modal handlers
-        document.getElementById('closeAddLocationModal').addEventListener('click', () => closeAddModal('addLocationModal'));
-        document.getElementById('cancelAddLocation').addEventListener('click', () => closeAddModal('addLocationModal'));
-
-        document.getElementById('addLocationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            if (!currentThread) {
-                alert('No thread selected');
-                return;
-            }
-
-            const submitBtn = document.getElementById('submitAddLocation');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Adding...';
-
-            try {
-                const lat = document.getElementById('locationLat').value;
-                const lng = document.getElementById('locationLng').value;
-                const coordinates = (lat && lng) ? { lat: parseFloat(lat), lng: parseFloat(lng) } : undefined;
-
-                const response = await fetch('/api/intel/locations', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        threadId: currentThread.id,
-                        name: document.getElementById('locationName').value.trim(),
-                        type: document.getElementById('locationType').value,
-                        status: document.getElementById('locationStatus').value,
-                        address: document.getElementById('locationAddress').value.trim(),
-                        coordinates,
-                        photo: document.getElementById('locationPhoto').value.trim(),
-                        description: document.getElementById('locationDescription').value.trim(),
-                        notes: document.getElementById('locationNotes').value.trim()
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.error) throw new Error(data.error);
-
-                closeAddModal('addLocationModal');
-
-                // Reload the thread data to show the new location
-                await loadPosts(currentThread.id);
-
-                // Switch to Locations tab to show the new entry
-                currentTab = 'locations';
-                updateTabs();
-
-            } catch (error) {
-                alert('Error adding location: ' + error.message);
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Add Location';
-            }
-        });
-
-        // Close modals on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeAddModal('addPersonModal');
-                closeAddModal('addVehicleModal');
-                closeAddModal('addLocationModal');
-            }
-        });
-
-        // Hide command suggestions when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!messageInput.contains(e.target) && !commandSuggestions.contains(e.target)) {
-                commandSuggestions.classList.add('hidden');
-            }
-        });
-
-        // ===== Attachment (Clip Icon) Handler =====
-        const attachmentBtn = document.getElementById('attachmentBtn');
-        const attachmentFileInput = document.getElementById('attachmentFileInput');
-
-        // When the clip icon is clicked, trigger the file input
-        attachmentBtn.addEventListener('click', () => {
-            attachmentFileInput.click();
-        });
-
-        // Handle file selection
-        attachmentFileInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            // Validate file type
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-            if (!allowedTypes.includes(file.type)) {
-                alert('Invalid file type. Please select an image (JPEG, PNG, GIF, WebP, or SVG).');
-                attachmentFileInput.value = '';
-                return;
-            }
-
-            // Validate file size (max 10MB)
-            const maxSize = 10 * 1024 * 1024;
-            if (file.size > maxSize) {
-                alert('File too large. Maximum size is 10MB.');
-                attachmentFileInput.value = '';
-                return;
-            }
-
-            // Show loading state on button
-            attachmentBtn.disabled = true;
-            attachmentBtn.innerHTML = `
-                <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            `;
-
-            try {
-                const formData = new FormData();
-                formData.append('file', file);
-
-                const response = await fetch('/api/images', {
-                    method: 'POST',
-                    body: formData,
+                    body: JSON.stringify(payload),
                     credentials: 'include'
                 });
 
                 const data = await response.json();
+                if (data.error) throw new Error(data.error);
 
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to upload image');
-                }
+                document.getElementById('vehicleModal').classList.add('hidden');
+                document.getElementById('vehicleForm').reset();
+                showStatus('Vehicle added successfully');
 
-                // Insert the image URL into the message input
-                const imageUrl = data.urls.raw;
-                const currentValue = messageInput.value;
-                messageInput.value = currentValue + (currentValue ? ' ' : '') + imageUrl;
-                messageInput.focus();
-
+                // Refresh search results
+                const query = document.getElementById('searchInput').value.trim();
+                if (query) searchDatabase(query);
             } catch (error) {
-                console.error('Upload error:', error);
-                alert('Failed to upload image: ' + error.message);
-            } finally {
-                // Reset button
-                attachmentBtn.disabled = false;
-                attachmentBtn.innerHTML = `
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                    </svg>
-                `;
-                // Reset file input
-                attachmentFileInput.value = '';
+                showStatus('Error adding vehicle: ' + error.message, 'error');
             }
         });
 
         // Initialize
-        init();
+        checkSession().then(user => {
+            if (user) {
+                currentUser = user;
+            }
+        });
     </script>
 </Layout>

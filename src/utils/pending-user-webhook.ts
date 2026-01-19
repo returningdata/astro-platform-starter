@@ -80,6 +80,21 @@ export async function hasBeenNotified(userId: string): Promise<boolean> {
 }
 
 /**
+ * Get the base URL for the site
+ */
+function getSiteUrl(): string {
+    // Try environment variables first
+    if (typeof process !== 'undefined' && process.env?.URL) {
+        return process.env.URL;
+    }
+    if (typeof process !== 'undefined' && process.env?.DEPLOY_PRIME_URL) {
+        return process.env.DEPLOY_PRIME_URL;
+    }
+    // Fall back to production URL
+    return 'https://delperro.netlify.app';
+}
+
+/**
  * Send a Discord notification for a new pending user
  * This is called immediately when a new user registers
  */
@@ -92,10 +107,14 @@ export async function notifyNewPendingUser(user: PendingUser): Promise<boolean> 
             return true;
         }
 
+        // Generate approval link
+        const siteUrl = getSiteUrl();
+        const approvalLink = `${siteUrl}/api/intel/user-approve?id=${encodeURIComponent(user.id)}`;
+
         // Build the Discord embed for a single user
         const embed = {
             title: "New User Awaiting Clearance Approval",
-            description: "A new user has registered and is pending clearance approval.",
+            description: "A new user has registered and is pending clearance approval.\n\n**[Click here to approve or deny](" + approvalLink + ")**",
             color: 0xFFAA00, // Orange/amber color for pending
             fields: [
                 {
@@ -155,23 +174,29 @@ export async function notifyMultiplePendingUsers(users: PendingUser[], totalPend
     }
 
     try {
+        const siteUrl = getSiteUrl();
+
         // Build the Discord embed
         const embed = {
             title: "New Pending Clearance Approvals",
-            description: `There ${users.length === 1 ? 'is' : 'are'} **${users.length}** new user${users.length === 1 ? '' : 's'} awaiting clearance approval.`,
+            description: `There ${users.length === 1 ? 'is' : 'are'} **${users.length}** new user${users.length === 1 ? '' : 's'} awaiting clearance approval.\n\nClick on a user's name to approve or deny their access.`,
             color: 0xFFAA00, // Orange/amber color for pending
-            fields: users.slice(0, 25).map(user => ({
-                name: user.callsign && user.officerName
+            fields: users.slice(0, 25).map(user => {
+                const approvalLink = `${siteUrl}/api/intel/user-approve?id=${encodeURIComponent(user.id)}`;
+                const userName = user.callsign && user.officerName
                     ? `${user.callsign} | ${user.officerName}`
-                    : user.name || user.email,
-                value: [
-                    `**Email:** ${user.email}`,
-                    user.discordId ? `**Discord:** ${user.discordUsername || 'N/A'} (${user.discordId})` : '',
-                    user.badgeNumber ? `**Badge:** ${user.badgeNumber}` : '',
-                    `**Registered:** <t:${Math.floor(user.createdAt / 1000)}:R>`
-                ].filter(Boolean).join('\n'),
-                inline: true
-            })),
+                    : user.name || user.email;
+                return {
+                    name: `[${userName}](${approvalLink})`,
+                    value: [
+                        `**Email:** ${user.email}`,
+                        user.discordId ? `**Discord:** ${user.discordUsername || 'N/A'} (${user.discordId})` : '',
+                        user.badgeNumber ? `**Badge:** ${user.badgeNumber}` : '',
+                        `**Registered:** <t:${Math.floor(user.createdAt / 1000)}:R>`
+                    ].filter(Boolean).join('\n'),
+                    inline: true
+                };
+            }),
             footer: {
                 text: `Total pending: ${totalPending} user${totalPending === 1 ? '' : 's'}`
             },

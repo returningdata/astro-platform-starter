@@ -21,6 +21,7 @@ export const GET: APIRoute = async ({ request }) => {
                     officerName: session.user.officerName,
                     callsign: session.user.callsign,
                     badgeNumber: session.user.badgeNumber,
+                    profileComplete: session.user.profileComplete,
                 },
             }), {
                 status: 200,

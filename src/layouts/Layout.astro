@@ -33,7 +33,7 @@ interface SiteInfo {
 }
 
 const defaultThemeSettings: ThemeSettings = {
-    activeTheme: 'new-year',
+    activeTheme: 'default',
     christmasMusic: 'yXfWUNl1PbM',
     halloweenMusic: 'qw07ZfxeV4g',
     defaultMusic: '329iFlRszxs',
@@ -645,13 +645,20 @@ const playerStyle = themePlayerStyles[activeTheme];
                 const countdownContainer = document.getElementById('countdown-container');
                 if (!countdownContainer) return;
 
-                countdownContainer.classList.remove('hidden');
-
                 function updateCountdown() {
                     // Target: January 1, 2026, 00:00:00 CST (UTC-6)
                     const now = new Date();
                     const targetDate = new Date('2026-01-01T00:00:00-06:00');
+                    const celebrationEndDate = new Date('2026-01-08T00:00:00-06:00'); // Hide after Jan 7
                     const diff = targetDate - now;
+
+                    // Hide the countdown if celebration period is over
+                    if (now > celebrationEndDate) {
+                        countdownContainer.classList.add('hidden');
+                        return;
+                    }
+
+                    countdownContainer.classList.remove('hidden');
 
                     if (diff <= 0) {
                         // It's New Year!

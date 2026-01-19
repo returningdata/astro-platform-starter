@@ -40,6 +40,12 @@ interface ParsedRoster {
 function normalizeRank(rank: string): string {
     const rankLower = rank.toLowerCase().trim();
 
+    // IMPORTANT: Check for "Trial High Command" prefix FIRST, before other rank keywords
+    // "Trial High Command - Chief of Police" should map to Commander, not Chief of Police
+    if (rankLower.includes('trial high command') || rankLower.startsWith('thc -') || rankLower.startsWith('thc-')) {
+        return 'Commander';
+    }
+
     // High Command
     if (rankLower.includes('chief of police') && !rankLower.includes('deputy') && !rankLower.includes('assistant')) {
         return 'Chief of Police';

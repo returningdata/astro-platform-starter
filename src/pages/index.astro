@@ -783,6 +783,7 @@ import Layout from '../layouts/Layout.astro';
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="text-xs font-medium text-white truncate">${l.name}</div>
+                                ${l.callSign ? `<div class="text-[9px] text-rose-400 font-mono">${l.callSign}</div>` : ''}
                                 ${l.jobTitle ? `<div class="text-[10px] text-rose-400/70 truncate">${l.jobTitle}</div>` : ''}
                             </div>
                             ${l.isLOA ? '<span class="px-1 py-0.5 text-[8px] font-bold bg-yellow-500 text-black rounded flex-shrink-0">LOA</span>' : ''}

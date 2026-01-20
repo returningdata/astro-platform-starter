@@ -28,6 +28,7 @@ interface RosterEntry {
     hireDate: string;
     movDate: string;
     status: string;
+    jobTitle?: string; // Column K - Job Title from roster
     strikes?: number;
     activityStatus?: 'active' | 'inactive' | 'semi_active' | 'warning' | 'probation';
     isSuspended?: boolean;
@@ -196,6 +197,10 @@ function parseCSVLine(line: string): string[] {
 }
 
 // Parse CSV data from Google Sheets main sheet
+// Main sheet (gid=1963323163) columns:
+// A(0): Callsign, B(1): Badge Number, C(2): Name, D(3): Discord ID,
+// E(4): Rank, F(5): Status, G(6): Timezone, H(7): Hired Date, I(8): Mov. Date,
+// J(9): Time in Rank, K(10): Job Title, L(11): Strike 1, M(12): Strike 2, N(13): Suspended
 function parseMainCSV(csvText: string): Map<string, Partial<RosterEntry>> {
     const lines = csvText.split('\n');
     const entries = new Map<string, Partial<RosterEntry>>();
@@ -218,6 +223,9 @@ function parseMainCSV(csvText: string): Map<string, Partial<RosterEntry>> {
                 const strike2 = fields[12].trim().toUpperCase();
                 if (strike2 === 'TRUE') strikes++;
             }
+
+            // Parse job title from column K (index 10)
+            const jobTitle = fields.length > 10 ? fields[10]?.trim() || '' : '';
 
             let isSuspended: boolean = false;
             if (fields.length > 13 && fields[13]) {
@@ -248,6 +256,7 @@ function parseMainCSV(csvText: string): Map<string, Partial<RosterEntry>> {
                 hireDate: fields[7]?.trim() || '',
                 movDate: fields[8]?.trim() || '',
                 status: fields[5]?.trim() || 'Active',
+                jobTitle: jobTitle,                   // Column K - Job Title
                 strikes: strikes,
                 activityStatus,
                 isSuspended: isSuspended,
@@ -326,7 +335,8 @@ async function fetchRosterData(): Promise<RosterEntry[]> {
                 discordId: entry.discordId || '',
                 hireDate: entry.hireDate || '',
                 movDate: entry.movDate || '',
-                status: entry.status || 'Active'
+                status: entry.status || 'Active',
+                jobTitle: entry.jobTitle || ''
             } as RosterEntry);
         }
 
@@ -418,7 +428,7 @@ async function syncRoster(): Promise<{ success: boolean; message: string; update
             rank,
             name: officer?.name || '',
             callSign: officer?.callSign || '',
-            jobTitle: officer?.rank || '',
+            jobTitle: officer?.jobTitle || '', // Use jobTitle from column K
             discordId: officer?.discordId || '',
             isLOA: officer?.status.toLowerCase() === 'loa',
             strikes: officer?.strikes,
@@ -434,7 +444,7 @@ async function syncRoster(): Promise<{ success: boolean; message: string; update
         const members: RankMember[] = officers.map(o => ({
             name: o.name,
             callSign: o.callSign,
-            jobTitle: o.rank,
+            jobTitle: o.jobTitle || '', // Use jobTitle from column K
             discordId: o.discordId,
             isLOA: o.status.toLowerCase() === 'loa',
             strikes: o.strikes,
@@ -466,10 +476,8 @@ async function syncRoster(): Promise<{ success: boolean; message: string; update
             existingPos.activityStatus = importedPos.activityStatus;
             existingPos.isSuspended = importedPos.isSuspended;
             existingPos.suspensionReason = importedPos.suspensionReason;
-            // Only update job title if imported value is different from rank
-            if (importedPos.jobTitle && importedPos.jobTitle !== importedPos.rank) {
-                existingPos.jobTitle = importedPos.jobTitle;
-            }
+            // Always update job title from roster column K
+            existingPos.jobTitle = importedPos.jobTitle;
             updatedCount++;
         } else if (existingPos) {
             // Still update status fields even if no name
@@ -493,9 +501,8 @@ async function syncRoster(): Promise<{ success: boolean; message: string; update
                 if (importedMember.name) {
                     existingRank.members[i] = {
                         ...importedMember,
-                        jobTitle: (importedMember.jobTitle && importedMember.jobTitle !== importedRank.rank)
-                            ? importedMember.jobTitle
-                            : existingRank.members[i].jobTitle || ''
+                        // Always use job title from roster column K
+                        jobTitle: importedMember.jobTitle
                     };
                     updatedCount++;
                 } else {

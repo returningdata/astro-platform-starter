@@ -1843,10 +1843,8 @@ import Layout from '../../layouts/Layout.astro';
                                     existing.name = imported.name;
                                     existing.callSign = imported.callSign || existing.callSign;
                                     existing.isLOA = imported.isLOA || false;
-                                    // Keep existing jobTitle if imported one is same as rank
-                                    if (imported.jobTitle && imported.jobTitle !== imported.rank) {
-                                        existing.jobTitle = imported.jobTitle;
-                                    }
+                                    // Always sync jobTitle from roster
+                                    existing.jobTitle = imported.jobTitle || '';
                                     // Sync new status fields - always update to allow clearing values
                                     existing.strikes = imported.strikes ?? 0;
                                     existing.activityStatus = imported.activityStatus || undefined;
@@ -1868,10 +1866,8 @@ import Layout from '../../layouts/Layout.astro';
                                         existing.members[idx].name = member.name;
                                         existing.members[idx].callSign = member.callSign || '';
                                         existing.members[idx].isLOA = member.isLOA || false;
-                                        // Keep existing jobTitle if imported one is same as rank
-                                        if (member.jobTitle && member.jobTitle !== imported.rank) {
-                                            existing.members[idx].jobTitle = member.jobTitle;
-                                        }
+                                        // Always sync jobTitle from roster
+                                        existing.members[idx].jobTitle = member.jobTitle || '';
                                         // Sync new status fields - always update to allow clearing values
                                         existing.members[idx].strikes = member.strikes ?? 0;
                                         existing.members[idx].activityStatus = member.activityStatus || undefined;
@@ -1972,9 +1968,8 @@ import Layout from '../../layouts/Layout.astro';
                                     existing.name = imported.name;
                                     existing.callSign = imported.callSign || existing.callSign;
                                     existing.isLOA = imported.isLOA || false;
-                                    if (imported.jobTitle && imported.jobTitle !== imported.rank) {
-                                        existing.jobTitle = imported.jobTitle;
-                                    }
+                                    // Always sync jobTitle from roster
+                                    existing.jobTitle = imported.jobTitle || '';
                                     existing.strikes = imported.strikes ?? 0;
                                     existing.activityStatus = imported.activityStatus || undefined;
                                     existing.isSuspended = imported.isSuspended ?? false;
@@ -1994,9 +1989,8 @@ import Layout from '../../layouts/Layout.astro';
                                         existing.members[idx].name = member.name;
                                         existing.members[idx].callSign = member.callSign || '';
                                         existing.members[idx].isLOA = member.isLOA || false;
-                                        if (member.jobTitle && member.jobTitle !== imported.rank) {
-                                            existing.members[idx].jobTitle = member.jobTitle;
-                                        }
+                                        // Always sync jobTitle from roster
+                                        existing.members[idx].jobTitle = member.jobTitle || '';
                                         existing.members[idx].strikes = member.strikes ?? 0;
                                         existing.members[idx].activityStatus = member.activityStatus || undefined;
                                         existing.members[idx].isSuspended = member.isSuspended ?? false;

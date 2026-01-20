@@ -19,6 +19,7 @@ interface RosterEntry {
     hireDate: string;
     movDate: string;
     status: string;
+    jobTitle?: string; // Column K - Job Title from roster
     // Additional columns that may exist in spreadsheet
     strikes?: number;
     activityStatus?: string;
@@ -94,7 +95,7 @@ function normalizeRank(rank: string): string {
 // Main sheet (gid=1963323163) columns:
 // A(0): Callsign, B(1): Badge Number, C(2): Name, D(3): Discord ID,
 // E(4): Rank, F(5): Status, G(6): Timezone, H(7): Hired Date, I(8): Mov. Date,
-// J(9): Time in Rank, K(10): Notes, L(11): Strike 1, M(12): Strike 2, N(13): Suspended
+// J(9): Time in Rank, K(10): Job Title, L(11): Strike 1, M(12): Strike 2, N(13): Suspended
 function parseMainCSV(csvText: string): Map<string, Partial<RosterEntry>> {
     const lines = csvText.split('\n');
     const entries = new Map<string, Partial<RosterEntry>>();
@@ -123,6 +124,9 @@ function parseMainCSV(csvText: string): Map<string, Partial<RosterEntry>> {
                 const strike2 = fields[12].trim().toUpperCase();
                 if (strike2 === 'TRUE') strikes++;
             }
+
+            // Parse job title from column K (index 10)
+            const jobTitle = fields.length > 10 ? fields[10]?.trim() || '' : '';
 
             // Parse suspension status (column N, index 13)
             let isSuspended: boolean = false;
@@ -156,6 +160,7 @@ function parseMainCSV(csvText: string): Map<string, Partial<RosterEntry>> {
                 hireDate: fields[7]?.trim() || '',    // Column H - Hire Date
                 movDate: fields[8]?.trim() || '',     // Column I - Movement Date
                 status: fields[5]?.trim() || 'Active', // Column F
+                jobTitle: jobTitle,                   // Column K - Job Title
                 strikes: strikes,                     // Always include strikes (0, 1, or 2) so it can clear
                 activityStatus,
                 isSuspended: isSuspended,             // Always include isSuspended (true or false) so it can clear
@@ -263,7 +268,8 @@ async function fetchRosterData(): Promise<RosterEntry[]> {
             discordId: entry.discordId || '',
             hireDate: entry.hireDate || '',
             movDate: entry.movDate || '',
-            status: entry.status || 'Active'
+            status: entry.status || 'Active',
+            jobTitle: entry.jobTitle || ''
         } as RosterEntry);
     }
 
@@ -331,7 +337,7 @@ export const GET: APIRoute = async ({ request }) => {
                 rank,
                 name: officer?.name || '',
                 callSign: officer?.callSign || '',
-                jobTitle: officer?.rank || '',
+                jobTitle: officer?.jobTitle || officer?.rank || '', // Use jobTitle from roster (column K), fallback to rank
                 discordId: officer?.discordId || '',
                 isLOA: officer?.status.toLowerCase() === 'loa',
                 strikes: officer?.strikes,
@@ -347,7 +353,7 @@ export const GET: APIRoute = async ({ request }) => {
             const members = officers.map(o => ({
                 name: o.name,
                 callSign: o.callSign,
-                jobTitle: o.rank,
+                jobTitle: o.jobTitle || o.rank, // Use jobTitle from roster (column K), fallback to rank
                 discordId: o.discordId,
                 isLOA: o.status.toLowerCase() === 'loa',
                 strikes: o.strikes,

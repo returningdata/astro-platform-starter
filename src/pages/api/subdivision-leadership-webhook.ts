@@ -35,7 +35,7 @@ interface SubdivisionLeader {
     subdivisionId?: string;
     isLOA?: boolean;
     discordId?: string;
-    positionType?: 'overseer' | 'assistant_head' | 'leader'; // New field to distinguish position type
+    positionType?: 'department_liaison' | 'overseer' | 'assistant_head' | 'leader'; // Department liaisons should be excluded from this webhook
 }
 
 interface Subdivision {
@@ -247,15 +247,19 @@ function buildSubdivisionLeadershipEmbeds(departmentData: DepartmentData, subdiv
         }
     }
 
-    // Subdivision Leaders (exclude overseer and assistant heads)
+    // Subdivision Leaders (exclude overseer, assistant heads, and department liaisons)
     const subdivisionLeaders = leadership.filter(l => {
         // Exclude overseers
         if (l.positionType === 'overseer') return false;
         if (l.positionType === 'assistant_head') return false;
+        // Exclude department liaisons - they belong in the chain of command webhook only
+        if (l.positionType === 'department_liaison') return false;
 
         const normalizedDiv = l.division.toLowerCase();
         if (normalizedDiv.includes('overseer') && normalizedDiv === 'subdivision overseer') return false;
         if (normalizedDiv.includes('assistant head') || normalizedDiv.includes('assistant overseer')) return false;
+        // Also exclude by division name for backwards compatibility
+        if (normalizedDiv.includes('department liaison')) return false;
 
         return true;
     });
